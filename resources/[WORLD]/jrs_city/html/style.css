@@ -1,0 +1,205 @@
+* {
+    box-sizing: border-box;
+    user-select: none;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: transparent !important;
+    pointer-events: none;
+}
+
+.zone-toast {
+    --fade-in: 180ms;
+    --fade-out: 260ms;
+    position: fixed;
+    top: 1.8vh;
+    left: 50%;
+    width: 340px;
+    max-width: 82vw;
+    transform: translate(-50%, -5px);
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        opacity var(--fade-out) ease,
+        transform var(--fade-out) ease,
+        visibility 0s linear var(--fade-out);
+}
+
+.zone-toast.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+    transition:
+        opacity var(--fade-in) ease,
+        transform var(--fade-in) ease,
+        visibility 0s;
+}
+
+.zone-panel {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 432 / 100;
+    padding: 8px 24px 7px;
+    background-image: url('assets/box_a_bg_1.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100% 100%;
+    color: #eee;
+    text-align: center;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .85);
+    display: grid;
+    grid-template-rows: auto auto 1px 1fr;
+    align-content: center;
+    gap: 2px;
+}
+
+.zone-title {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 18px;
+    line-height: 19px;
+    font-weight: 700;
+    letter-spacing: .045em;
+    font-variant: small-caps;
+}
+
+.zone-title.long-title {
+    font-size: 15px;
+    letter-spacing: .025em;
+}
+
+.zone-title.extra-long-title {
+    font-size: 13px;
+    line-height: 15px;
+    letter-spacing: .015em;
+}
+
+.zone-district {
+    min-height: 11px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 11px;
+    line-height: 13px;
+    font-weight: 600;
+    letter-spacing: .03em;
+    color: rgba(220, 220, 220, .88);
+}
+
+.zone-divider {
+    width: 88%;
+    height: 1px;
+    justify-self: center;
+    background: linear-gradient(90deg, transparent, rgba(220,220,220,.82) 15%, rgba(220,220,220,.82) 85%, transparent);
+    box-shadow: 0 1px 1px rgba(0,0,0,.65);
+}
+
+.zone-footer {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    overflow: hidden;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 8px;
+    line-height: 10px;
+    font-weight: 700;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+}
+
+.zone-state {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: rgba(185, 185, 185, .82);
+}
+
+.zone-state:not(:empty) + .zone-details:not(:empty)::before {
+    content: '•';
+    margin: 0 7px;
+    color: rgba(150, 150, 150, .55);
+}
+
+.zone-details {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: rgba(225, 225, 225, .88);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.zone-detail-part {
+    unicode-bidi: isolate;
+    display: inline-block;
+}
+
+.zone-detail-sep {
+    opacity: 0.55;
+    margin: 0 5px;
+    display: inline-block;
+    user-select: none;
+}
+
+@media (max-width: 900px) {
+    .zone-toast {
+        width: 320px;
+        max-width: 86vw;
+    }
+
+    .zone-panel {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+}
+
+html[lang="ar"] .zone-title,
+html[lang="ar"] .zone-footer,
+html[lang="ar"] .zone-details,
+html[lang="ar"] .zone-state,
+html[lang="ar"] .zone-district,
+body.jrs-rtl .zone-title,
+body.jrs-rtl .zone-footer,
+body.jrs-rtl .zone-details,
+body.jrs-rtl .zone-state,
+body.jrs-rtl .zone-district {
+    font-family: var(--jrs-ar-font, 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif) !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+}
+
+body.jrs-rtl .zone-title {
+    font-size: 16px;
+    line-height: 20px;
+    font-weight: 700;
+}
+body.jrs-rtl .zone-title.long-title {
+    font-size: 14px;
+}
+body.jrs-rtl .zone-title.extra-long-title {
+    font-size: 12px;
+}
+body.jrs-rtl .zone-district {
+    font-size: 11px;
+    line-height: 14px;
+    font-weight: 600;
+}
+body.jrs-rtl .zone-footer {
+    font-size: 9px;
+    line-height: 12px;
+}
+

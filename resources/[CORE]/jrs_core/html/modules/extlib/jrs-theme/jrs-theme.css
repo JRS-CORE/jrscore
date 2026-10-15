@@ -1,0 +1,16 @@
+/* JRS Core theme (jrs_stores look) - injected by the JRS build */
+:root{--jrs-text:#f2eee7;--jrs-muted:#c8c3bb;--jrs-dim:#85817b;--jrs-line:rgba(255,255,255,.09);--jrs-field:rgba(0,0,0,.44);--jrs-danger:#c77f79;--jrs-success:#9db5a7}
+.jrs-panel{background:url(panel-background.png) center/100% 100% no-repeat!important;filter:drop-shadow(0 18px 34px rgba(0,0,0,.72))}
+/* tab.png == tab-active.png: selection is shown with light + an edge marker, like jrs_stores */
+.menu .menu-items .menu-item.selected,.grid-container .grid-item.selected,menu a:hover,menu span:hover,.mailbox-letter.selected,.modal-bg .modal .char-list .active{box-shadow:inset 3px 0 0 rgba(255,255,255,.85),inset 0 -2px 0 rgba(255,255,255,.35)!important;filter:brightness(1.18)!important}
+
+/* generic: text-only overlays (zone names, progress text, dev tools) */
+body,#app{font-family:Georgia,'Times New Roman',serif}
+.bc-wrapper h1,.bc-wrapper h2,.bc-wrapper h4,.progress-text{font-family:Georgia,'Times New Roman',serif!important;color:#fff!important;text-shadow:0 2px 4px #000;letter-spacing:.06em}
+.bc-wrapper .extra{font-family:Arial,sans-serif!important;color:var(--jrs-muted)!important}
+.wrapper{background:url(panel-background.png) center/100% 100% no-repeat;color:var(--jrs-text);padding:14px}
+.wrapper button,#admin-ui button{background:url(tab.png) center/100% 100% no-repeat!important;color:var(--jrs-text)!important;border:0!important;border-radius:0!important;font-family:Arial,sans-serif!important;font-weight:800;text-transform:uppercase;padding:6px 10px}
+.wrapper button:hover,#admin-ui button:hover{background-image:url(tab-active.png)!important;color:#fff!important}
+#admin-ui{background:url(panel-background.png) center/100% 100% no-repeat!important;color:var(--jrs-text)!important;font-family:Georgia,serif!important;border:0!important;filter:drop-shadow(0 18px 34px rgba(0,0,0,.72))}
+#admin-ui input,#admin-ui select,.wrapper input{background:var(--jrs-field)!important;border:1px solid rgba(255,255,255,.08)!important;color:#fff!important}
+.admin-ui-option-group .title{color:#fff!important;letter-spacing:.06em;text-transform:uppercase}

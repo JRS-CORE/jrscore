@@ -1,0 +1,70 @@
+body {
+    margin-top: 100px;
+    font-family: 'Roboto', sans-serif;
+    overflow: hidden;
+}
+
+.toast {
+    width: 100px;
+    float: right;
+}
+
+.wrapper {
+    width: 100px;
+    height: auto;
+    background-color: #1e1e1e;
+    float: right;
+}
+
+.main {
+    margin: 12px 16px 12px 56px;
+    position: relative;
+}
+
+.main::before {
+    font-size: 24px;
+    top: calc(50% - 12px);
+    left: -40px;
+    line-height: 24px;
+    position: absolute;
+}
+
+
+
+/* Long Text Notification */
+
+.zombie_aggressive_1-icon::before {
+    font-family: "Font Awesome 5 Free";
+    content: "\f11c";
+    color: #6c757d00;
+}
+
+.zombie_aggressive_1 {
+    background-color: rgba(20, 20, 20, 0);
+    color: #ffffff00;
+    padding: 5px 5px 5px 5px;
+}
+
+.zombie_aggressive_1-border {
+    border-left: 4px solid #6c757d00;
+}
+
+
+
+/* Long Text Notification */
+
+.zombie_growl_2-icon::before {
+    font-family: "Font Awesome 5 Free";
+    content: "\f11c";
+    color: #6c757d00;
+}
+
+.zombie_growl_2 {
+    background-color: rgba(20, 20, 20, 0);
+    color: #ffffff00;
+    padding: 5px 5px 5px 5px;
+}
+
+.zombie_growl_2-border {
+    border-left: 4px solid #6c757d00;
+}

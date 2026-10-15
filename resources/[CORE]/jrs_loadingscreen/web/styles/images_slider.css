@@ -1,0 +1,64 @@
+#image-slider {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    overflow: hidden;
+    background-color: transparent;
+}
+
+.slider-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    z-index: 1;
+}
+
+.slider-image.active {
+    opacity: 1;
+}
+
+.transition-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    transition: all 0.2s ease-in-out;
+    will-change: opacity;
+    backface-visibility: hidden;
+}
+
+.transition-overlay.active {
+    opacity: 1;
+}
+
+.border-image {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 100vh;
+    height: 100vw;
+    max-width: none;
+    max-height: none;
+    object-fit: fill;
+    z-index: 200;
+    pointer-events: none;
+    transform: translate(-50%, -50%) rotate(90deg);
+    display: none;
+}
+
+.border-image.active {
+    display: block !important;
+}

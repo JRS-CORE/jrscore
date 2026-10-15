@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>JRS Loading Screen</title>
+
+    <!-- Preload only image assets supported reliably by RedM CEF. The video element below uses preload="auto". -->
+    <link rel="preload" as="image" href="assets/images/image_1.jpg">
+    <link rel="preload" as="image" href="assets/images/border_1.png">
+
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/images_slider.css">
+    <link rel="stylesheet" href="styles/music_controls.css">
+    <link rel="stylesheet" href="styles/team_cards.css">
+    <link rel="stylesheet" href="styles/responsive.css">
+    <link rel="stylesheet" href="styles/language.css">
+
+</head>
+<body>
+    <!-- Always-visible local fallback. It prevents a black frame while MP4 decoding starts. -->
+    <div id="instant-background" aria-hidden="true"></div>
+
+    <video id="video"
+           autoplay
+           loop
+           playsinline
+           preload="auto"
+           poster="assets/images/image_1.jpg">
+        Your browser does not support the video tag.
+    </video>
+
+    <div id="loading-screen">
+        <div id="server-name"></div>
+        <img id="server-logo" src="" alt="Server Logo">
+    </div>
+
+    <div id="server-description"></div>
+    <div id="server-warning"></div>
+
+    <div id="image-slider">
+        <img id="image-current" class="slider-image active" src="" alt="Loading Screen">
+        <img id="image-next" class="slider-image" src="" alt="Loading Screen">
+        <img id="transition-overlay" class="transition-overlay" src="" alt="Transition">
+    </div>
+
+    <img id="border-image" class="border-image" src="assets/images/border_1.png" alt="Border">
+
+    <div id="loading-progress-container" aria-live="polite">
+        <div id="loading-text" data-i18n="loading">LOADING...</div>
+        <div id="loading-progress-row">
+            <div id="loading-progress-track" aria-hidden="true">
+                <div id="loading-progress-fill"></div>
+            </div>
+            <div id="loading-progress-icon" aria-hidden="true">
+                <span class="progress-glyph">✦</span>
+            </div>
+        </div>
+        <div id="loading-progress-percent">0%</div>
+    </div>
+
+
+    <div id="user-info-card">
+        <div id="user-avatar">
+            <img src="assets/images/default_avatar.jpg" alt="Avatar">
+        </div>
+        <div id="user-details">
+            <span id="user-name" data-i18n="outsider">Outsider</span>
+            <span id="user-role"></span>
+        </div>
+        <div id="player-count">
+            <span class="player-count-glyph" aria-hidden="true">♟</span>
+            <span id="player-count-text">0/0</span>
+        </div>
+        <div id="social-links" aria-label="Social links">
+            <a id="btn-youtube" class="social-icon-btn" href="#" rel="noopener noreferrer"></a>
+            <a id="btn-discord" class="social-icon-btn" href="#" rel="noopener noreferrer"></a>
+            <a id="btn-website" class="social-icon-btn" href="#" rel="noopener noreferrer"></a>
+        </div>
+    </div>
+
+    <section id="rules-side-panel" class="side-feed side-feed-right side-feed-right-secondary" aria-label="Rules">
+        <div class="side-feed-title"><span class="side-feed-symbol">✦</span><span data-i18n="panelRules">RULES</span></div>
+        <div id="rules-side-viewport" class="side-feed-viewport">
+            <div id="rules-side-track" class="side-feed-track"></div>
+        </div>
+    </section>
+
+    <section id="team-side-panel" class="side-feed side-feed-right" aria-label="Team">
+        <div class="side-feed-title"><span class="side-feed-symbol">♟</span><span data-i18n="panelTeam">TEAM</span></div>
+        <div id="team-side-viewport" class="side-feed-viewport">
+            <div id="team-side-track" class="side-feed-track"></div>
+        </div>
+    </section>
+
+    <section id="news-side-panel" class="side-feed side-feed-left" aria-label="News">
+        <div class="side-feed-title"><span class="side-feed-symbol">▤</span><span data-i18n="panelNews">NEWS</span></div>
+        <div id="news-side-viewport" class="side-feed-viewport">
+            <div id="news-side-track" class="side-feed-track"></div>
+        </div>
+    </section>
+
+    <section id="hints-side-panel" class="side-feed side-feed-left side-feed-left-secondary" aria-label="Hints">
+        <div class="side-feed-title"><span class="side-feed-symbol">✧</span><span data-i18n="panelHints">HINTS</span></div>
+        <div id="hints-side-viewport" class="side-feed-viewport">
+            <div id="hints-side-track" class="side-feed-track"></div>
+        </div>
+    </section>
+
+    <!-- Language, offered on the very first screen a player sees. The buttons
+         themselves are built by scripts/script_lang.js so the option list lives
+         next to the packs. -->
+    <div id="language-toggle" aria-label="Language"></div>
+
+    <div id="info-buttons">
+        <button id="btn-team" class="info-btn" type="button"></button>
+        <button id="btn-hints" class="info-btn" type="button"></button>
+        <button id="btn-news" class="info-btn" type="button"></button>
+        <button id="btn-rules" class="info-btn" type="button"></button>
+    </div>
+
+    <div id="team-cards-container" class="cards-container">
+        <div id="team-cards-wrapper" class="cards-wrapper"></div>
+    </div>
+
+    <div id="hints-cards-container" class="cards-container">
+        <div id="hints-cards-wrapper" class="cards-wrapper"></div>
+    </div>
+
+    <div id="news-cards-container" class="cards-container">
+        <div id="news-cards-wrapper" class="cards-wrapper"></div>
+    </div>
+
+    <div id="rules-cards-container" class="cards-container">
+        <div id="rules-cards-wrapper" class="cards-wrapper"></div>
+    </div>
+
+    <audio id="music-audio" preload="auto" playsinline></audio>
+
+    <button id="btn-toggle-controls" type="button" aria-label="Music controls">
+        <span class="music-toggle-glyph" aria-hidden="true">♫</span>
+    </button>
+
+    <div id="music-controls">
+        <div id="music-info">
+            <span id="music-title" data-i18n="noTrack">No Track</span>
+        </div>
+        <div id="music-buttons">
+            <button id="btn-previous" type="button"></button>
+            <button id="btn-play-pause" type="button"></button>
+            <button id="btn-next" type="button"></button>
+            <button id="btn-favorite" type="button"></button>
+            <button id="btn-mute" type="button"></button>
+            <input type="range" id="volume-slider" min="0" max="100" value="100" aria-label="Volume">
+        </div>
+    </div>
+
+    <script type="module" src="scripts/script_main.js"></script>
+</body>
+</html>

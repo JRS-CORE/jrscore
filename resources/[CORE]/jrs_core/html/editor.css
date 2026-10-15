@@ -1,0 +1,1181 @@
+/* ------------------------------------------------------------------
+   jrs_core HUD editor - jrs_metabolism editor skin.
+
+   Straight port of [HUD]/jrs_metabolism/html/jrsui/editor.css so the two
+   HUD editors on this server are one interface: the same jrs_stores
+   panel/header/tab/card artwork, the same cream-on-black palette, the same
+   flat hairlines and Georgia type, the same draggable window with an icon
+   header bar, a grouped vertical tab rail, a drag-resizable rail and a
+   scrolling settings pane.
+
+   storeui/*.png here are byte-identical copies of the same jrs_stores
+   textures jrs_metabolism uses. tab, tab-active, card and card-active are
+   all the SAME master texture in that resource - rest and active are
+   separated by border colour and brightness, not by two images.
+
+   Everything is scoped under `#hudEditorPanel` so it wins over style.css,
+   which is loaded before this file.
+   ------------------------------------------------------------------ */
+
+/* Tokens on :root, not on the panel: the editor also paints the world-side
+   selection outlines on elements that live outside the panel, and those
+   need the same rgba(var(--st-accent-rgb), ...) colours to resolve.
+   (Tokens only - never `color-scheme` on :root in a RedM NUI.) */
+:root {
+    --st-accent:     #d9d4c7;
+    --st-accent-rgb: 217, 212, 199;
+    --st-text:       #f4f0e7;
+    --st-muted:      #c3bdb1;
+    --st-dim:        #8f887c;
+    --st-success:    #7ad6a3;
+    --st-warning:    #e7c56c;
+    --st-danger:     #e57373;
+
+    --st-panel:       url(storeui/panel-background.png);
+    --st-header:      url(storeui/ui-header.png);
+    --st-tab:         url(storeui/tab.png);
+    --st-tab-active:  url(storeui/tab-active.png);
+    --st-card:        url(storeui/card.png);
+    --st-card-active: url(storeui/card-active.png);
+
+    /* jrs_stores' hairlines: three weights, all flat rgba - never a gradient,
+       which is the rule these menus already learned the hard way in CEF. */
+    --st-line:      rgba(255, 255, 255, .055);
+    --st-line-mid:  rgba(255, 255, 255, .075);
+    --st-line-hard: rgba(255, 255, 255, .15);
+    --st-well:      rgba(0, 0, 0, .44);
+}
+
+/* ------------------------------------------------------------- overlay */
+
+#hudEditorPanel {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    color: var(--st-text);
+    font-family: Georgia, "Times New Roman", serif;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 160ms ease, visibility 0ms linear 160ms;
+}
+
+body.hud-editing #hudEditorPanel {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0ms;
+}
+
+/* ---------------------------------------------------------------- panel */
+
+#hudEditorPanel .jrs-editor {
+    --jrs-content-font: Georgia, "Times New Roman", serif;
+    --jrs-title-font: Georgia, "Times New Roman", serif;
+
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    /* Landscape, not portrait - same reasoning as jrs_metabolism: a tall
+       narrow panel puts one setting per row and buries the rest under a
+       long scroll. jrs_core has far fewer settings than the metabolism
+       editor, so this is the same shape at a smaller size. */
+    width: 1040px;
+    max-width: 94vw;
+    height: 660px;
+    max-height: 90vh;
+    min-width: 560px;
+    background-image: var(--st-panel);
+    background-color: transparent;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: var(--st-text);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: none;
+    border-radius: 5px;
+    padding: 1rem 1rem 1.6rem;
+    box-sizing: border-box;
+    font-family: var(--jrs-content-font);
+    pointer-events: auto;
+    filter: drop-shadow(0 18px 35px rgba(0, 0, 0, .72));
+}
+
+/* Dragging replaces the centring transform with explicit coordinates. */
+#hudEditorPanel .jrs-editor.is-positioned {
+    left: var(--jrs-editor-x, 50%);
+    top: var(--jrs-editor-y, 50%);
+    transform: none;
+}
+
+#hudEditorPanel .jrs-editor.is-minimized { display: none; }
+#hudEditorPanel .jrs-editor.is-dragging { transition: none; }
+
+/* --------------------------------------------------------------- header */
+
+#hudEditorPanel .editor-header {
+    padding: 15px;
+    background-image: var(--st-header);
+    background-color: transparent;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-bottom: 1px solid var(--st-line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+    user-select: none;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
+
+#hudEditorPanel .editor-header h2 {
+    font-size: 22px;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--st-accent);
+    margin: 0;
+    text-shadow: 0 1px 2px #000;
+    font-family: var(--jrs-title-font);
+}
+
+#hudEditorPanel .editor-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+#hudEditorPanel .editor-header-btn {
+    background-image: var(--st-tab);
+    background-color: transparent;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 1px solid var(--st-line-mid);
+    cursor: pointer;
+    padding: 0;
+    transition: opacity .2s ease;
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    min-height: 46px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+#hudEditorPanel .editor-header-btn:hover {
+    background-image: var(--st-tab-active);
+    border-color: var(--st-line-hard);
+    filter: brightness(1.08);
+}
+
+#hudEditorPanel .editor-header-btn__svg {
+    position: static;
+    width: 23px;
+    height: 23px;
+    display: block;
+    color: var(--st-text);
+    flex-shrink: 0;
+}
+
+#hudEditorPanel .editor-header-btn__svg--save { width: 21px; height: 21px; }
+
+/* -------------------------------------------------------------- content */
+
+#hudEditorPanel .editor-content {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#hudEditorPanel .settings-tabs {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: 250px;
+}
+
+#hudEditorPanel .settings-tabs .tab {
+    background-image: var(--st-tab);
+    background-color: transparent;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 1px solid var(--st-line);
+    padding: 12px;
+    cursor: pointer;
+    font-size: 15px;
+    text-align: left;
+    transition: all .2s;
+    color: var(--st-muted);
+    text-shadow: 0 1px 2px #000;
+    margin-bottom: 3px;
+    height: 46px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--jrs-content-font);
+}
+
+#hudEditorPanel .settings-tabs .tab:hover,
+#hudEditorPanel .settings-tabs .tab.active {
+    background-image: var(--st-tab-active);
+    border-color: var(--st-line-hard);
+    color: var(--st-text);
+    filter: brightness(1.08);
+}
+
+/* jrs_stores separates rest from active by border and brightness alone,
+   which reads fine across a handful of tabs but not across a rail this
+   long. The selected one also gets an accent edge. */
+#hudEditorPanel .settings-tabs .tab.active {
+    border-left: 2px solid var(--st-accent);
+    padding-left: 9px;
+}
+
+/* Ctrl-clicked into a link group - a violet accent, distinct from the
+   accent "selected" edge and the amber "hidden" state. */
+#hudEditorPanel .settings-tabs .tab.is-linked {
+    box-shadow: inset 3px 0 0 rgba(178, 138, 255, .95);
+}
+
+#hudEditorPanel .tab-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 21px;
+    height: 21px;
+}
+
+#hudEditorPanel .tab-icon-wrap img {
+    width: 21px;
+    height: 21px;
+    object-fit: contain;
+    display: block;
+}
+
+/* The ported jrs_metabolism glyphs (html/hud-icons.js) sit in the same 21px
+   slot as the PNGs beside them and take the tab's own colour, so a selected
+   or hidden tab tints its icon exactly the way jrs_metabolism's rail does. */
+#hudEditorPanel .tab-icon-wrap[data-jrs-icon] > .jrs-hud-icon,
+#hudEditorPanel .tab-icon-wrap .jrs-hud-icon {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+#hudEditorPanel .tab-label {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#hudEditorPanel .tab-state {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-family: Arial, sans-serif;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--st-dim);
+}
+
+#hudEditorPanel .settings-tabs .tab.is-hidden .tab-state { color: var(--st-warning); }
+#hudEditorPanel .settings-tabs .tab.is-hidden .tab-label { opacity: .65; }
+
+#hudEditorPanel .tab-group-header {
+    font-size: 12px;
+    color: var(--st-dim);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding: 8px 10px 4px;
+    margin-top: 8px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--st-line);
+    flex-shrink: 0;
+}
+
+#hudEditorPanel .tab-group-header:first-child { margin-top: 0; }
+
+/* --------------------------------------------------------- resize handle */
+
+#hudEditorPanel .resize-handle {
+    width: 8px;
+    background: var(--st-well);
+    border: 1px solid var(--st-line);
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: all .2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-radius: 2px;
+    margin: 0 2px;
+}
+
+#hudEditorPanel .resize-handle:hover {
+    background: rgba(255, 255, 255, .12);
+    border-color: var(--st-line-hard);
+    width: 12px;
+}
+
+#hudEditorPanel .resize-handle-grip {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    opacity: .6;
+    transition: opacity .2s ease;
+}
+
+#hudEditorPanel .resize-handle:hover .resize-handle-grip { opacity: 1; }
+
+#hudEditorPanel .grip-dot {
+    width: 3px;
+    height: 3px;
+    background: var(--st-accent);
+    border-radius: 50%;
+}
+
+/* ------------------------------------------------------- settings panel */
+
+#hudEditorPanel .settings-panel {
+    flex: 1;
+    min-width: 0;
+    padding: 15px 20px;
+    overflow-y: auto;
+}
+
+#hudEditorPanel .settings-section {
+    display: none;
+    margin-bottom: 24px;
+}
+
+#hudEditorPanel .settings-section.active {
+    display: block;
+    animation: jrsEditorPageIn 140ms ease-out;
+}
+
+@keyframes jrsEditorPageIn {
+    from { opacity: 0; transform: translateX(-4px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Each page flows into two columns on a wide panel, exactly as
+   jrs_metabolism's does. Multi-column rather than grid because these pages
+   are a plain run of blocks - the columns balance themselves, and no rule
+   has to know how many settings a page holds. It also keeps each block
+   narrow enough that the card texture reads as the same dark panel it does
+   in the metabolism editor rather than stretching out pale. */
+#hudEditorPanel .settings-section {
+    column-count: 2;
+    column-gap: 26px;
+}
+
+#hudEditorPanel .settings-section > h3 { column-span: all; }
+
+/* A setting split down the middle of a column break is unreadable. */
+#hudEditorPanel .setting-item,
+#hudEditorPanel .setting-section {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+}
+
+/* Back to a single column when the panel is too narrow to hold two. */
+@media (max-width: 1180px) {
+    #hudEditorPanel .settings-section { column-count: 1; }
+}
+
+#hudEditorPanel .settings-section h3 {
+    margin: 0 0 18px;
+    padding: 0 0 6px;
+    border: none;
+    border-bottom: 1px solid var(--st-line-mid);
+    font-size: 18px;
+    color: var(--st-text);
+    line-height: 1.4;
+    font-family: var(--jrs-title-font);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    text-align: left;
+    text-shadow: none;
+}
+
+#hudEditorPanel .settings-section h3 .h3-sub {
+    display: block;
+    margin-top: 3px;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--st-dim);
+}
+
+#hudEditorPanel .setting-section h4 {
+    margin: 0 0 .6rem;
+    font-size: 18px;
+    color: var(--st-accent);
+    line-height: 1;
+    padding-bottom: .5rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--st-line);
+    font-family: var(--jrs-title-font);
+    text-align: left;
+}
+
+#hudEditorPanel .setting-section {
+    background-image: var(--st-card);
+    background-color: transparent;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 1px solid var(--st-line);
+    padding: .75rem 1rem;
+    margin-bottom: 1rem;
+}
+
+#hudEditorPanel .setting-item {
+    margin: 0 0 16px;
+    background: none;
+    border: none;
+    padding: 0;
+    display: block;
+}
+
+#hudEditorPanel .setting-item > label {
+    display: flex;
+    margin-bottom: 7px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--st-muted);
+}
+
+#hudEditorPanel .setting-help {
+    font-size: 13px;
+    color: var(--st-dim);
+    font-style: italic;
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+#hudEditorPanel .settings-panel::-webkit-scrollbar,
+#hudEditorPanel .settings-tabs::-webkit-scrollbar { width: 4px; }
+
+#hudEditorPanel .settings-panel::-webkit-scrollbar-track,
+#hudEditorPanel .settings-tabs::-webkit-scrollbar-track { background: transparent; }
+
+#hudEditorPanel .settings-panel::-webkit-scrollbar-thumb,
+#hudEditorPanel .settings-tabs::-webkit-scrollbar-thumb {
+    background-color: rgba(var(--st-accent-rgb), .22);
+    border-radius: 4px;
+}
+
+#hudEditorPanel .settings-panel::-webkit-scrollbar-thumb:hover,
+#hudEditorPanel .settings-tabs::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(var(--st-accent-rgb), .5);
+}
+
+/* ------------------------------------------------------------ checkboxes */
+
+/* jrs_stores has no checkbox sprite - it builds them out of the same well
+   and hairline every input uses, with the accent as the tick. This one is a
+   <button role="switch"> rather than an <input>, because the existing editor
+   code reads its aria-checked, so the tick keys off that attribute. */
+#hudEditorPanel .custom-checkbox {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--st-muted);
+    font-family: var(--jrs-content-font);
+    font-size: 15px;
+}
+
+#hudEditorPanel .checkmark {
+    position: relative;
+    display: inline-block;
+    width: 21px;
+    height: 21px;
+    margin-right: 8px;
+    background-color: var(--st-well);
+    border: 1px solid var(--st-line-mid);
+    box-sizing: border-box;
+    flex-shrink: 0;
+    transition: border-color .15s ease;
+}
+
+#hudEditorPanel .checkmark::after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 1px;
+    width: 6px;
+    height: 12px;
+    border: solid var(--st-accent);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) scale(0);
+    transition: transform .12s ease;
+}
+
+#hudEditorPanel .custom-checkbox[aria-checked="true"] .checkmark { border-color: var(--st-line-hard); }
+#hudEditorPanel .custom-checkbox[aria-checked="true"] .checkmark::after { transform: rotate(45deg) scale(1); }
+#hudEditorPanel .custom-checkbox:hover .checkmark { border-color: var(--st-line-hard); }
+#hudEditorPanel .checkbox-label { user-select: none; }
+
+/* --------------------------------------------------------------- sliders */
+
+#hudEditorPanel .custom-slider-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    user-select: none;
+    gap: 10px;
+}
+
+#hudEditorPanel .custom-slider-container label {
+    flex: 0 0 auto;
+    font-size: 15px;
+    margin-bottom: 0;
+    color: var(--st-muted);
+    /* The two step buttons live in the slider wrapper, so at two-column width
+       there is not enough room left for the label to wrap gracefully. */
+    white-space: nowrap;
+}
+
+#hudEditorPanel .slider-wrapper {
+    position: relative;
+    flex: 2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#hudEditorPanel input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 26px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    outline: none;
+    /* CEF paints its own red thumb from accent-color unless this is cleared. */
+    accent-color: initial;
+    cursor: pointer;
+}
+
+#hudEditorPanel input[type="range"]::-webkit-slider-runnable-track {
+    height: 7px;
+    background-color: var(--st-well);
+    border: 1px solid var(--st-line-mid);
+    box-sizing: border-box;
+}
+
+#hudEditorPanel input[type="range"]:focus { outline: none; box-shadow: none; }
+
+#hudEditorPanel input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 17px;
+    height: 17px;
+    margin-top: -6px;
+    background-color: var(--st-accent);
+    border: 1px solid rgba(0, 0, 0, .55);
+    border-radius: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+    cursor: pointer;
+    transition: filter .1s ease;
+}
+
+#hudEditorPanel input[type="range"]::-webkit-slider-thumb:hover { filter: brightness(120%); }
+
+#hudEditorPanel .slider-value {
+    min-width: 54px;
+    text-align: right;
+    font-size: 14px;
+    color: var(--st-muted);
+}
+
+#hudEditorPanel .slider-step {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    padding: 0;
+    background-image: var(--st-tab);
+    background-color: transparent;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 1px solid var(--st-line-mid);
+    color: var(--st-text);
+    font-family: var(--jrs-content-font);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+#hudEditorPanel .slider-step:hover {
+    background-image: var(--st-tab-active);
+    border-color: var(--st-line-hard);
+    filter: brightness(1.08);
+}
+
+/* ----------------------------------------------------------- colour rows */
+
+#hudEditorPanel .color-input {
+    display: flex;
+    align-items: center;
+}
+
+#hudEditorPanel .color-input input[type="color"] {
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: none;
+    margin-right: 10px;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+#hudEditorPanel .color-input input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    padding: 10px;
+    font-size: 14px;
+    color: var(--st-text);
+    font-family: monospace;
+    background-color: var(--st-well);
+    border: 1px solid var(--st-line-mid);
+    outline: none;
+}
+
+#hudEditorPanel .color-input input[type="text"]:focus-visible {
+    outline: 1px solid rgba(var(--st-accent-rgb), .9);
+    outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------- buttons */
+
+#hudEditorPanel .editor-btn {
+    padding: 11px 14px;
+    background-image: var(--st-tab);
+    background-color: transparent;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 1px solid var(--st-line-mid);
+    color: var(--st-muted);
+    text-shadow: 0 1px 2px #000;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all .2s ease;
+    text-align: center;
+    font-family: var(--jrs-content-font);
+    border-radius: 0;
+}
+
+#hudEditorPanel .editor-btn:hover {
+    background-image: var(--st-tab-active);
+    border-color: var(--st-line-hard);
+    color: var(--st-text);
+    filter: brightness(1.08);
+}
+
+#hudEditorPanel .color-input .editor-btn { margin-left: 10px; flex-shrink: 0; }
+
+/* The cross-HUD hand-off button - full width so it reads as an action that
+   leaves this menu, not another setting on it. */
+#hudEditorPanel .editor-btn--wide {
+    display: block;
+    width: 100%;
+    padding: 13px 15px;
+    color: var(--st-text);
+    font-size: 15px;
+}
+
+/* Link/Unlink - a violet accent, distinct from the accent "selected" edge
+   and the amber "hidden" state, so a linked element reads at a glance even
+   when it is not the thing currently selected. Same colour jrs_metabolism's
+   selection bar uses for exactly this. */
+#hudEditorPanel .link-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+#hudEditorPanel .jrs-selection-link {
+    padding: 8px 14px;
+    border: 1px solid rgba(178, 138, 255, .4);
+    background-color: rgba(178, 138, 255, .08);
+    background-image: none;
+    color: #d9c9ff;
+    cursor: pointer;
+    font-family: var(--jrs-content-font);
+    font-size: 14px;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+
+#hudEditorPanel .jrs-selection-link:hover {
+    border-color: rgba(178, 138, 255, .9);
+    background-color: rgba(178, 138, 255, .18);
+    filter: none;
+}
+
+#hudEditorPanel .jrs-selection-link[hidden] { display: none; }
+
+#hudEditorPanel .selection-note {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--st-muted);
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+#hudEditorPanel .selection-note:empty { display: none; }
+
+/* --------------------------------------------- element visibility chips */
+
+#hudEditorPanel .visibility-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
+    gap: 7px;
+}
+
+#hudEditorPanel .core-item {
+    display: flex;
+    align-items: center;
+    padding: 9px 10px;
+    gap: 8px;
+    border: 1px solid var(--st-line);
+    border-radius: 0;
+    background-color: var(--st-well);
+    background-image: none;
+    color: var(--st-dim);
+    font-size: 13px;
+    letter-spacing: .05em;
+    font-family: var(--jrs-content-font);
+    cursor: pointer;
+    text-align: left;
+}
+
+#hudEditorPanel .core-item:hover {
+    border-color: var(--st-line-hard);
+    color: var(--st-muted);
+}
+
+#hudEditorPanel .core-item.on {
+    background-image: var(--st-tab-active);
+    background-color: transparent;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-color: var(--st-line-mid);
+    color: var(--st-text);
+    text-shadow: 0 1px 2px #000;
+}
+
+#hudEditorPanel .core-item .dot {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(var(--st-accent-rgb), .28);
+}
+
+#hudEditorPanel .core-item.on .dot { background: var(--st-accent); }
+
+/* Forced off by the server config - the player's own toggle cannot bring
+   it back, so the chip says so instead of pretending it is switchable. */
+#hudEditorPanel .core-item.is-server-off {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+#hudEditorPanel .core-item.is-server-off .dot { background: var(--st-warning); }
+
+/* ------------------------------------------------------------ crosshair */
+
+#hudEditorPanel .crosshair-shape-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 8px;
+}
+
+#hudEditorPanel .crosshair-shape-card {
+    width: 64px;
+    height: 64px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--st-well);
+    background-image: none;
+    border: 1px solid var(--st-line);
+    cursor: pointer;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+
+#hudEditorPanel .crosshair-shape-card img {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    /* Same base tint as the live overlay, so the picker reads the shape
+       clearly against the dark well regardless of the chosen colour. */
+    filter: brightness(0) invert(1);
+}
+
+#hudEditorPanel .crosshair-shape-card:hover { border-color: var(--st-line-hard); }
+
+#hudEditorPanel .crosshair-shape-card.is-selected {
+    border-color: var(--st-accent);
+    background-color: rgba(var(--st-accent-rgb), .14);
+}
+
+#hudEditorPanel .crosshair-shape-card.is-selected img {
+    filter: var(--crosshair-filter, brightness(0) invert(1));
+}
+
+#hudEditorPanel .crosshair-preview-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 90px;
+    background: radial-gradient(circle, rgba(255, 255, 255, .05) 0%, rgba(0, 0, 0, .45) 100%), var(--st-well);
+    border: 1px solid var(--st-line);
+    margin-bottom: 4px;
+}
+
+#hudEditorPanel .crosshair-preview-box img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    filter: var(--crosshair-filter, brightness(0) invert(1));
+    transition: filter .15s ease;
+}
+
+#hudEditorPanel .crosshair-color-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+#hudEditorPanel .crosshair-color-swatch {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid var(--st-line-mid);
+    cursor: pointer;
+    transition: border-color .15s ease, transform .15s ease;
+}
+
+#hudEditorPanel .crosshair-color-swatch:hover { transform: scale(1.12); }
+
+#hudEditorPanel .crosshair-color-swatch.is-selected {
+    border-color: var(--st-accent);
+    box-shadow: 0 0 0 2px rgba(var(--st-accent-rgb), .35);
+}
+
+#hudEditorPanel .crosshair-color-white  { background: #ffffff; }
+#hudEditorPanel .crosshair-color-red    { background: #e53935; }
+#hudEditorPanel .crosshair-color-green  { background: #43a047; }
+#hudEditorPanel .crosshair-color-blue   { background: #1e88e5; }
+#hudEditorPanel .crosshair-color-yellow { background: #fdd835; }
+#hudEditorPanel .crosshair-color-pink   { background: #ec407a; }
+#hudEditorPanel .crosshair-color-purple { background: #8e24aa; }
+#hudEditorPanel .crosshair-color-cyan   { background: #00acc1; }
+#hudEditorPanel .crosshair-color-orange { background: #fb8c00; }
+#hudEditorPanel .crosshair-color-black  { background: #1a1a1a; }
+
+/* ------------------------------------------------------------ help cards */
+
+/* Flat well, not the card texture: these sit INSIDE a .setting-section that
+   already paints that texture, and stacking it twice washes the block out to
+   a pale beige that looks nothing like jrs_metabolism's panel. */
+#hudEditorPanel .help-card {
+    background-color: var(--st-well);
+    background-image: none;
+    border: 1px solid var(--st-line);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+}
+
+#hudEditorPanel .help-card strong {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--st-text);
+    font-family: var(--jrs-title-font);
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: .03em;
+}
+
+#hudEditorPanel .help-card span {
+    display: block;
+    color: var(--st-dim);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* ------------------------------------------------- minimised dock / fab */
+
+#hudEditorPanel .editor-minimized-dock {
+    position: fixed;
+    left: 50%;
+    bottom: 12%;
+    transform: translate(-50%, 0);
+    z-index: 1001;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;
+}
+
+#hudEditorPanel .editor-minimized-dock.show { display: flex; }
+
+#hudEditorPanel .editor-restore-fab {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background-image: var(--st-tab);
+    background-color: transparent;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 1px solid var(--st-line-mid);
+    color: var(--st-text);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .45);
+    pointer-events: auto;
+    flex-shrink: 0;
+}
+
+#hudEditorPanel .editor-restore-fab:hover {
+    background-image: var(--st-tab-active);
+    border-color: var(--st-line-hard);
+    filter: brightness(1.08);
+}
+
+#hudEditorPanel .editor-restore-fab__svg {
+    position: static;
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+#hudEditorPanel .editor-minimized-selection {
+    pointer-events: auto;
+    padding: 6px 10px;
+    background-image: var(--st-card);
+    background-color: transparent;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 1px solid var(--st-line-mid);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, .4);
+    white-space: nowrap;
+    font-family: var(--jrs-content-font);
+    font-size: 12px;
+    color: var(--st-muted);
+}
+
+/* ------------------------------------------- editor mode world treatment */
+
+/* jrs_metabolism dims the whole screen behind the HUD while editing. The dim
+   has to sit on the body, not inside #hudEditorPanel: that panel is its own
+   z-index:10000 stacking context, so a child of it would paint over the very
+   HUD elements being edited (they are pinned to z-index 9000 while the editor
+   is open) instead of behind them. */
+body.hud-editing::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-color: rgba(29, 29, 29, .8);
+    z-index: 8000;
+    pointer-events: none;
+}
+
+/* Every element stays visible and grabbable while editing, including the
+   ones the player (or the server config) has switched off. */
+body.hud-editing .playerStats .stat,
+body.hud-editing .playerStats .stat.hud-user-hidden,
+body.hud-editing .playerStats .stat.hud-config-hidden {
+    display: flex !important;
+    cursor: grab;
+    user-select: none;
+    pointer-events: auto;
+    outline: 1px dashed rgba(var(--st-accent-rgb), .26);
+    outline-offset: 5px;
+    transition: outline-color .12s ease;
+}
+
+body.hud-editing .playerStats .stat:hover {
+    outline: 2px dashed rgba(var(--st-accent-rgb), .67);
+}
+
+body.hud-editing .playerStats .stat.hud-selected {
+    outline: 2px dashed rgba(var(--st-accent-rgb), .95);
+}
+
+/* Linked but not selected keeps the violet edge from the panel. The XP boost
+   banner is dragged the same way but is not a .playerStats .stat, so it is
+   named alongside every rule that has to reach it. */
+body.hud-editing .playerStats .stat.hud-linked,
+body.hud-editing .doubleXpHud.hud-linked {
+    outline-color: rgba(178, 138, 255, .75);
+}
+
+body.hud-editing .playerStats .stat.hud-linked.hud-selected,
+body.hud-editing .doubleXpHud.hud-linked.hud-selected {
+    outline-color: rgba(var(--st-accent-rgb), .95);
+}
+
+/* Switched-off elements keep jrs_metabolism's amber "this is off" tint. */
+body.hud-editing .playerStats .stat.hud-user-hidden,
+body.hud-editing .playerStats .stat.hud-config-hidden {
+    opacity: .55;
+    filter: grayscale(.45);
+    outline-color: rgba(224, 161, 58, .5);
+}
+
+body.hud-editing .playerStats .stat.hud-user-hidden:hover,
+body.hud-editing .playerStats .stat.hud-config-hidden:hover,
+body.hud-editing .playerStats .stat.hud-user-hidden.hud-selected,
+body.hud-editing .playerStats .stat.hud-config-hidden.hud-selected {
+    outline-color: #e0a13a;
+}
+
+body.hud-editing .playerStats .stat.hud-dragging {
+    cursor: grabbing;
+    outline-color: #ffffff;
+}
+
+@media (max-height: 700px), (max-width: 900px) {
+    #hudEditorPanel .jrs-editor {
+        width: 92vw;
+        height: 88vh;
+        padding: .7rem .7rem 1rem;
+    }
+    #hudEditorPanel .editor-header { padding: 10px; margin-bottom: .6rem; }
+    #hudEditorPanel .editor-header h2 { font-size: 18px; }
+    #hudEditorPanel .editor-header-btn { width: 38px; height: 38px; min-width: 38px; min-height: 38px; }
+    #hudEditorPanel .settings-tabs { width: 200px; }
+    #hudEditorPanel .settings-tabs .tab { height: 38px; font-size: 13px; }
+}
+
+/* Crosshair tile 0 - the game's own reticle, drawn as a word, not a shape. */
+.crosshair-shape-card.crosshair-shape-default span {
+    display: block;
+    font-size: 11px;
+    line-height: 1.15;
+    color: #e6e6e6;
+    text-align: center;
+    padding: 0 2px;
+    pointer-events: none;
+}
+.crosshair-preview-default {
+    font-size: 13px;
+    color: #cfcfcf;
+    text-align: center;
+}
+.crosshair-preview-default[hidden],
+#crosshairEditorPreview[hidden] {
+    display: none !important;
+}
+
+/* ------------------------------------------------------------
+   Active / Inactive HUD Editor Enhancements & Double XP Support
+   ------------------------------------------------------------ */
+body.hud-editing #doubleXpHud,
+body.hud-editing #doubleXpHud.hud-user-hidden,
+body.hud-editing #doubleXpHud.hud-config-hidden {
+    display: flex !important;
+    cursor: grab;
+    user-select: none;
+    pointer-events: auto;
+    outline: 1px dashed rgba(var(--st-accent-rgb), .26);
+    outline-offset: 5px;
+    transition: outline-color .12s ease;
+}
+
+body.hud-editing #doubleXpHud:hover {
+    outline: 2px dashed rgba(var(--st-accent-rgb), .67);
+}
+
+body.hud-editing #doubleXpHud.hud-selected {
+    outline: 2px dashed rgba(var(--st-accent-rgb), .95);
+}
+
+body.hud-editing #doubleXpHud.hud-user-hidden,
+body.hud-editing #doubleXpHud.hud-config-hidden,
+body.hud-editing .hud-editor-inactive {
+    opacity: .55;
+    filter: grayscale(.45);
+    outline-color: rgba(224, 161, 58, .5) !important;
+}
+
+body.hud-editing #doubleXpHud.hud-user-hidden:hover,
+body.hud-editing #doubleXpHud.hud-config-hidden:hover,
+body.hud-editing #doubleXpHud.hud-user-hidden.hud-selected,
+body.hud-editing #doubleXpHud.hud-config-hidden.hud-selected,
+body.hud-editing .hud-editor-inactive:hover,
+body.hud-editing .hud-editor-inactive.hud-selected {
+    outline-color: #e0a13a !important;
+}
+
+body.hud-editing #doubleXpHud.hud-dragging {
+    cursor: grabbing;
+    outline-color: #ffffff;
+}
+
+/* Floating status badge on elements in editor mode (ACTIVE / NOT ACTIVE) */
+body.hud-editing [data-hud-editor-state]::after {
+    content: attr(data-hud-editor-state);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%);
+    min-width: max-content;
+    padding: 3px 7px;
+    border-radius: 3px;
+    background: rgba(9, 9, 9, 0.92);
+    border: 1px solid rgba(83, 197, 156, 0.9);
+    color: #dff8ef;
+    font: 700 10px/1.2 Arial, sans-serif;
+    letter-spacing: 0.7px;
+    text-shadow: none;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+body.hud-editing .hud-editor-inactive::after {
+    border-color: #e0a13a;
+    color: #ffd48a;
+}

@@ -1,0 +1,1 @@
+-- jrs_kit registers the character lookup (JRS.Me) used by the job check on the client.

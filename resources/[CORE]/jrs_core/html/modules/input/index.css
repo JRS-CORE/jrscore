@@ -1,0 +1,174 @@
+@font-face {
+    font-family: crock;
+    src: url(crock.ttf);
+}
+
+* {
+    font-family: crock;
+    box-sizing: border-box;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    background: none !important;
+    overflow: hidden;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DIALOG PANEL — matches inventory #input_data dark style
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#container,
+#container2 {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 430px;
+    background-color: #0b0a09;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 4px;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .65);
+    color: #f4f0e7;
+    overflow: hidden;
+    padding: 0;
+    height: auto;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TITLE (header)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#header,
+#header2 {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: auto;
+    font-size: 15px;
+    color: #f4f0e7;
+    text-align: center;
+    padding: 18px 24px 10px;
+    letter-spacing: .4px;
+    background: none;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    outline: none;
+    overflow: visible;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PROMPT SUBTITLE — shows the instruction text
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#header_desc {
+    font-size: 12px;
+    color: rgba(244, 240, 231, .55);
+    text-align: center;
+    padding: 6px 20px 0;
+    min-height: 4px;
+    line-height: 1.5;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TEXT INPUT FIELD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+input[type="text"],
+input[type="inputType"] {
+    -webkit-user-select: text;
+    user-select: text;
+    display: block;
+    width: calc(100% - 48px);
+    margin: 12px auto 16px;
+    padding: 5px 0;
+    position: relative;
+    top: auto;
+    left: auto;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, .22);
+    outline: none;
+    color: #ffffff;
+    font-size: 19px;
+    font-family: crock;
+    text-align: center;
+}
+
+input[type="text"]:focus,
+input[type="inputType"]:focus {
+    border-bottom-color: rgba(255, 255, 255, .50);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BUTTON ROW WRAPPER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.jrs-btn-row {
+    display: flex;
+    flex-direction: row;
+    border-top: 1px solid rgba(255, 255, 255, .10);
+    margin-top: 4px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BUTTONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#button_1,
+#button_2,
+#button_1_ans,
+#button_2_ans {
+    flex: 1;
+    position: relative;
+    bottom: auto;
+    right: auto;
+    left: auto;
+    top: auto;
+    width: auto;
+    height: auto;
+    display: block;
+    text-align: center;
+    padding: 13px 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: rgba(244, 240, 231, .72);
+    background: transparent;
+    background-image: none !important;
+    background-repeat: no-repeat;
+    background-color: transparent;
+    border: none;
+    border-left: none;
+    border-right: none;
+    outline: none;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    transition: background .15s ease, color .15s ease;
+    letter-spacing: .2px;
+}
+
+/* Divider: confirm on left, leave on right (LTR) */
+#button_2,
+#button_2_ans {
+    border-right: 1px solid rgba(255, 255, 255, .10);
+}
+
+#button_1:hover,
+#button_1_ans:hover,
+#button_2:hover,
+#button_2_ans:hover {
+    background: rgba(255, 255, 255, .06) !important;
+    background-image: none !important;
+    color: #f4f0e7;
+}
+
+#button_1:active,
+#button_1_ans:active,
+#button_2:active,
+#button_2_ans:active {
+    background: rgba(255, 255, 255, .10) !important;
+    background-image: none !important;
+}

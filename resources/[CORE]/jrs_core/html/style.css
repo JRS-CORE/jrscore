@@ -1,0 +1,1022 @@
+@font-face { font-family: "JRS Ranch"; src: url("Hapna-Regular.ttf") format("truetype"); }
+@font-face { font-family: "JRS Display"; src: url("RDRLino-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Cormorant Garamond"; src: url("Hapna-Regular.ttf") format("truetype"); font-weight: 300 700; }
+@font-face { font-family: "Cinzel"; src: url("RDRLino-Regular.ttf") format("truetype"); font-weight: 400 900; }
+@font-face { font-family: "Playfair Display"; src: url("Hapna-Regular.ttf") format("truetype"); font-weight: 400 900; }
+
+* {padding: 0; margin: 0; box-sizing: border-box;}
+
+body { background: transparent; overflow: hidden; width: 100%; height: 100%; }
+
+html { width: 100%; height: 100%; }
+
+/* Custom aiming reticle (Config.Crosshair, HUD editor's Crosshair tab). Lives
+   outside #ui on purpose - see the comment beside its markup in ui.html.
+   filter tints the flat PNG shape; see CROSSHAIR_COLORS in main.js. */
+.crosshair-overlay {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 2147483647;
+    filter: var(--crosshair-filter, brightness(0) invert(1));
+}
+
+.crosshair-overlay.is-aiming { display: block !important; }
+
+#ui {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.playerStats {
+    position: absolute;
+    top: clamp(100px, 13vh, 280px);
+    right: clamp(16px, 1.8vw, 48px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: clamp(8px, .9vh, 20px);
+    width: clamp(180px, 12vw, 360px);
+    min-width: 180px;
+}
+
+
+.stat {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 11px;
+    width: 180px;
+    min-width: 180px;
+    min-height: 32px;
+    padding: 0;
+    flex-direction: row-reverse;
+    transform: scale(calc(var(--hud-scale, 1) * var(--jrs-screen-scale, 1)));
+    transform-origin: top right;
+}
+
+.stat .icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.stat .icon img {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+}
+
+/* Inline-SVG glyphs ported from jrs_metabolism (see html/hud-icons.js). They
+   paint with `currentColor`, so the colour comes from the .icon box below and
+   the HUD editor's Text Colour picker reaches the glyph as well as the label.
+   Line art reads heavier than the padded PNGs it replaces, hence 24 not 30. */
+.stat .icon .icon-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.stat .icon .jrs-hud-icon {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, .85));
+}
+
+.stat span {
+    flex: 1 1 auto;
+    min-width: 0;
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: right;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Each rule's hardcoded hex is the "default colour" a var(--hud-color)
+   override (set by the HUD editor's Text Colour picker) falls back to when
+   unset - so an element nobody has touched still renders exactly as before. */
+#PlayerGold span,  #PlayerGold .icon  { color: var(--hud-color, #f0c040); }
+#PlayerGold span { font-weight: 600; font-size: 18px; }
+#PlayerMoney span, #PlayerMoney .icon { color: var(--hud-color, #ffffff); }
+#PlayerDirtyMoney span { color: var(--hud-color, #b85c5c); font-weight: 600; }
+#PlayerDirtyMoney .icon img { filter: grayscale(1) sepia(.45) saturate(2.2) hue-rotate(315deg) brightness(.9); }
+#id span, #id .icon   { color: var(--hud-color, #c8b898); }
+#id span { font-size: 16px; }
+#job span, #job .icon { color: var(--hud-color, #d4c4a8); }
+#job span { font-size: 16px; }
+#xp span { color: var(--hud-color, #b89870); font-size: 16px; }
+#town span { color: var(--hud-color, #c8b898); font-size: 16px; }
+#pvp span { font-size: 15px; font-weight: 700; letter-spacing: 1px; }
+/* The pvp shield used to be a PNG recoloured with a sepia/hue-rotate filter
+   stack; as an SVG it just takes the state colour directly. */
+#pvp.pvp-enabled span,  #pvp.pvp-enabled .icon  { color: #d86d62; }
+#pvp.pvp-disabled span, #pvp.pvp-disabled .icon { color: #75b884; }
+
+/* Fades out after the player stands still for a few seconds, same idea as
+   the compass; setPvpIdle in main.js toggles this, driven by client-side
+   movement polling in gameplay.lua. */
+#pvp { transition: opacity 0.6s ease; }
+#pvp.pvp-idle-hidden { opacity: 0; }
+
+.stat-divider { display: none; }
+
+body.hud-suppressed #ui {
+    display: none !important;
+}
+
+.playerStats .stat.hud-user-hidden,
+.playerStats .stat.hud-config-hidden { display: none !important; }
+
+.carStats {
+    position: absolute;
+    right: 50px;
+    bottom: 50px;
+    display: none;
+}
+
+.carStats .stat {
+    background: linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.65) 100%);
+    text-align: right;
+}
+
+.carStats .stat .icon {
+    float: right;
+    right: 0px;
+    left: 15px;
+}
+
+.carStats .stat span {
+    white-space: nowrap;
+    right: 20px;
+}
+
+.status {
+    display: flex;
+    width: 195px;
+    position: relative;
+    left: -15px;
+    justify-content: space-between;
+}
+
+.veh-gas {
+    display: flex;
+    width: 235px;
+    position: relative;
+    right: -15px;
+    justify-content: space-between;
+}
+
+.vert-stat {
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.vert-stat .bg {
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    bottom: 0;
+}
+
+.vert-stat img {
+    width: 50%;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#gas {
+    position: absolute;
+    right: 100px;
+    bottom: 50px;
+}
+
+#loading-screen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background:
+        repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(255,255,255,0.015) 60px, rgba(255,255,255,0.015) 61px),
+        repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(255,255,255,0.015) 60px, rgba(255,255,255,0.015) 61px),
+        radial-gradient(ellipse at 50% 40%, #1a1a1a 0%, #0d0d0d 60%, #050505 100%);
+    z-index: 9999;
+    font-family: 'Cormorant Garamond', serif;
+    color: #fff;
+}
+
+#background-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.03) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+#loading-screen::before,
+#loading-screen::after {
+    content: '';
+    position: absolute;
+    left: 60px;
+    right: 60px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    z-index: 2;
+}
+#loading-screen::before { top: 30px; }
+#loading-screen::after { bottom: 30px; }
+
+.corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: rgba(255,255,255,0.15);
+    border-style: solid;
+    z-index: 2;
+}
+.corner-tl { top: 25px; left: 55px; border-width: 1px 0 0 1px; }
+.corner-tr { top: 25px; right: 55px; border-width: 1px 1px 0 0; }
+.corner-bl { bottom: 25px; left: 55px; border-width: 0 0 1px 1px; }
+.corner-br { bottom: 25px; right: 55px; border-width: 0 1px 1px 0; }
+
+#center-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 1;
+    gap: 50px;
+}
+
+#logo-container { text-align: center; }
+#logo-icon {
+    font-size: 52px;
+    margin-bottom: 12px;
+    filter: grayscale(1) brightness(1.5);
+    animation: float 3s ease-in-out infinite;
+}
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+#logo-container::before {
+    content: '';
+    display: block;
+    width: 80px;
+    height: 1px;
+    background: rgba(255,255,255,0.25);
+    margin: 0 auto 24px auto;
+}
+#server-title {
+    font-family: 'Cinzel', serif;
+    font-size: 44px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+    letter-spacing: 10px;
+    text-transform: uppercase;
+}
+#server-subtitle {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 14px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 14px;
+    text-transform: uppercase;
+    margin-top: 10px;
+}
+#logo-container::after {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 1px;
+    background: rgba(255,255,255,0.15);
+    margin: 20px auto 0 auto;
+}
+
+#spinner-container {
+    width: 80px;
+    height: 80px;
+    position: relative;
+}
+#revolver-spinner {
+    width: 70px;
+    height: 70px;
+    border: 2px solid rgba(255,255,255,0.08);
+    border-top: 2px solid rgba(255,255,255,0.6);
+    border-radius: 50%;
+    animation: spin 1.2s cubic-bezier(0.4,0.0,0.2,1) infinite;
+    margin: 5px;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+#progress-container { width: 360px; text-align: center; }
+#progress-bar {
+    width: 100%;
+    height: 1px;
+    background: rgba(255,255,255,0.1);
+    position: relative;
+}
+#progress-fill {
+    width: 0%;
+    height: 100%;
+    background: #fff;
+    transition: width 0.4s ease;
+    position: relative;
+}
+#progress-fill::after {
+    content: '';
+    position: absolute;
+    right: -3px;
+    top: -3px;
+    width: 7px;
+    height: 7px;
+    background: #fff;
+    border-radius: 50%;
+    opacity: 0.6;
+}
+#progress-text {
+    margin-top: 14px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+}
+
+#tip-container {
+    text-align: center;
+    max-width: 480px;
+    opacity: 0;
+    animation: fadeIn 1s ease forwards;
+    animation-delay: 0.5s;
+}
+@keyframes fadeIn { to { opacity: 1; } }
+#tip-label {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 5px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+#tip-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 17px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 2px;
+    line-height: 1.6;
+    font-style: italic;
+}
+
+#bottom-info {
+    position: absolute;
+    bottom: 50px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 80px;
+    z-index: 1;
+}
+#server-ip, #player-count {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 11px;
+    color: rgba(255,255,255,0.15);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+/* ==========================================================================
+   LEVEL / XP HUD (visual presentation adapted from alfie_level)
+   ========================================================================== */
+:root {
+  --level-hud-w: clamp(360px, 24vw, 490px);
+  --level-hud-h: clamp(84px, 5.5vw, 102px);
+  --level-hud-x: clamp(16px, 2.4vw, 50px);
+  --level-hud-y: clamp(95px, 10.5vh, 125px);
+  --level-badge-size: clamp(66px, 4.4vw, 86px);
+  --level-badge-boost: clamp(56px, 3.7vw, 74px);
+  --level-bar-w: clamp(225px, 16vw, 324px);
+  --level-bar-h: clamp(12px, 0.85vw, 15px);
+  --level-text-main: rgba(255,255,255,0.96);
+  --level-text-soft: rgba(255,255,255,0.60);
+  --level-text-dark: rgba(12,12,12,0.96);
+  --level-toast-w: clamp(250px, 17vw, 320px);
+  --level-toast-h: clamp(58px, 4vw, 74px);
+}
+
+/* The .levelHud block is the unified container for both the level card and the
+   Double XP boost top tier. Tied to pause menu, TAB peek and XP gain updates. */
+.levelHud {
+  position: fixed;
+  top: var(--level-hud-y);
+  left: var(--level-hud-x);
+  right: auto;
+  width: var(--level-hud-w);
+  height: auto;
+  max-width: calc(100vw - (var(--level-hud-x) * 2));
+  z-index: 9000;
+  pointer-events: none;
+}
+
+.levelHud__card {
+  position: relative;
+  width: 100%;
+  height: auto;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition:
+    opacity 180ms ease,
+    transform 220ms ease,
+    visibility 0ms linear 220ms;
+  background: url("img/level/selection_box_bg_1c.png") center / 100% 100% no-repeat;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.55));
+}
+
+.levelHud.is-visible .levelHud__card {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition:
+    opacity 180ms ease,
+    transform 220ms ease,
+    visibility 0ms linear 0ms;
+}
+
+.levelHud__card::before {
+  content: "";
+  position: absolute;
+  inset: 7px 8px;
+  opacity: 0.9;
+}
+
+.levelHud__inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  padding: 8px 16px 8px 12px;
+}
+
+.rankBadge {
+  position: relative;
+  flex: 0 0 var(--level-badge-size);
+  width: var(--level-badge-size);
+  height: var(--level-badge-size);
+  filter: drop-shadow(0 3px 7px rgba(0,0,0,0.42));
+}
+
+.rankBadge img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.rankBadge__number {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--level-text-dark);
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  line-height: 1;
+
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.14),
+    0 0 1px rgba(0,0,0,0.15);
+
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.rankBadge__number[data-digits="1"] {
+  font-size: 48px;
+  letter-spacing: -0.03em;
+  transform: translate(-1px, -2px) scaleY(1.04);
+}
+
+.rankBadge__number[data-digits="2"] {
+  font-size: 42px;
+  letter-spacing: -0.04em;
+  transform: translate(-1px, -2px) scaleY(1.04);
+}
+
+.rankBadge__number[data-digits="3"] {
+  font-size: 36px;
+  letter-spacing: -0.06em;
+  transform: translate(0px, -2px) scaleY(1.02);
+}
+
+.rankBadge__number[data-digits="4"] {
+  font-size: 26px;
+  letter-spacing: -0.04em;
+  transform: translate(0px, -2px) scaleY(1.02);
+}
+
+.rankBadge__number[data-digits="5"],
+.rankBadge__number[data-digits="6"] {
+  font-size: 21px;
+  letter-spacing: -0.05em;
+  transform: translate(0px, -2px) scaleY(1.02);
+}
+
+/* =====================================================================
+   THE "MAX" TEXT IN THE ROUND BADGE (shown once the player hits max level).
+   Edit font-size below to make it bigger/smaller so it fits the badge image.
+   NOTE: !important is required here -- app.js also sets data-digits="3" on
+   this element (for legacy reasons), and .rankBadge__number[data-digits="3"]
+   above has higher CSS specificity (36px, class+attribute selector) than a
+   plain single-class selector. Without !important that 36px rule always won
+   silently, no matter what font-size was set here -- that was the actual bug.
+   ===================================================================== */
+.rankBadge__number--max {
+  font-size: 18px !important;
+  letter-spacing: -0.02em !important;
+  transform: translate(0px, -1px) scaleY(1.0) !important;
+}
+
+.xpWrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.xpBar {
+  position: relative;
+  width: var(--level-bar-w);
+  height: var(--level-bar-h);
+  overflow: hidden;
+}
+
+.xpBar__track,
+.xpBar__fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  height: 100%;
+}
+
+.xpBar__track {
+  width: 100%;
+  opacity: 0.92;
+  filter: brightness(0.22) contrast(1.08);
+}
+
+.xpBar__fillClip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0%;
+  height: 100%;
+  overflow: hidden;
+  transition: width 650ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@keyframes rankPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.18); filter: drop-shadow(0 0 6px rgba(255,215,0,0.6)); }
+  100% { transform: scale(1); }
+}
+
+.rank-pulse {
+  animation: rankPulse 550ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.xpBar__fill {
+  width: var(--level-bar-w);
+  max-width: none;
+  min-width: var(--level-bar-w);
+  object-fit: fill;
+  filter: drop-shadow(0 0 4px rgba(255,255,255,0.12));
+}
+
+.xpMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: var(--level-bar-w);
+}
+
+.xpMeta__label {
+  color: var(--level-text-soft);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+}
+
+.xpMeta__value {
+  color: var(--level-text-main);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.32);
+}
+
+/* Shown instead of the XP bar/meta once the player hits Config.MaxLevel --
+   toggled via #levelMaxText.style.display in app.js (render()). Kept hidden
+   by default here so it never flashes visible before app.js runs once. */
+.levelMax {
+  display: none;
+  color: var(--level-text-main);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+
+/* TOAST */
+
+.levelToast {
+  position: fixed;
+  top: 148px;
+  left: 48px;
+  width: var(--level-toast-w);
+  height: var(--level-toast-h);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-18px) translateY(-4px);
+  transition:
+    opacity 180ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0ms linear 260ms;
+}
+
+.levelToast.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0) translateY(0);
+  transition:
+    opacity 180ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0ms linear 0ms;
+}
+
+.levelToast__card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 12px 16px;
+  background: url("img/level/selection_box_bg_1c.png") center / 100% 100% no-repeat;
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.42));
+}
+
+.levelToast__card::before {
+  content: "";
+  position: absolute;
+  inset: 7px 8px;
+  background: linear-gradient(180deg, rgba(10,10,10,0.70), rgba(10,10,10,0.38));
+  border-radius: 2px;
+}
+
+.levelToast__card::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 10px;
+  height: 2px;
+  opacity: 0.9;
+}
+
+.levelToast.is-up .levelToast__card::after {
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.9), rgba(255,255,255,0));
+}
+
+.levelToast.is-down .levelToast__card::after {
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(180,180,180,0.9), rgba(255,255,255,0));
+}
+
+.levelToast__title,
+.levelToast__levels {
+  position: relative;
+  z-index: 1;
+}
+
+.levelToast__title {
+  color: rgba(255,255,255,0.90);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+
+.levelToast__levels {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.levelToast__num {
+  color: rgba(255,255,255,0.96);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 28px;
+  font-weight: 200;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+
+.levelToast__arrow {
+  color: rgba(255,255,255,0.78);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* The HUD editor now lives in editor.css - a port of jrs_metabolism's own
+   editor skin. The two @font-face blocks that used to sit here (Ranch Slab /
+   Ranch Display) went with it; that menu is set in Georgia like jrs_stores. */
+
+/* ==========================================================================
+   GLOBAL TIMED XP BOOST TIER (Unified inside Level Tab UI Card)
+   ========================================================================== */
+.levelHud__tier {
+    position: relative;
+    width: 100%;
+}
+
+.levelHud__tier--boost {
+    display: block;
+}
+
+.levelHud__tier--boost.tier-hidden,
+.levelHud__tier--boost:not(.is-active) {
+    display: none !important;
+}
+
+/* Single-tier card (normal Level HUD only) */
+.levelHud__card:not(.has-boost) {
+    height: var(--level-hud-h);
+}
+
+.levelHud__card:not(.has-boost) .levelHud__inner {
+    height: 100%;
+    padding: clamp(6px, 0.5vw, 10px) clamp(12px, 0.9vw, 18px) clamp(6px, 0.5vw, 10px) clamp(10px, 0.7vw, 14px);
+}
+
+/* Two-tier card (Double XP on top + Level on bottom, inside ONE unified UI) */
+.levelHud__card.has-boost {
+    height: auto;
+    padding: clamp(4px, 0.35vw, 7px) 0;
+}
+
+.levelHud__card.has-boost .levelHud__inner {
+    padding: clamp(4px, 0.35vw, 6px) clamp(12px, 0.9vw, 18px) clamp(4px, 0.35vw, 6px) clamp(10px, 0.7vw, 14px);
+}
+
+.levelHud__card.has-boost .rankBadge {
+    flex: 0 0 var(--level-badge-boost);
+    width: var(--level-badge-boost);
+    height: var(--level-badge-boost);
+}
+
+.levelHud__card.has-boost .rankBadge__number[data-digits="1"] { font-size: clamp(32px, 2.2vw, 42px); }
+.levelHud__card.has-boost .rankBadge__number[data-digits="2"] { font-size: clamp(26px, 1.8vw, 36px); }
+.levelHud__card.has-boost .rankBadge__number[data-digits="3"] { font-size: clamp(22px, 1.5vw, 30px); }
+.levelHud__card.has-boost .rankBadge__number[data-digits="4"] { font-size: clamp(18px, 1.2vw, 24px); }
+.levelHud__card.has-boost .rankBadge__number[data-digits="5"] { font-size: clamp(15px, 1.0vw, 19px); }
+
+/* Subtle etched divider separating the Double XP row from the Level row */
+.levelHud__divider {
+    height: 1px;
+    width: calc(100% - clamp(20px, 2vw, 36px));
+    margin: clamp(1px, 0.1vw, 2px) auto;
+    background: linear-gradient(90deg,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0.18) 12%,
+        rgba(255,255,255,0.30) 50%,
+        rgba(255,255,255,0.18) 88%,
+        rgba(255,255,255,0));
+}
+
+/* Ensure the double XP clip bar fills smoothly using the native weapon bar mask */
+#doubleXpFillClip {
+    transition: width 650ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Responsive screen media queries */
+@media (max-width: 1366px), (max-height: 768px) {
+    :root {
+        --level-hud-w: clamp(330px, 28vw, 400px);
+        --level-hud-y: clamp(14px, 3vh, 36px);
+        --level-hud-x: clamp(12px, 1.8vw, 24px);
+        --level-hud-h: 80px;
+        --level-badge-size: 64px;
+        --level-badge-boost: 52px;
+        --level-bar-w: clamp(190px, 17vw, 250px);
+        --level-bar-h: 12px;
+    }
+}
+
+@media (min-width: 2560px) and (min-height: 1440px) {
+    :root {
+        --level-hud-w: clamp(520px, 20vw, 660px);
+        --level-hud-y: clamp(40px, 5vh, 120px);
+        --level-hud-x: clamp(30px, 2.5vw, 70px);
+        --level-hud-h: clamp(108px, 4.5vw, 130px);
+        --level-badge-size: clamp(90px, 3.8vw, 110px);
+        --level-badge-boost: clamp(74px, 3.2vw, 92px);
+        --level-bar-w: clamp(340px, 14vw, 450px);
+        --level-bar-h: clamp(16px, 0.7vw, 20px);
+    }
+}
+
+/* Arabic language styling */
+html[lang="ar"] body,
+body.jrs-rtl {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif !important;
+}
+
+html[lang="ar"] .stat span,
+body.jrs-rtl .stat span {
+    direction: rtl !important;
+    text-align: right !important;
+    letter-spacing: 0 !important;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif !important;
+}
+
+#hudColorHex {
+    direction: ltr !important;
+    text-align: left !important;
+    unicode-bidi: embed !important;
+}
+
+/* =====================================================================
+   CORE PROGRESS BAR - inventory header skin
+   Same panel artwork (storeui/panel-background.png), cream-on-black palette,
+   Georgia type, flat hairlines and gold fill as the jrs_stores UI.
+   ===================================================================== */
+#core-progressbar {
+    position: fixed;
+    left: 50%;
+    bottom: 8vh;
+    transform: translateX(-50%) scale(var(--core-prog-scale, 1));
+    transform-origin: bottom center;
+    width: 420px;
+    max-width: 90vw;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease;
+    z-index: 2147483500;
+}
+
+#core-progressbar.visible {
+    opacity: 1;
+}
+
+.core-progress-card {
+    position: relative;
+    padding: 24px 34px 26px;
+    background: url("img/progress_header.png") no-repeat center / 100% 100%;
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.6));
+    box-sizing: border-box;
+}
+
+.core-progress-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    user-select: none;
+}
+
+.core-progress-brand {
+    font-family: 'Segoe Print', 'Segoe Script', 'Comic Sans MS', cursive, serif;
+    font-size: 16px;
+    letter-spacing: 2px;
+    color: #e7c56c;
+    text-transform: uppercase;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.core-progress-label {
+    font-family: 'Segoe Print', 'Segoe Script', 'Comic Sans MS', cursive, serif;
+    font-size: 17px;
+    color: #f7f2e7;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 270px;
+    font-weight: 700;
+}
+
+.core-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    direction: ltr;
+}
+
+.core-progress-pct {
+    flex: 0 0 auto;
+    min-width: 40px;
+    text-align: right;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #f7f2e7;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
+    user-select: none;
+}
+
+.core-progress-track {
+    flex: 1 1 auto;
+    position: relative;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-sizing: border-box;
+}
+
+.core-progress-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #8f8c86, #cfcbc3);
+    box-shadow: 0 0 8px rgba(207, 203, 195, 0.45);
+    transition: width .12s linear;
+}
+
+.core-progress-icon {
+    display: none !important;
+}
+
+html[lang="ar"] .core-progress-brand,
+body.jrs-rtl .core-progress-brand,
+html[lang="ar"] .core-progress-label,
+body.jrs-rtl .core-progress-label {
+    font-family: 'Segoe UI', Tahoma, 'Times New Roman', sans-serif !important;
+}
+
+html[lang="ar"] .core-progress-brand,
+body.jrs-rtl .core-progress-brand {
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+}
+
+html[lang="ar"] .core-progress-label,
+body.jrs-rtl .core-progress-label {
+    direction: rtl !important;
+    unicode-bidi: plaintext !important;
+    text-align: right !important;
+}
+
+

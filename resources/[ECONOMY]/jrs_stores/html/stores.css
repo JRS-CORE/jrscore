@@ -1,0 +1,15 @@
+/* Original admin menu textures with the store's balances and basket controls. */
+#panel #navigation{grid-template-columns:repeat(var(--store-tabs,5),minmax(0,1fr))!important}
+.store-balances{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:8px 18px 0;flex-shrink:0}
+.store-balance{display:flex;align-items:center;gap:12px;min-width:0;padding:10px 14px;background:url('img/box_a_bg_1.png') center/100% 100% no-repeat}
+.store-balance img{width:36px;height:36px;object-fit:contain;filter:grayscale(1)}.store-balance span{min-width:0}
+.store-balance small{display:block;color:#c4beb2;font-size:11px}.store-balance strong{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}
+.store-checkout{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;padding:10px 18px}
+.store-checkout small{display:block;font-size:11px;color:#c4beb2}.store-checkout strong{display:block;font-size:14px;margin-top:4px;overflow-wrap:anywhere}
+#panel .store-checkout .btn{min-height:40px!important;min-width:130px;font-size:13px!important}
+.store-selected{min-width:34px;text-align:center;padding:7px;background:url('img/box_s_bg_1_b.png') center/100% 100% no-repeat;font-size:14px;direction:ltr}
+#panel #buyMode[aria-pressed=true],#panel #sellMode[aria-pressed=true]{background-image:url('img/box_s_bg_1.png')!important}
+#panel #inputValue{direction:ltr}#panel #inputSummary{color:#ddd}#panel #list .option-desc{white-space:normal;max-height:3.4em;overflow:hidden}
+#panel #inputForm label{font-size:13px;color:#c4beb2}
+@media(max-width:700px){#panel #navigation{grid-template-columns:repeat(3,minmax(0,1fr))!important}.store-balances{padding:5px 10px 0;gap:4px}.store-balance{padding:8px;gap:5px}.store-balance img{width:23px;height:23px}.store-balance small{font-size:10px}.store-balance strong{font-size:15px}.store-checkout{padding:8px 10px}.store-checkout strong{font-size:12px}#panel .store-checkout .btn{min-width:90px;font-size:12px!important}}
+@media(max-height:700px) and (min-width:701px){.store-balances{padding-top:3px}.store-balance{padding:6px 12px}.store-balance img{width:28px;height:28px}.store-balance strong{font-size:16px}.store-checkout{padding-block:7px}}

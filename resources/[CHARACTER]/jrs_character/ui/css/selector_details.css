@@ -1,0 +1,218 @@
+/* Character selector details */
+#ChooseCharacterMenu .CharactersMenuContent {
+    min-height: 620px;
+}
+
+#ChooseCharacterMenu .CharactersMenuElem {
+    width: 100%;
+}
+
+.selected-character-details {
+    width: 86%;
+    margin: 10px auto 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.selected-detail-row {
+    min-height: 46px;
+    box-sizing: border-box;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    background: rgba(18, 18, 18, 0.78);
+    border-top: 1px solid rgba(232, 232, 232, 0.14);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.85);
+}
+
+.selected-detail-label {
+    flex: 0 0 42%;
+    font-family: 'Hapna';
+    font-size: 16px;
+    color: #bdbdbd;
+    text-align: left;
+}
+
+.selected-detail-value {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: 'Hapna';
+    font-size: 17px;
+    color: #ececec;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.lang-ar .selected-detail-row,
+body.lang-rtl .selected-detail-row,
+body.jrs-rtl .selected-detail-row {
+    direction: rtl;
+}
+
+body.lang-ar .selected-detail-label,
+body.lang-rtl .selected-detail-label,
+body.jrs-rtl .selected-detail-label {
+    font-family: var(--ar-font, 'Segoe UI', Tahoma, sans-serif);
+    text-align: right;
+}
+
+body.lang-ar .selected-detail-value,
+body.lang-rtl .selected-detail-value,
+body.jrs-rtl .selected-detail-value {
+    font-family: var(--ar-font, 'Segoe UI', Tahoma, sans-serif);
+    text-align: left;
+}
+
+.selected-detail-value.money {
+    color: #e6e6e6;
+}
+
+.selected-detail-value.gold {
+    color: #d8bd68;
+}
+
+.selected-detail-value.dirty-money {
+    color: #b96b6b;
+}
+
+/* Character selection actions: Play, Language, Delete and Back in one row. */
+#ChooseCharacterMenu .CharactersMenuInteraction.character-selector-actions {
+    width: 86%;
+    height: auto;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    align-items: stretch;
+    overflow: visible;
+}
+
+#ChooseCharacterMenu .character-selector-action {
+    width: auto;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 14px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+#ChooseCharacterMenu .character-action-icon {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 17px;
+    fill: currentColor;
+    opacity: 0.9;
+}
+
+#ChooseCharacterMenu .character-selector-action:hover .character-action-icon {
+    opacity: 1;
+}
+
+
+#ChooseCharacterMenu .CharactersMenuContent {
+    width: min(620px, calc(var(--creator-layout-width) - 34px));
+    max-width: min(620px, calc(var(--creator-layout-width) - 34px));
+    min-height: 650px;
+}
+
+#ChooseCharacterMenu .CharactersMenuList {
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+#ChooseCharacterMenu .title {
+    width: 86%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#ChooseCharacterMenu .selected-name-caption {
+    display: none !important;
+}
+
+#ChooseCharacterMenu .title h1,
+#ChooseCharacterMenu #titleSelectedCharactersMenu {
+    margin: 0 !important;
+    text-align: center;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 14px;
+}
+
+#ChooseCharacterMenu .CharactersMenuElem {
+    width: 86%;
+    overflow-y: auto;
+}
+
+#ChooseCharacterMenu .character-selector-action {
+    min-height: 56px;
+    font-size: 14px;
+}
+
+@media (max-width: 1100px) {
+    #ChooseCharacterMenu .CharactersMenuContent {
+        width: min(560px, calc(var(--creator-layout-width) - 20px));
+        max-width: min(560px, calc(var(--creator-layout-width) - 20px));
+    }
+
+    #ChooseCharacterMenu .selected-character-details,
+    #ChooseCharacterMenu .CharactersMenuInteraction.character-selector-actions,
+    #ChooseCharacterMenu .title,
+    #ChooseCharacterMenu .CharactersMenuElem {
+        width: 90%;
+    }
+}
+
+/* v3.3.0 selector readability and spacing */
+#ChooseCharacterMenu .selected-character-details {
+    width: 88%;
+    gap: 8px;
+}
+
+#ChooseCharacterMenu .selected-detail-row {
+    min-height: 44px;
+    padding: 9px 15px;
+}
+
+#ChooseCharacterMenu .CharactersMenuInteraction.character-selector-actions {
+    width: 88%;
+    gap: 6px;
+}
+
+#ChooseCharacterMenu .character-selector-action {
+    min-height: 54px;
+    padding: 12px 4px;
+}
+
+@media (max-width: 520px) {
+    #ChooseCharacterMenu .CharactersMenuInteraction.character-selector-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-height: 760px) {
+    #ChooseCharacterMenu .selected-character-details {
+        gap: 5px;
+        margin-top: 5px;
+        margin-bottom: 9px;
+    }
+    #ChooseCharacterMenu .selected-detail-row {
+        min-height: 38px;
+        padding: 6px 12px;
+    }
+    #ChooseCharacterMenu .selected-detail-label { font-size: 14px; }
+    #ChooseCharacterMenu .selected-detail-value { font-size: 15px; }
+    #ChooseCharacterMenu .character-selector-action { min-height: 46px; padding: 8px 3px; font-size: 13px; }
+}

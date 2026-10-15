@@ -1,0 +1,179 @@
+/* ========================================================================== 
+   ALFIE RANCH 3.2.19 — compact level clarity + lighter NUI rendering
+   Loaded last. Keeps the western monochrome identity while reducing repeated
+   texture layers and ensuring the compact level label is always readable.
+   ========================================================================== */
+
+/* Accessible full/compact level captions. */
+#farmLevelBadge .level-label-compact{display:none}
+#farmLevelBadge .level-label-full{display:inline}
+
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] .farm-header{
+  grid-template-columns:clamp(7.35rem,22.5%,8.15rem) minmax(0,1fr) clamp(7.35rem,22.5%,8.15rem)!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge{
+  width:clamp(7.1rem,100%,7.9rem)!important;
+  min-width:7.1rem!important;
+  max-width:7.9rem!important;
+  height:2.05rem!important;
+  min-height:2.05rem!important;
+  padding:.2rem .3rem!important;
+  gap:.26rem!important;
+  background-color:rgba(22,22,22,.64)!important;
+  border-color:rgba(255,255,255,.13)!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge>i{
+  width:1.36rem!important;
+  height:1.36rem!important;
+  min-width:1.36rem!important;
+  flex-basis:1.36rem!important;
+  font-size:.61rem!important;
+  opacity:.86!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge .farm-level-copy{
+  grid-template-columns:minmax(0,1fr) 2.05rem!important;
+  gap:.28rem!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge small{
+  display:block!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:clip!important;
+  white-space:nowrap!important;
+  color:rgba(255,255,255,.86)!important;
+  font-family:Arial Narrow,Arial,sans-serif!important;
+  font-size:clamp(.56rem,.45vw,.66rem)!important;
+  font-weight:800!important;
+  line-height:1!important;
+  letter-spacing:.018em!important;
+  text-rendering:geometricPrecision!important;
+  -webkit-font-smoothing:antialiased!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge .level-label-full{display:none!important}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge .level-label-compact{display:inline!important}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge strong{
+  min-width:2.05rem!important;
+  max-width:2.05rem!important;
+  height:1.28rem!important;
+  min-height:1.28rem!important;
+  padding:.05rem .18rem!important;
+  color:#fff!important;
+  background:rgba(255,255,255,.075)!important;
+  border:1px solid rgba(255,255,255,.16)!important;
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:clamp(.66rem,.5vw,.78rem)!important;
+  font-weight:800!important;
+  line-height:1!important;
+  letter-spacing:0!important;
+  text-rendering:geometricPrecision!important;
+  -webkit-font-smoothing:antialiased!important;
+}
+
+/* Lighter visual hierarchy: preserve one ranch/page texture but avoid using a
+   separate stretched PNG on every repeated control and list row. */
+#main_ui :is(.tab,.mini-tab,.gender-tab,.pill,.btn,.camera-reset,.building-action),
+#admin_ui :is(.admin-btn,.admin-tool-btn){
+  background-image:none!important;
+  background-color:rgba(255,255,255,.045)!important;
+  border-color:rgba(255,255,255,.11)!important;
+  box-shadow:none!important;
+  filter:none!important;
+}
+#main_ui :is(.tab,.mini-tab,.gender-tab,.pill,.btn,.camera-reset,.building-action):hover,
+#admin_ui :is(.admin-btn,.admin-tool-btn):hover{
+  background-color:rgba(255,255,255,.085)!important;
+  border-color:rgba(255,255,255,.19)!important;
+}
+#main_ui :is(.tab[aria-selected="true"],.mini-tab.active,.mini-tab[aria-selected="true"],.gender-tab[aria-selected="true"],.pill[aria-pressed="true"],.use-pill.active,.btn.primary){
+  color:#fff!important;
+  background-image:none!important;
+  background-color:rgba(255,255,255,.14)!important;
+  border-color:rgba(255,255,255,.30)!important;
+  box-shadow:inset 2px 0 rgba(255,255,255,.82)!important;
+}
+#main_ui :is(.tab[aria-selected="true"],.mini-tab.active,.mini-tab[aria-selected="true"],.gender-tab[aria-selected="true"],.pill[aria-pressed="true"],.use-pill.active,.btn.primary) i{
+  color:#fff!important;
+}
+
+/* Repeated rows use a cheap charcoal gradient instead of a full-size image. */
+#main_ui :is(.slot,.animal-card,.barn-animal-card,.market-row,.market-card,.building-card,.build-shop-card,.guard-dog-card,.guard-dog-owned-card,.manage-row,.staff-row,.record-row,.pregnancy-card,.breeding-record,.care-profile,.shop-profile),
+#admin_ui :is(.admin-card,.admin-pane,.admin-tool-card){
+  background-image:linear-gradient(90deg,rgba(255,255,255,.025),rgba(255,255,255,.008))!important;
+  background-color:rgba(8,8,8,.40)!important;
+  background-blend-mode:normal!important;
+  border-color:rgba(255,255,255,.10)!important;
+  box-shadow:none!important;
+  filter:none!important;
+}
+#main_ui :is(.slot,.animal-card,.barn-animal-card,.market-row,.building-card,.build-shop-card,.guard-dog-card,.guard-dog-owned-card):hover{
+  background-color:rgba(255,255,255,.052)!important;
+  border-color:rgba(255,255,255,.17)!important;
+}
+
+/* Reduce visual density in the small camera page without changing its size. */
+#main_ui.camera-compact .ui{
+  --line:rgba(255,255,255,.10)!important;
+}
+#main_ui.camera-compact :is(.section,.shop-details,.care-details,.market-panel,.breeding-panel){
+  border-color:rgba(255,255,255,.09)!important;
+  box-shadow:none!important;
+}
+#main_ui.camera-compact .view{
+  background-color:rgba(0,0,0,.035)!important;
+}
+#main_ui.camera-compact .tabs>.tab{
+  background-color:rgba(255,255,255,.035)!important;
+}
+#main_ui.camera-compact .tabs>.tab[aria-selected="true"]{
+  background-color:rgba(255,255,255,.115)!important;
+}
+#main_ui.camera-compact :is(.slot,.animal-card,.barn-animal-card,.market-row,.build-shop-card){
+  border-width:1px!important;
+}
+
+/* Long lists: skip painting rows that are outside the scroll viewport. This is
+   supported by Chromium/CEF and safely ignored by older artifacts. */
+#main_ui :is(#shopList,#careAnimals,#guardDogCatalog,#choreList,#staffList,#breedingRecords,#pregnancyList,#marketBuyList,#marketSellList,#buildList) > *,
+#admin_ui :is(.admin-list,.admin-animal-list,.admin-ranch-list) > *{
+  content-visibility:auto;
+  contain-intrinsic-size:auto 4.8rem;
+  contain:layout paint style;
+}
+
+/* Large cards do not need transitions while scrolling. Keep button feedback. */
+#main_ui :is(.slot,.animal-card,.barn-animal-card,.market-row,.market-card,.building-card,.build-shop-card,.guard-dog-card,.guard-dog-owned-card,.care-profile,.shop-profile),
+#admin_ui :is(.admin-card,.admin-pane,.admin-tool-card){
+  transition:none!important;
+  will-change:auto!important;
+}
+#main_ui :is(button,.btn,.tab,.mini-tab,.gender-tab,.pill),
+#admin_ui :is(button,.admin-btn,.admin-tool-btn){
+  transition-duration:65ms!important;
+}
+
+/* Keep text crisp on compact scale and prevent artificial filtering on text. */
+#main_ui.camera-compact,
+#main_ui.camera-compact button,
+#main_ui.camera-compact input,
+#main_ui.camera-compact select{
+  text-rendering:geometricPrecision;
+  -webkit-font-smoothing:antialiased;
+}
+
+@media(max-width:720px){
+  #main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] .farm-header{
+    grid-template-columns:7.7rem minmax(0,1fr) 7.7rem!important;
+  }
+  #main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge{
+    width:7.45rem!important;
+    min-width:7.45rem!important;
+  }
+  #main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge small{
+    font-size:.53rem!important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  #main_ui :is(.slot,.animal-card,.market-row,.building-card),
+  #admin_ui :is(.admin-card,.admin-pane){content-visibility:auto}
+}

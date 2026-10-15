@@ -1,0 +1,403 @@
+/* ========================================================================== 
+   ALFIE RANCH 3.2.13 — true compact sizing
+   Loaded after every other ranch stylesheet. The camera panel is a genuinely
+   smaller layout, not a desktop layout squeezed into a narrow column.
+   ========================================================================== */
+
+#main_ui.camera-compact{
+  --compact-font-xs:clamp(8px,.46vw,10px);
+  --compact-font-sm:clamp(9px,.52vw,11px);
+  --compact-font-md:clamp(11px,.63vw,14px);
+  --compact-font-lg:clamp(13px,.75vw,17px);
+  --compact-gap:clamp(4px,.28vw,7px);
+}
+
+/* A smaller left-side book page on every resolution, including 4K. */
+#main_ui.camera-compact .ui{
+  width:min(48vh,29vw)!important;
+  max-width:29vw!important;
+  min-width:25.5rem!important;
+  height:82vh!important;
+  max-height:82vh!important;
+  padding:0 .48rem .48rem!important;
+  left:1.35vh!important;
+  top:50%!important;
+  bottom:auto!important;
+  transform:translateY(-50%)!important;
+}
+
+/* Compact header: level/title on top, role/camera directly beneath. */
+#main_ui.camera-compact .farm-header{
+  display:grid!important;
+  grid-template-columns:7.15rem minmax(0,1fr)!important;
+  grid-template-rows:auto auto!important;
+  gap:.34rem .48rem!important;
+  min-height:4.9rem!important;
+  height:auto!important;
+  margin-top:.28rem!important;
+  padding:.42rem .5rem!important;
+}
+#main_ui.camera-compact #farmLevelBadge{
+  grid-column:1!important;
+  grid-row:1!important;
+  width:7.15rem!important;
+  min-width:7.15rem!important;
+  max-width:7.15rem!important;
+  min-height:2.45rem!important;
+  padding:.28rem .34rem!important;
+  gap:.28rem!important;
+}
+#main_ui.camera-compact #farmLevelBadge>i{
+  width:1.7rem!important;
+  height:1.7rem!important;
+  flex-basis:1.7rem!important;
+  font-size:.72rem!important;
+}
+#main_ui.camera-compact #farmLevelBadge .farm-level-copy{
+  grid-template-columns:minmax(0,1fr) 2.15rem!important;
+  gap:.2rem!important;
+}
+#main_ui.camera-compact #farmLevelBadge small{
+  font-size:var(--compact-font-xs)!important;
+  line-height:1.05!important;
+}
+#main_ui.camera-compact #farmLevelBadge strong{
+  min-width:2.15rem!important;
+  min-height:1.75rem!important;
+  padding:.05rem .15rem!important;
+  font-size:1rem!important;
+}
+#main_ui.camera-compact .farm-header-center{
+  grid-column:2!important;
+  grid-row:1!important;
+  align-self:center!important;
+  min-width:0!important;
+}
+#main_ui.camera-compact .farm-header-center .title{
+  font-size:var(--compact-font-lg)!important;
+  line-height:1.05!important;
+}
+#main_ui.camera-compact .farm-header-center .subtitle{
+  margin-top:.12rem!important;
+  font-size:var(--compact-font-xs)!important;
+  line-height:1.05!important;
+}
+#main_ui.camera-compact .farm-header .global-view-tools{
+  grid-column:1/-1!important;
+  grid-row:2!important;
+  justify-self:stretch!important;
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:.28rem!important;
+  width:100%!important;
+  max-width:none!important;
+}
+#main_ui.camera-compact .farm-header .global-view-tools :is(.camera-tab-button,#dutyRankBadge){
+  width:100%!important;
+  min-height:1.65rem!important;
+  padding:.2rem .3rem!important;
+  justify-content:center!important;
+  font-size:var(--compact-font-xs)!important;
+}
+#main_ui.camera-compact .farm-header .global-view-tools #dutyRankBadge strong,
+#main_ui.camera-compact .farm-header .global-view-tools .camera-tab-button span{
+  font-size:var(--compact-font-xs)!important;
+}
+
+/* Main and secondary navigation shrink together. */
+#main_ui.camera-compact .tabs{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:.2rem!important;
+  padding:.28rem .1rem .34rem!important;
+}
+#main_ui.camera-compact .tabs>.tab{
+  min-height:1.75rem!important;
+  padding:.2rem .18rem!important;
+  gap:.18rem!important;
+  font-size:var(--compact-font-xs)!important;
+  line-height:1.05!important;
+}
+#main_ui.camera-compact .view{
+  padding:.3rem .18rem .38rem!important;
+}
+#main_ui.camera-compact :is(#careCenterTabs,#businessCenterTabs,#breedingCenterTabs,#careSubtabs,.tools-center-tabs){
+  gap:.2rem!important;
+  padding:.18rem!important;
+  margin-bottom:.28rem!important;
+}
+#main_ui.camera-compact :is(#careCenterTabs,#businessCenterTabs,#breedingCenterTabs,#careSubtabs,.tools-center-tabs) .mini-tab{
+  min-height:1.65rem!important;
+  padding:.18rem .2rem!important;
+  font-size:var(--compact-font-xs)!important;
+  line-height:1!important;
+}
+#main_ui.camera-compact #careSubtabs{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+
+/* Compact typography and controls across the active side page. */
+#main_ui.camera-compact :is(.section h2,.sec-head h2){
+  font-size:var(--compact-font-md)!important;
+  line-height:1.08!important;
+}
+#main_ui.camera-compact :is(.muted,.mini){
+  font-size:var(--compact-font-xs)!important;
+  line-height:1.18!important;
+}
+#main_ui.camera-compact :is(.btn,.filter-btn,.pill,.gender-tab){
+  min-height:1.62rem!important;
+  padding:.18rem .32rem!important;
+  font-size:var(--compact-font-xs)!important;
+  line-height:1!important;
+}
+#main_ui.camera-compact .section{
+  padding:.35rem!important;
+  margin-bottom:.3rem!important;
+}
+#main_ui.camera-compact .sec-head{
+  min-height:1.85rem!important;
+  gap:.28rem!important;
+  margin-bottom:.28rem!important;
+}
+#main_ui.camera-compact .sec-head .actions{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  gap:.2rem!important;
+}
+#main_ui.camera-compact .sec-head .actions .btn{
+  white-space:nowrap!important;
+}
+#main_ui.camera-compact .filters{
+  gap:.2rem!important;
+  margin:.18rem 0 .28rem!important;
+}
+#main_ui.camera-compact .filters .filter-btn{
+  flex:0 0 auto!important;
+  min-width:0!important;
+}
+#main_ui.camera-compact :is(.list-search,.ranch-search-art,.records-search){
+  min-height:2rem!important;
+  padding:.16rem .28rem!important;
+  margin-bottom:.3rem!important;
+}
+#main_ui.camera-compact :is(.list-search,.ranch-search-art,.records-search) input{
+  min-height:1.62rem!important;
+  padding:.2rem .35rem!important;
+  font-size:var(--compact-font-sm)!important;
+}
+
+/* Animal Care cards: one compact identity column and one fixed meter grid. */
+#main_ui.camera-compact #view-care #careListSection{
+  padding:.32rem!important;
+}
+#main_ui.camera-compact #view-care #careListSection .care-list-scroll{
+  padding-right:.12rem!important;
+}
+#main_ui.camera-compact #careAnimals{
+  gap:.28rem!important;
+}
+#main_ui.camera-compact #careAnimals .care-barn-row{
+  display:grid!important;
+  grid-template-columns:minmax(10.4rem,42%) minmax(0,1fr)!important;
+  grid-template-rows:auto auto!important;
+  grid-template-areas:
+    "identity meters"
+    "return meters"!important;
+  align-items:center!important;
+  min-height:3.75rem!important;
+  padding:.34rem .4rem .34rem .95rem!important;
+  gap:.2rem .45rem!important;
+}
+#main_ui.camera-compact #careAnimals .care-barn-row .animal-left{
+  grid-area:identity!important;
+  grid-template-columns:2.55rem minmax(0,1fr)!important;
+  gap:.38rem!important;
+}
+#main_ui.camera-compact #careAnimals .care-animal-thumb{
+  width:2.45rem!important;
+  height:2.45rem!important;
+  min-width:2.45rem!important;
+}
+#main_ui.camera-compact #careAnimals .care-animal-thumb .avatar{
+  width:2.12rem!important;
+  height:2.12rem!important;
+  min-width:2.12rem!important;
+  padding:.08rem!important;
+}
+#main_ui.camera-compact #careAnimals .name-row{
+  gap:.2rem!important;
+}
+#main_ui.camera-compact #careAnimals .animal-name{
+  max-width:calc(100% - 1.4rem)!important;
+  font-size:var(--compact-font-md)!important;
+  line-height:1.05!important;
+}
+#main_ui.camera-compact #careAnimals .rename{
+  flex-basis:1.15rem!important;
+  width:1.15rem!important;
+  height:1.15rem!important;
+  min-height:1.15rem!important;
+  font-size:var(--compact-font-xs)!important;
+}
+#main_ui.camera-compact #careAnimals .meta .muted{
+  margin-top:.1rem!important;
+  font-size:var(--compact-font-xs)!important;
+  line-height:1.12!important;
+}
+#main_ui.camera-compact #careAnimals .care-return-animal{
+  grid-area:return!important;
+  justify-self:start!important;
+  width:auto!important;
+  min-width:3.7rem!important;
+  max-width:6rem!important;
+  min-height:1.35rem!important;
+  padding:.12rem .28rem!important;
+  font-size:var(--compact-font-xs)!important;
+}
+#main_ui.camera-compact #careAnimals .care-return-animal:disabled{
+  display:none!important;
+}
+#main_ui.camera-compact #careAnimals .care-card-bars{
+  grid-area:meters!important;
+  align-self:stretch!important;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  align-content:center!important;
+  gap:.28rem .36rem!important;
+  padding:0!important;
+  border:0!important;
+}
+#main_ui.camera-compact #careAnimals .care-card-meter{
+  padding:0!important;
+}
+#main_ui.camera-compact #careAnimals .care-card-meter-head{
+  gap:.12rem!important;
+  margin:0 0 .1rem!important;
+  font-size:var(--compact-font-xs)!important;
+  line-height:1!important;
+}
+#main_ui.camera-compact #careAnimals .care-card-meter-head span{
+  gap:.1rem!important;
+}
+#main_ui.camera-compact #careAnimals .care-card-meter-head i{
+  width:.7rem!important;
+  font-size:var(--compact-font-xs)!important;
+}
+#main_ui.camera-compact #careAnimals .care-card-meter-head b{
+  font-size:var(--compact-font-xs)!important;
+}
+#main_ui.camera-compact #careAnimals .care-card-meter-track{
+  height:2px!important;
+}
+#main_ui.camera-compact #careAnimals .delete-btn{
+  top:.28rem!important;
+  left:.2rem!important;
+  width:.86rem!important;
+  height:.86rem!important;
+  min-width:.86rem!important;
+  min-height:.86rem!important;
+  font-size:7px!important;
+}
+#main_ui.camera-compact #careAnimals .status-tag{
+  top:.18rem!important;
+  right:.22rem!important;
+  max-width:5rem!important;
+  padding:.08rem .18rem!important;
+  font-size:7px!important;
+}
+
+/* Details view uses the same compact scale. */
+#main_ui.camera-compact #careDetails .care-profile{
+  grid-template-columns:4.2rem minmax(0,1fr)!important;
+  gap:.45rem!important;
+  padding:.42rem!important;
+}
+#main_ui.camera-compact #careDetails .care-profile>:is(img,.avatar){
+  width:4rem!important;
+  height:4rem!important;
+  padding:.25rem!important;
+}
+#main_ui.camera-compact #careDetails .care-profile-head{
+  padding:.1rem .08rem .3rem!important;
+  margin-bottom:.3rem!important;
+}
+#main_ui.camera-compact #careDetails .care-profile-head h3{
+  font-size:var(--compact-font-lg)!important;
+}
+#main_ui.camera-compact #careDetails .care-profile-head p,
+#main_ui.camera-compact #careDetails .care-state{
+  font-size:var(--compact-font-xs)!important;
+}
+#main_ui.camera-compact #careDetails .care-detail-groups{
+  gap:.32rem!important;
+}
+#main_ui.camera-compact #careDetails .care-detail-group{
+  padding:.36rem!important;
+}
+#main_ui.camera-compact #careDetails .care-detail-group h4{
+  margin-bottom:.28rem!important;
+  font-size:var(--compact-font-sm)!important;
+}
+#main_ui.camera-compact #careDetails .care-fact{
+  min-height:2.35rem!important;
+  padding:.3rem!important;
+}
+#main_ui.camera-compact #careDetails .care-fact span{
+  font-size:var(--compact-font-xs)!important;
+}
+#main_ui.camera-compact #careDetails .care-fact b{
+  margin-top:.12rem!important;
+  font-size:var(--compact-font-sm)!important;
+}
+#main_ui.camera-compact #careDetails .care-meter{
+  padding:.28rem!important;
+}
+#main_ui.camera-compact #careDetails .care-meter>div :is(span,b){
+  font-size:var(--compact-font-xs)!important;
+}
+
+/* Keep the compact scrollbar proportional to the smaller page. */
+#main_ui.camera-compact :is(.scroll-area,.care-center-pane,.care-list-scroll,.care-details,.market-cart-list,.breed-choice-scroll){
+  scrollbar-width:thin!important;
+}
+#main_ui.camera-compact :is(.scroll-area,.care-center-pane,.care-list-scroll,.care-details,.market-cart-list,.breed-choice-scroll)::-webkit-scrollbar{
+  width:4px!important;
+  height:4px!important;
+}
+
+/* Low resolutions keep a usable minimum, while still being smaller than full UI. */
+@media(max-width:1400px), (max-height:800px){
+  #main_ui.camera-compact .ui{
+    width:min(54vh,34vw)!important;
+    max-width:34vw!important;
+    min-width:24rem!important;
+    height:84vh!important;
+    max-height:84vh!important;
+  }
+  #main_ui.camera-compact #careAnimals .care-barn-row{
+    grid-template-columns:minmax(9rem,40%) minmax(0,1fr)!important;
+  }
+}
+@media(max-width:900px){
+  #main_ui.camera-compact .ui{
+    width:min(62vh,48vw)!important;
+    max-width:48vw!important;
+    min-width:22rem!important;
+  }
+}
+@media(max-width:720px){
+  #main_ui.camera-compact .ui{
+    width:94vw!important;
+    max-width:94vw!important;
+    min-width:0!important;
+  }
+  #main_ui.camera-compact #careAnimals .care-barn-row{
+    grid-template-columns:1fr!important;
+    grid-template-areas:"identity" "meters" "return"!important;
+  }
+  #main_ui.camera-compact #careAnimals .care-return-animal{
+    justify-self:stretch!important;
+    width:100%!important;
+    max-width:none!important;
+  }
+}

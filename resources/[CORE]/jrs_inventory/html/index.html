@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&display=swap">
+    <link rel="stylesheet" href="index.css?v=jrs71" type="text/css">
+    <link rel="stylesheet" href="jrs-i18n.css" type="text/css">
+
+
+    <script src="jrs-i18n.js"></script>
+    <script src="locales/en.js?v=jrs64"></script>
+    <script src="locales/ar.js?v=jrs64"></script>
+    <script src="vendor/jquery.min.js" type="text/javascript"></script>
+    <script src="vendor/jquery-ui.min.js" type="text/javascript"></script>
+</head>
+
+<body>
+<div id="standard-inventory-layout" aria-label="Inventory layout">
+<div class="hotbar" id="hotbar">
+
+    <div id="slot1" class="hotbar-slot" data-hotbar-slot="1" role="button" aria-label="Quick slot 1" title="Drag an item here. Right-click to clear." data-i18n-title="inv_drag_an_item_here_right">
+        <img class="slot-frame" src="images/slot.png">
+        <img class="slot-item" id="slot1-item">
+        <div class="slot-number">1</div>
+        <div class="slot-count" id="slot1-count"></div>
+    </div>
+
+    <div id="slot2" class="hotbar-slot" data-hotbar-slot="2" role="button" aria-label="Quick slot 2" title="Drag an item here. Right-click to clear." data-i18n-title="inv_drag_an_item_here_right">
+        <img class="slot-frame" src="images/slot.png">
+        <img class="slot-item" id="slot2-item">
+        <div class="slot-number">2</div>
+        <div class="slot-count" id="slot2-count"></div>
+    </div>
+
+    <div id="slot3" class="hotbar-slot" data-hotbar-slot="3" role="button" aria-label="Quick slot 3" title="Drag an item here. Right-click to clear." data-i18n-title="inv_drag_an_item_here_right">
+        <img class="slot-frame" src="images/slot.png">
+        <img class="slot-item" id="slot3-item">
+        <div class="slot-number">3</div>
+        <div class="slot-count" id="slot3-count"></div>
+    </div>
+
+    <div id="slot4" class="hotbar-slot" data-hotbar-slot="4" role="button" aria-label="Quick slot 4" title="Drag an item here. Right-click to clear." data-i18n-title="inv_drag_an_item_here_right">
+        <img class="slot-frame" src="images/slot.png">
+        <img class="slot-item" id="slot4-item">
+        <div class="slot-number">4</div>
+        <div class="slot-count" id="slot4-count"></div>
+    </div>
+
+    <div id="slot5" class="hotbar-slot" data-hotbar-slot="5" role="button" aria-label="Quick slot 5" title="Drag an item here. Right-click to clear." data-i18n-title="inv_drag_an_item_here_right">
+        <img class="slot-frame" src="images/slot.png">
+        <img class="slot-item" id="slot5-item">
+        <div class="slot-number">5</div>
+        <div class="slot-count" id="slot5-count"></div>
+    </div>
+
+</div>
+
+         <!--  -->
+
+         <div id="ground-container">
+
+            <div class="ground-title" data-i18n="inv_ground">
+                GROUND
+            </div>
+
+            <div class="ground-grid" id="groundData">
+
+            </div>
+
+        </div>
+        <!--  -->
+
+        <div id="groundAmountWindow" style="display:none;">
+
+            <div class="groundAmountTitle" data-i18n="inv_drop_amount">
+                DROP AMOUNT
+            </div>
+
+            <input
+                id="groundAmountInput"
+                type="number"
+                min="1"
+                value="1">
+
+            <div class="groundAmountButtons">
+
+                <button onclick="confirmGroundDrop()" data-i18n="inv_drop">
+                    DROP
+                </button>
+
+                <button onclick="cancelGroundDrop()" data-i18n="inv_cancel">
+                    CANCEL
+                </button>
+
+            </div>
+
+        </div>
+        <!--  -->
+
+  <div id="jrs-panel-dock" role="toolbar" aria-label="Show / hide panels" data-i18n-aria-label="inv_panels_show_hide">
+    <button type="button" class="jrs-panel-toggle" data-panel="clothing" aria-pressed="true"><span class="jrs-panel-dot"></span><span class="jrs-panel-toggle-label" data-i18n="inv_panel_clothing">Clothing</span></button>
+    <button type="button" class="jrs-panel-toggle" data-panel="ground" aria-pressed="true"><span class="jrs-panel-dot"></span><span class="jrs-panel-toggle-label" data-i18n="inv_panel_ground">Ground</span></button>
+    <button type="button" class="jrs-panel-toggle" data-panel="money" aria-pressed="true"><span class="jrs-panel-dot"></span><span class="jrs-panel-toggle-label" data-i18n="inv_panel_money">Money</span></button>
+    <button type="button" class="jrs-panel-toggle" data-panel="slots" aria-pressed="true"><span class="jrs-panel-dot"></span><span class="jrs-panel-toggle-label" data-i18n="inv_panel_slots">Slots</span></button>
+  </div>
+
+  <div id="container">
+      <div class="panel-title-wrap"><h2 id="header" data-i18n="inv_inventory">Inventory</h2></div>
+      <div id="id03"></div>
+      <div id="id04"></div>
+      <div id="id07"></div>
+      <div id="show_weapons" onclick="Show_Weap()"></div>
+
+      <div id="player-inventory-side-label" class="transfer-side-label" data-i18n="inv_player_inventory">PLAYER INVENTORY</div>
+      <div class="grid0" id="tableData"></div>
+
+      <div id="inventory-filter-bar">
+        <div id="inventory-search-wrap">
+          <span class="inventory-search-icon">⌕</span>
+          <input
+            id="inventorySearch"
+            type="text"
+            placeholder="Search..." data-i18n-placeholder="inv_search"
+            autocomplete="off"
+            oninput="searchInventoryItems(this.value)"
+            onkeydown="event.stopPropagation()"
+            onkeyup="event.stopPropagation()"
+            onkeypress="event.stopPropagation()"
+          >
+        </div>
+
+
+      </div>
+
+      <div id="inventory-action-bar" class="jrs-no-trade">
+        <button id="inventorySortButton" type="button" onclick="cycleInventorySort()" title="Preview the next temporary sort mode" data-i18n-title="inv_preview_the_next_temporary_sort">
+          <span class="sort-icon">↕</span>
+          <span id="inventorySortLabel" data-i18n="inv_sort_by_name">SORT BY NAME</span>
+        </button>
+
+        <div id="inventory-filter-carousel" aria-label="Inventory filters">
+          <button class="inventory-filter-arrow" type="button" onclick="changeInventoryFilter(-1)" title="Previous filter" data-i18n-title="inv_previous_filter" aria-label="Previous filter">
+            <span>&#10094;</span>
+          </button>
+
+          <div id="inventory-filter-current" title="All items" data-i18n-title="inv_all_items">
+            <img id="inventoryFilterIcon" src="images/filter/allitems.png" alt="All items" style="display:none;">
+            <span id="inventoryFilterLabel" data-i18n="inv_all">ALL</span>
+          </div>
+
+          <button class="inventory-filter-arrow" type="button" onclick="changeInventoryFilter(1)" title="Next filter" data-i18n-title="inv_next_filter" aria-label="Next filter">
+            <span>&#10095;</span>
+          </button>
+        </div>
+
+        <button id="inventoryManualButton" class="inventory-layout-button active" type="button" onclick="showManualInventoryLayout()" title="Return to your saved manual slots" data-i18n-title="inv_return_to_your_saved_manual" data-i18n="inv_manual">MANUAL</button>
+        <!-- The separate ALL button was removed: it only reset the filter to "all",
+             which the filter carousel's own ALL entry already does (duplicate label). -->
+        <button id="inventoryMultiButton" class="inventory-layout-button" type="button" onclick="toggleMultiSelectMode()" title="Select several items" data-i18n-title="inv_select_several_items" data-i18n="inv_multi">MULTI</button>
+        <button id="inventoryTradeButton" class="inventory-layout-button inventory-trade-button" type="button" onclick="openTradeSystem()" title="Start a secure trade with a nearby player" data-i18n-title="inv_start_a_secure_trade_with" style="display:none;" data-i18n="inv_trade">TRADE</button>
+      </div>
+
+      <div id="multi-select-toolbar" style="display:none;">
+        <span id="multiSelectedCount" data-i18n="inv_0_selected">0 SELECTED</span>
+        <button type="button" onclick="selectAllVisibleInventoryItems()" data-i18n="inv_all">ALL</button>
+        <button id="multiStorageButton" type="button" onclick="moveMultiSelectionToStorage()" data-i18n="inv_storage">STORAGE</button>
+        <button type="button" onclick="openMultiGivePlayers()" data-i18n="inv_give">GIVE</button>
+        <button id="multiClearButton" type="button" onclick="deleteMultiSelection()" data-i18n="inv_clear">CLEAR ALL</button>
+      </div>
+
+      <div id="expanded-item-info" style="display:none;"></div>
+
+      <div id="inventory-status">
+        <div class="inventory-divider"></div>
+        <div class="status-row weight-status-row" onclick="toggleWeightBreakdown()" title="Show weight by category" data-i18n-title="inv_show_weight_by_category">
+            <span class="status-label" data-i18n="inv_weight">WEIGHT</span>
+            <span class="status-value" id="weightText">0 / 0 KG</span>
+        </div>
+
+        <div class="weight-bar" id="inventoryWeightBar">
+            <div id="weightFill"></div>
+        </div>
+
+        <div id="weight-breakdown-panel" style="display:none;"></div>
+
+        <div class="status-row">
+            <span class="status-label" data-i18n="inv_weapons">WEAPONS</span>
+            <span class="status-value" id="slotText">0 / 0</span>
+        </div>
+
+        <div class="inventory-divider"></div>
+      </div>
+</div>
+
+
+<div id="currency-panel" aria-label="Player currency">
+  <div class="currency-entry item" data-origin="inventory" data-slot="money" data-type="money" data-content="money" data-filter-tags="currency">
+    <div id="money" class="item-content" onmouseenter="change_name(-1)">
+      <img src="images/items/money.png" class="currency-icon" alt="Money">
+      <div class="currency-copy">
+        <span class="currency-label" data-i18n="inv_money">MONEY</span>
+        <span class="currency-value" id="count_money">0 $</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="currency-entry item" data-origin="inventory" data-slot="gold" data-type="gold" data-content="gold" data-filter-tags="currency">
+    <div id="gold" class="item-content" onmouseenter="change_name(-2)">
+      <img src="images/items/gold.png" class="currency-icon" alt="Gold">
+      <div class="currency-copy">
+        <span class="currency-label" data-i18n="inv_gold">GOLD</span>
+        <span class="currency-value" id="count_gold">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="currency-entry item dirtymoney-entry" data-origin="inventory" data-slot="dirtymoney" data-type="dirtymoney" data-content="dirtymoney" data-filter-tags="currency">
+    <div id="dirtymoney" class="item-content" onmouseenter="change_name(-3)">
+      <img src="images/items/dirtymoney.png" class="currency-icon" alt="Dirty Money">
+      <div class="currency-copy">
+        <span class="currency-label" data-i18n="inv_dirty_money">DIRTY MONEY</span>
+        <span class="currency-value" id="count_dirtymoney">0 $</span>
+      </div>
+    </div>
+  </div>
+</div>
+<!--  -->
+
+  <div id="clothing-side-panel">
+    <div class="clothing-header">
+      <span data-i18n="inv_clothing">Clothing</span>
+      <span id="clothing-integration-status" aria-live="polite"></span>
+    </div>
+    <div class="clothing-slots-grid" id="clothingSlotsGrid"></div>
+  </div>
+
+  <div id="container_other">
+    <div class="panel-title-wrap"><h2 id="header_container" data-i18n="inv_storage_2">Storage</h2></div>
+
+    <div id="storage-filter-bar">
+      <div id="storage-search-wrap">
+        <span class="inventory-search-icon">&#9906;</span>
+        <input
+          id="myInput"
+          type="text"
+          placeholder="Search..." data-i18n-placeholder="inv_search"
+          autocomplete="off"
+          oninput="filterTextInput()"
+          onkeydown="event.stopPropagation()"
+          onkeyup="event.stopPropagation()"
+          onkeypress="event.stopPropagation()"
+        >
+      </div>
+    </div>
+
+    <div id="storage-side-label" class="transfer-side-label" data-i18n="inv_storage">STORAGE</div>
+    <div class="grid_other" id="expand_container"></div>
+
+    <div id="storage-status">
+      <div class="inventory-divider"></div>
+
+      <div class="status-row">
+        <span class="status-label" data-i18n="inv_weight">WEIGHT</span>
+        <span class="status-value" id="storageWeightText" data-i18n="inv_0_0_kg">0 / 0 KG</span>
+      </div>
+
+      <div class="weight-bar" id="storageWeightBar">
+        <div id="storageWeightFill"></div>
+      </div>
+
+      <div class="status-row">
+        <span class="status-label" id="storageContainerLabel" data-i18n="inv_container">CONTAINER</span>
+        <span class="status-value" id="storageContainerName">-</span>
+      </div>
+
+      <div class="inventory-divider"></div>
+    </div>
+
+    <!-- Legacy storage weight readout. The status block above replaced it as the
+         visible element; it is kept (hidden) so nothing that writes to it breaks. -->
+    <div id="id08"></div>
+    <div id="id05"></div>
+  </div>
+
+</div><!-- /standard-inventory-layout -->
+
+  <div id="item-details" style="display:none;">
+    <div id="name"></div>
+    <div id="desc"></div>
+  </div>
+
+  <div class="grid2" id="playerData"></div>
+  <div id="multi-player-window" style="display:none;">
+    <div class="multi-player-title" data-i18n="inv_select_player">SELECT PLAYER</div>
+    <div id="multi-player-list"></div>
+    <button type="button" class="multi-player-cancel" onclick="closeMultiPlayerWindow()" data-i18n="inv_cancel">CANCEL</button>
+  </div>
+
+  <div id="give-player-window" style="display:none;">
+    <div class="give-player-header">
+      <div class="give-player-title" data-i18n="inv_give">GIVE</div>
+      <button type="button" class="give-player-close-btn" onclick="closeGivePlayerWindow()">✕</button>
+    </div>
+    <div id="give-player-item-preview">
+      <div class="give-item-icon-wrap">
+        <img id="give-player-item-img" src="images/items/money.png" alt="">
+      </div>
+      <div class="give-item-info">
+        <div id="give-player-item-name">Item Name</div>
+        <div id="give-player-item-count">Count: 1</div>
+      </div>
+    </div>
+    <div id="give-player-quantity-section" style="display:none;">
+      <div class="give-qty-label" data-i18n="inv_amount">AMOUNT</div>
+      <div class="give-quantity-controls">
+        <button type="button" class="give-qty-btn" onclick="adjustGiveQuantity(-1)">−</button>
+        <input id="give-player-quantity-input" type="number" min="1" value="1">
+        <button type="button" class="give-qty-btn" onclick="adjustGiveQuantity(1)">+</button>
+        <button type="button" class="give-qty-max-btn" onclick="setGiveQuantityMax()">MAX</button>
+      </div>
+    </div>
+    <div class="give-player-section-divider"></div>
+    <button type="button" id="give-player-next-btn" class="give-player-cancel-btn" onclick="confirmGiveAmountAndPickPlayer()" data-i18n="inv_choose_player">CHOOSE PLAYER</button>
+    <button type="button" class="give-player-cancel-btn" onclick="closeGivePlayerWindow()" data-i18n="inv_cancel">CANCEL</button>
+  </div>
+  
+  <div id="context-menu">
+      <div class="content_button" id="contextGiveButton" onclick="transferItem()"><center data-i18n="inv_give_2">Give</center></div>
+      <div class="content_button" id="contextDropButton" onclick="openDropFromContext()"><center data-i18n="inv_drop_2">Drop</center></div>
+      <div class="content_button" id="contextCopySerialButton" onclick="copySelectedWeaponSerial(event)" style="display:none;"><center data-i18n="inv_copy_serial">Copy Serial</center></div>
+      <div class="content_button" id="contextSplitButton" onclick="openSplitStack()"><center data-i18n="inv_split_stack">Split Stack</center></div>
+      <div class="content_button" id="contextPinButton" onclick="toggleSelectedInventoryPin()"><center data-i18n="inv_pin">Pin</center></div>
+  </div>
+
+  <!-- Right-clicking a filled quick slot no longer wipes it instantly; it opens
+       this one-entry menu so the removal is deliberate. -->
+  <div id="hotbar-context-menu">
+      <div class="content_button" id="hotbarRemoveButton" onclick="removeSelectedHotbarSlot()"><center data-i18n="inv_remove_from_hotbar">Remove from Hotbar</center></div>
+  </div>
+
+  <div id="split-stack-window" style="display:none;">
+    <div class="split-stack-title" data-i18n="inv_split_stack_2">SPLIT STACK</div>
+    <div id="split-stack-item-name"></div>
+    <input id="split-stack-count" type="number" min="1" value="1" autocomplete="off">
+    <div class="split-stack-buttons">
+      <button type="button" onclick="confirmSplitStack()" data-i18n="inv_confirm">CONFIRM</button>
+      <button type="button" onclick="closeSplitStack()" data-i18n="inv_cancel">CANCEL</button>
+    </div>
+  </div>
+  
+  <div id="input_data" style="display:none;">
+    <div id="input_text" data-i18n="inv_amount"> amount </div>
+    <div id="button3" onclick="transferAcceptItem()"><center data-i18n="inv_confirm_2">Confirm</center></div>
+    <div id="button4" onclick="transferLeaveItem()"><center data-i18n="inv_close">close</center></div>
+    <input type="inputType" id="input_type">
+  </div>
+
+  <script>
+    function filterAllTrash() {
+      document.getElementById("eatFilter").value = "trash";
+        var input, text_filter, td0, i, divList;
+        input = document.getElementById("eatFilter");
+        text_filter = input.value.toUpperCase();
+       divList = $(".item");
+        for (i = 0; i < divList.length; i++) {
+          td0 = divList[i].getAttribute('data-content');
+          if (td0) {
+            if (td0.toUpperCase().indexOf(text_filter) > -1) { divList[i].style.display = ""; } else { divList[i].style.display = "none"; }
+          } 
+        }
+    }
+    function filterAllBuild() {
+      document.getElementById("eatFilter").value = "build";
+        var input, text_filter, td0, i, divList;
+        input = document.getElementById("eatFilter");
+        text_filter = input.value.toUpperCase();
+       divList = $(".item");
+        for (i = 0; i < divList.length; i++) {
+          td0 = divList[i].getAttribute('data-content');
+          if (td0) {
+            if (td0.toUpperCase().indexOf(text_filter) > -1) { divList[i].style.display = ""; } else { divList[i].style.display = "none"; }
+          } 
+        }
+    }
+    function filterAllHorse() {
+      document.getElementById("eatFilter").value = "horse";
+        var input, text_filter, td0, i, divList;
+        input = document.getElementById("eatFilter");
+        text_filter = input.value.toUpperCase();
+       divList = $(".item");
+        for (i = 0; i < divList.length; i++) {
+          td0 = divList[i].getAttribute('data-content');
+          if (td0) {
+            if (td0.toUpperCase().indexOf(text_filter) > -1) { divList[i].style.display = ""; } else { divList[i].style.display = "none"; }
+          } 
+        }
+    }
+    function filterAllValuable() {
+      document.getElementById("eatFilter").value = "valuable";
+        var input, text_filter, td0, i, divList;
+        input = document.getElementById("eatFilter");
+        text_filter = input.value.toUpperCase();
+       divList = $(".item");
+        for (i = 0; i < divList.length; i++) {
+          td0 = divList[i].getAttribute('data-content');
+          if (td0) {
+            if (td0.toUpperCase().indexOf(text_filter) > -1) { divList[i].style.display = ""; } else { divList[i].style.display = "none"; }
+          } 
+        }
+    }
+    function filterAllCraft() {
+      document.getElementById("eatFilter").value = "craft";
+        var input, text_filter, td0, i, divList;
+        input = document.getElementById("eatFilter");
+        text_filter = input.value.toUpperCase();
+       divList = $(".item");
+        for (i = 0; i < divList.length; i++) {
+          td0 = divList[i].getAttribute('data-content');
+          if (td0) {
+            if (td0.toUpperCase().indexOf(text_filter) > -1) { divList[i].style.display = ""; } else { divList[i].style.display = "none"; }
+          } 
+        }
+    }
+    function filterAllHerb() {
+      document.getElementById("eatFilter").value = "herb";
+        var input, text_filter, td0, i, divList;
+        input = document.getElementById("eatFilter");
+        text_filter = input.value.toUpperCase();
+       divList = $(".item");
+        for (i = 0; i < divList.length; i++) {
+          td0 = divList[i].getAttribute('data-content');
+          if (td0) {
+            if (td0.toUpperCase().indexOf(text_filter) > -1) { divList[i].style.display = ""; } else { divList[i].style.display = "none"; }
+          } 
+        }
+    }
+    function filterAllItem() {
+      document.getElementById("eatFilter").value = "";
+        var input, text_filter, td0, i, divList;
+        input = document.getElementById("eatFilter");
+        text_filter = input.value.toUpperCase();
+       divList = $(".item");
+        for (i = 0; i < divList.length; i++) {
+          td0 = divList[i].getAttribute('data-content');
+          if (td0) {
+            if (td0.toUpperCase().indexOf(text_filter) > -1) { divList[i].style.display = ""; } else { divList[i].style.display = "none"; }
+          } 
+        }
+    }
+    function filterAllDrink() {
+      document.getElementById("eatFilter").value = "drink";
+        var input, text_filter, td0, i, divList;
+        input = document.getElementById("eatFilter");
+        text_filter = input.value.toUpperCase();
+       divList = $(".item");
+        for (i = 0; i < divList.length; i++) {
+          td0 = divList[i].getAttribute('data-content');
+          if (td0) {
+            if (td0.toUpperCase().indexOf(text_filter) > -1) { divList[i].style.display = ""; } else { divList[i].style.display = "none"; }
+          } 
+        }
+    }
+    function filterAllEat() {
+      document.getElementById("eatFilter").value = "eat";
+        var input, text_filter, td0, i, divList;
+        input = document.getElementById("eatFilter");
+        text_filter = input.value.toUpperCase();
+       divList = $(".item");
+        for (i = 0; i < divList.length; i++) {
+          td0 = divList[i].getAttribute('data-content');
+          if (td0) {
+            if (td0.toUpperCase().indexOf(text_filter) > -1) { divList[i].style.display = ""; } else { divList[i].style.display = "none"; }
+          } 
+        }
+    }
+
+    $('input').click(function(){return false;});
+
+    function filterTextInput() {
+        var input = document.getElementById("myInput");
+        var storageGrid = document.getElementById("expand_container");
+        if (!input || !storageGrid) return;
+
+        var text_filter = input.value.trim().toUpperCase();
+        var divList = storageGrid.querySelectorAll(".item");
+        var emptySlots = storageGrid.querySelectorAll(".storage-empty-slot");
+
+        for (var i = 0; i < divList.length; i++) {
+          var td0 = divList[i].getAttribute('data-content') || "";
+          divList[i].style.display = td0.toUpperCase().indexOf(text_filter) > -1 ? "" : "none";
+        }
+
+        for (var j = 0; j < emptySlots.length; j++) {
+          emptySlots[j].style.display = text_filter === "" ? "" : "none";
+        }
+    }
+  </script>
+  <script src="./config.js" type="text/javascript"></script>
+  <script src="./index.js?v=jrs75" type="text/javascript"></script>
+
+<iframe data-i18n-title="inventory_jrs_trade" id="jrsTradeModule" src="modules/trade/index.html" title="JRS trade" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none;visibility:hidden;z-index:2147483500"></iframe>
+<script src="./trade-relay.js" type="text/javascript"></script>
+  <script src="nui://jrs_core/html/jrs-pad.js"></script>
+</body>
+</html>

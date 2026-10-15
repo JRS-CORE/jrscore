@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="jrs-i18n.css">
+    <script src="jrs-i18n.js"></script>
+    <script src="locales/en.js"></script>
+    <script src="locales/ar.js"></script>
+</head>
+<body>
+    <div id="zoneToast" class="zone-toast" aria-hidden="true">
+        <div class="zone-panel">
+            <div id="zoneTitle" class="zone-title"></div>
+            <div id="zoneDistrict" class="zone-district"></div>
+            <div class="zone-divider"></div>
+            <div class="zone-footer">
+                <div id="zoneState" class="zone-state"></div>
+                <div id="zoneDetails" class="zone-details"></div>
+            </div>
+        </div>
+    </div>
+    <audio id="zoneSound" preload="auto" src="assets/zone_open.mp3"></audio>
+    <script src="app.js"></script>
+    <script src="nui://jrs_core/html/jrs-pad.js"></script>
+</body>
+</html>

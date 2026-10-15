@@ -1,0 +1,1260 @@
+/* ========================================================================== 
+   ALFIE RANCH 3.2.1 — authoritative responsive / camera-small layout
+   Loaded last on purpose so older ranch.css passes cannot re-introduce overlap.
+   ========================================================================== */
+
+#main_ui .ui,
+#main_ui .ui * {
+  min-width: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Camera-small ranch shell
+   -------------------------------------------------------------------------- */
+#main_ui.camera-compact .ui {
+  inset: auto !important;
+  top: 50% !important;
+  left: .75rem !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: clamp(29rem, 42vw, 40rem) !important;
+  min-width: 0 !important;
+  max-width: calc(100vw - 1.5rem) !important;
+  height: min(90vh, 58rem) !important;
+  min-height: 32rem !important;
+  max-height: 90vh !important;
+  padding: .55rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  transform: translateY(-50%) !important;
+  box-sizing: border-box !important;
+}
+
+#main_ui.camera-compact .farm-header {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: minmax(8.5rem, .82fr) minmax(0, 1.18fr) !important;
+  grid-template-rows: auto auto !important;
+  align-items: center !important;
+  gap: .38rem .55rem !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: .55rem .65rem !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+#main_ui.camera-compact #farmLevelBadge {
+  position: static !important;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  align-self: stretch !important;
+  justify-self: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  min-height: 3.15rem !important;
+  margin: 0 !important;
+  padding: .35rem .45rem !important;
+  transform: none !important;
+  box-sizing: border-box !important;
+}
+
+#main_ui.camera-compact #farmLevelBadge > i {
+  width: 2rem !important;
+  height: 2rem !important;
+  flex: 0 0 2rem !important;
+  font-size: .9rem !important;
+}
+
+#main_ui.camera-compact #farmLevelBadge .farm-level-copy {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: .35rem !important;
+}
+
+#main_ui.camera-compact #farmLevelBadge small {
+  font-size: .57rem !important;
+  line-height: 1.08 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+#main_ui.camera-compact #farmLevelBadge strong {
+  min-width: 2.15rem !important;
+  font-size: 1.15rem !important;
+  line-height: 1 !important;
+  padding: .2rem .3rem !important;
+}
+
+#main_ui.camera-compact .farm-header-center {
+  position: static !important;
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  align-self: center !important;
+  justify-self: stretch !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+  text-align: center !important;
+  overflow: hidden !important;
+}
+
+#main_ui.camera-compact .farm-header-center .title {
+  display: block !important;
+  width: 100% !important;
+  font-size: 1.08rem !important;
+  line-height: 1.12 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#main_ui.camera-compact .farm-header-center .subtitle {
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+  margin-top: .18rem !important;
+  font-size: .65rem !important;
+  line-height: 1.15 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#main_ui.camera-compact .farm-header .global-view-tools {
+  position: static !important;
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+  justify-self: stretch !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  align-items: stretch !important;
+  gap: .35rem !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+  overflow: hidden !important;
+}
+
+#main_ui.camera-compact .farm-header .global-view-tools #dutyRankBadge,
+#main_ui.camera-compact .farm-header .global-view-tools .camera-tab-button,
+#main_ui.camera-compact .farm-header .global-view-tools .duty-button {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 2rem !important;
+  height: auto !important;
+  padding: .3rem .42rem !important;
+  font-size: .65rem !important;
+  line-height: 1.1 !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  box-sizing: border-box !important;
+}
+
+#main_ui.camera-compact .farm-header .global-view-tools #dutyRankBadge strong {
+  min-width: 0 !important;
+  font-size: .65rem !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#main_ui.camera-compact .tabs {
+  flex: 0 0 auto !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: .28rem !important;
+  width: 100% !important;
+  margin: .28rem 0 0 !important;
+  padding: .28rem .12rem .38rem !important;
+}
+
+#main_ui.camera-compact .tabs > .tab {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 2.15rem !important;
+  height: auto !important;
+  padding: .3rem .22rem !important;
+  gap: .22rem !important;
+  font-size: .65rem !important;
+  line-height: 1.08 !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#main_ui.camera-compact .ui > .view.active {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  padding: .48rem .42rem .58rem !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+}
+
+#main_ui.camera-compact .section {
+  margin-bottom: .55rem !important;
+}
+
+#main_ui.camera-compact .section,
+#main_ui.camera-compact .slot,
+#main_ui.camera-compact .animal-card,
+#main_ui.camera-compact .market-card,
+#main_ui.camera-compact .test-card {
+  max-width: 100% !important;
+}
+
+#main_ui.camera-compact .sec-head {
+  gap: .4rem !important;
+  margin-bottom: .45rem !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+}
+
+#main_ui.camera-compact .section h2,
+#main_ui.camera-compact .sec-head h2 {
+  font-size: .82rem !important;
+  line-height: 1.18 !important;
+}
+
+#main_ui.camera-compact .mini,
+#main_ui.camera-compact .muted {
+  font-size: .64rem !important;
+  line-height: 1.32 !important;
+}
+
+#main_ui.camera-compact .scroll-area,
+#main_ui.camera-compact .scroll-area.tall,
+#main_ui.camera-compact .scroll-area.mid,
+#main_ui.camera-compact .scroll-area.short {
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+#main_ui.camera-compact #careCenterTabs,
+#main_ui.camera-compact #businessCenterTabs,
+#main_ui.camera-compact #breedingCenterTabs,
+#main_ui.camera-compact .tools-center-tabs,
+#main_ui.camera-compact #careSubtabs {
+  flex: 0 0 auto !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: .28rem !important;
+  width: 100% !important;
+  margin: 0 0 .42rem !important;
+  padding: .25rem !important;
+}
+
+#main_ui.camera-compact #careCenterTabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+#main_ui.camera-compact #careCenterTabs .mini-tab,
+#main_ui.camera-compact #businessCenterTabs .mini-tab,
+#main_ui.camera-compact #breedingCenterTabs .mini-tab,
+#main_ui.camera-compact .tools-center-tabs .mini-tab,
+#main_ui.camera-compact #careSubtabs .mini-tab {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 2.1rem !important;
+  padding: .3rem .2rem !important;
+  font-size: .63rem !important;
+  line-height: 1.08 !important;
+  white-space: normal !important;
+}
+
+/* --------------------------------------------------------------------------
+   Breeding center: single, reliable scrolling surface in small mode
+   -------------------------------------------------------------------------- */
+#main_ui.camera-compact #view-breeding.active {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+#main_ui.camera-compact #view-breeding > #breedingCenterTabs {
+  flex: 0 0 auto !important;
+}
+
+#main_ui.camera-compact #view-breeding > .breeding-center-panes {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+  overflow: hidden !important;
+}
+
+#main_ui.camera-compact #view-breeding > .breeding-center-panes > .view {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 0 .12rem .35rem !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+}
+
+#main_ui.camera-compact #view-breeding > .breeding-center-panes > .view.active {
+  display: block !important;
+}
+
+#main_ui.camera-compact #view-breed {
+  display: block !important;
+  overflow-y: auto !important;
+}
+
+#main_ui.camera-compact #view-breed > .section {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 0 .5rem !important;
+  padding: .48rem !important;
+}
+
+#main_ui.camera-compact #view-breed #breedingInformationSection {
+  display: block !important;
+}
+
+#main_ui.camera-compact #view-breed .pair-grid,
+#main_ui.camera-compact #view-breed .breed-choice-grid,
+#main_ui.camera-compact #view-breed .breeding-info-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: .45rem !important;
+}
+
+#main_ui.camera-compact #view-breed .pair-slot {
+  min-height: 4.25rem !important;
+  padding: .45rem !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-pair-animal {
+  display: grid !important;
+  grid-template-columns: 3.65rem minmax(0, 1fr) !important;
+  gap: .55rem !important;
+  align-items: center !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-pair-animal .avatar {
+  width: 3.45rem !important;
+  height: 3.45rem !important;
+  padding: .2rem !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-pair-meta > div {
+  font-size: .78rem !important;
+  line-height: 1.18 !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-pair-meta span,
+#main_ui.camera-compact #view-breed .breed-pair-meta small {
+  display: block !important;
+  font-size: .62rem !important;
+  line-height: 1.28 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+#main_ui.camera-compact #view-breed .pair-empty {
+  min-height: 3.4rem !important;
+  gap: .3rem !important;
+}
+
+#main_ui.camera-compact #view-breed .pair-empty i {
+  font-size: 1rem !important;
+}
+
+#main_ui.camera-compact #view-breed .pair-empty span {
+  font-size: .72rem !important;
+}
+
+#main_ui.camera-compact #view-breed .breeding-parent-facts,
+#main_ui.camera-compact #view-breed .breeding-forecast {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: .35rem !important;
+}
+
+#main_ui.camera-compact #view-breed .compat {
+  display: grid !important;
+  grid-template-columns: 3.75rem minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: .45rem !important;
+  padding: .48rem !important;
+}
+
+#main_ui.camera-compact #view-breed .score-ring {
+  width: 3.55rem !important;
+  height: 3.55rem !important;
+}
+
+#main_ui.camera-compact #view-breed .score-ring span {
+  font-size: .72rem !important;
+}
+
+#main_ui.camera-compact #view-breed #reqCircles {
+  min-width: 0 !important;
+  gap: .28rem !important;
+}
+
+#main_ui.camera-compact #view-breed #btnBreed {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  min-height: 2.25rem !important;
+  font-size: .7rem !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-animals-section {
+  display: block !important;
+  min-height: 0 !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-choice-scroll {
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding: 0 !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-parent-column {
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: .42rem !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-parent-head {
+  min-height: 2rem !important;
+  padding: .32rem .42rem !important;
+  gap: .3rem !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-parent-head span,
+#main_ui.camera-compact #view-breed .breed-parent-head b,
+#main_ui.camera-compact #view-breed .breed-selection-summary,
+#main_ui.camera-compact #view-breed .filter-btn {
+  font-size: .63rem !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-parent-list {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: .38rem !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-animal-choice {
+  width: 100% !important;
+  min-height: 4.4rem !important;
+  display: grid !important;
+  grid-template-columns: 3.4rem minmax(0, 1fr) 1.65rem !important;
+  gap: .42rem !important;
+  padding: .42rem .48rem !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-choice-avatar {
+  width: 3.25rem !important;
+  height: 3.25rem !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-choice-avatar .avatar {
+  width: 2.95rem !important;
+  height: 2.95rem !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-choice-main b {
+  font-size: .75rem !important;
+  line-height: 1.18 !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-choice-main small,
+#main_ui.camera-compact #view-breed .breed-choice-stats em {
+  font-size: .58rem !important;
+  line-height: 1.25 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+#main_ui.camera-compact #view-breed .breed-choice-state {
+  width: 1.45rem !important;
+  height: 1.45rem !important;
+  font-size: .62rem !important;
+}
+
+#main_ui.camera-compact #view-pregnancy .pregnancy-overview,
+#main_ui.camera-compact #view-records .records-head,
+#main_ui.camera-compact #view-records .records-head-actions {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: .4rem !important;
+}
+
+#main_ui.camera-compact #view-records .records-search {
+  width: 100% !important;
+}
+
+/* --------------------------------------------------------------------------
+   Other ranch pages in compact mode
+   -------------------------------------------------------------------------- */
+#main_ui.camera-compact #shopList,
+#main_ui.camera-compact #careAnimals,
+#main_ui.camera-compact .market-columns,
+#main_ui.camera-compact .guard-dog-grid,
+#main_ui.camera-compact .birth-records-grid {
+  grid-template-columns: 1fr !important;
+}
+
+#main_ui.camera-compact #view-barn .scroll-area.tall,
+#main_ui.camera-compact #view-care .scroll-area.tall,
+#main_ui.camera-compact #view-care .scroll-area.mid,
+#main_ui.camera-compact #view-business .scroll-area,
+#main_ui.camera-compact #view-tools .scroll-area {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+#main_ui.camera-compact #shopDetails {
+  min-height: 8rem !important;
+  max-height: none !important;
+}
+
+#main_ui.camera-compact #careAnimals .animal-card,
+#main_ui.camera-compact #shopList .barn-animal-card {
+  min-height: 5rem !important;
+  height: auto !important;
+}
+
+#main_ui.camera-compact #callBulkBar,
+#main_ui.camera-compact .test-actions,
+#main_ui.camera-compact .test-stats,
+#main_ui.camera-compact .test-access-row,
+#main_ui.camera-compact #view-build .build-cats,
+#main_ui.camera-compact #buildCats {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+#main_ui.camera-compact #view-call table {
+  min-width: 36rem !important;
+}
+
+#main_ui.camera-compact #view-call .scroll-area {
+  overflow-x: auto !important;
+}
+
+/* --------------------------------------------------------------------------
+   Narrow viewport fallback (small screen even when camera mode is off)
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px), (max-height: 720px) and (max-width: 1280px) {
+  #main_ui:not(.camera-compact) .ui {
+    inset: auto !important;
+    top: 50% !important;
+    left: 2vw !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 96vw !important;
+    min-width: 0 !important;
+    max-width: 96vw !important;
+    height: 94vh !important;
+    min-height: 0 !important;
+    max-height: 94vh !important;
+    padding: .55rem !important;
+    transform: translateY(-50%) !important;
+    overflow: hidden !important;
+  }
+
+  #main_ui:not(.camera-compact) .tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  #main_ui:not(.camera-compact) .ui > .view.active {
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
+
+  #main_ui:not(.camera-compact) .market-columns,
+  #main_ui:not(.camera-compact) #careAnimals,
+  #main_ui:not(.camera-compact) .breed-choice-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 560px) {
+  #main_ui.camera-compact .ui {
+    left: 2vw !important;
+    width: 96vw !important;
+    max-width: 96vw !important;
+    min-height: 0 !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
+  }
+
+  #main_ui.camera-compact .farm-header {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto !important;
+  }
+
+  #main_ui.camera-compact .farm-header-center {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  #main_ui.camera-compact #farmLevelBadge {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+
+  #main_ui.camera-compact .farm-header .global-view-tools {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+  }
+
+  #main_ui.camera-compact .tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #main_ui.camera-compact #view-breed .breeding-parent-facts,
+  #main_ui.camera-compact #view-breed .breeding-forecast,
+  #main_ui.camera-compact #callBulkBar,
+  #main_ui.camera-compact .test-actions,
+  #main_ui.camera-compact .test-stats,
+  #main_ui.camera-compact .test-access-row,
+  #main_ui.camera-compact #view-build .build-cats,
+  #main_ui.camera-compact #buildCats {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* ========================================================================== 
+   ALFIE RANCH 3.2.4 — smooth book-page transition between wide / compact UI
+   The real interface is hidden only while a temporary visual page turns. The
+   size swap happens while the page is edge-on, so no width jump is visible.
+   ========================================================================== */
+#main_ui.ranch-layout-transitioning{
+  perspective:1600px;
+  perspective-origin:center center;
+}
+
+#main_ui.ranch-layout-transitioning .ui{
+  transition:none !important;
+}
+
+#main_ui .ui.ranch-layout-real-hidden{
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
+
+#main_ui .ranch-book-ghost-shell{
+  position:fixed;
+  z-index:2147482000;
+  overflow:hidden;
+  pointer-events:none;
+  transform-origin:center center;
+  transform-style:preserve-3d;
+  backface-visibility:hidden;
+  will-change:transform,opacity;
+  contain:layout paint style;
+  border-radius:.5rem;
+  box-shadow:
+    0 1.15rem 2.8rem rgba(0,0,0,.46),
+    -.35rem 0 1.2rem rgba(0,0,0,.32),
+    inset .07rem 0 rgba(255,255,255,.08);
+}
+
+#main_ui.ranch-layout-to-wide .ranch-book-ghost-shell{
+  transform-origin:center center;
+}
+
+#main_ui.ranch-layout-to-compact .ranch-book-ghost-shell{
+  transform-origin:center center;
+}
+
+#main_ui .ranch-book-page-ghost{
+  position:absolute !important;
+  inset:0 !important;
+  top:0 !important;
+  left:0 !important;
+  right:0 !important;
+  bottom:0 !important;
+  width:100% !important;
+  min-width:0 !important;
+  max-width:none !important;
+  height:100% !important;
+  min-height:0 !important;
+  max-height:none !important;
+  margin:0 !important;
+  transform:none !important;
+  overflow:hidden !important;
+  pointer-events:none !important;
+  user-select:none !important;
+  backface-visibility:hidden;
+}
+
+#main_ui .ranch-book-ghost-shell::before,
+#main_ui .ranch-book-ghost-shell::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:20;
+  pointer-events:none;
+}
+
+#main_ui .ranch-book-ghost-shell::before{
+  background:
+    linear-gradient(90deg,
+      rgba(255,255,255,.10) 0%,
+      rgba(255,255,255,.025) 7%,
+      transparent 22%,
+      transparent 70%,
+      rgba(0,0,0,.18) 100%);
+  opacity:.58;
+}
+
+#main_ui .ranch-book-ghost-shell::after{
+  inset:0 auto 0 50%;
+  width:.34rem;
+  transform:translateX(-50%);
+  background:linear-gradient(90deg,rgba(0,0,0,.34),rgba(255,255,255,.15),rgba(0,0,0,.34));
+  box-shadow:-.55rem 0 1rem rgba(0,0,0,.22),.55rem 0 1rem rgba(0,0,0,.22);
+  opacity:.82;
+}
+
+@media (prefers-reduced-motion: reduce){
+  #main_ui .ranch-book-ghost-shell{display:none !important;}
+}
+
+
+/* ========================================================================== 
+   ALFIE RANCH 3.2.5 — exact viewport-centred book layout
+   - Wide and camera-small shells share one immutable screen centre.
+   - Fixed responsive shell heights stop tabs with different content lengths
+     from pulling the whole ranch upward/downward.
+   - Uses viewport units rather than fixed pixel sizes, including 4K displays.
+   ========================================================================== */
+#main_ui{
+  --alfie-ranch-safe-gap:clamp(.65rem,1.25vh,2.5rem);
+  --alfie-ranch-wide-width:min(108vh,62vw);
+  --alfie-ranch-wide-height:min(91vh,calc(100vh - (var(--alfie-ranch-safe-gap) * 2)));
+  --alfie-ranch-compact-width:clamp(29rem,min(52vh,31vw),74rem);
+  --alfie-ranch-compact-height:min(84vh,calc(100vh - (var(--alfie-ranch-safe-gap) * 2)));
+  perspective-origin:50vw 50vh!important;
+}
+
+#main_ui .ui,
+#main_ui:not(.camera-compact) .ui,
+#main_ui.camera-compact .ui{
+  position:fixed!important;
+  inset:auto!important;
+  top:50%!important;
+  left:50%!important;
+  right:auto!important;
+  bottom:auto!important;
+  margin:0!important;
+  transform:translate3d(-50%,-50%,0)!important;
+  transform-origin:50% 50%!important;
+  display:flex!important;
+  flex-direction:column!important;
+  min-width:0!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+}
+
+#main_ui:not(.camera-compact) .ui{
+  width:var(--alfie-ranch-wide-width)!important;
+  max-width:calc(100vw - (var(--alfie-ranch-safe-gap) * 2))!important;
+  height:var(--alfie-ranch-wide-height)!important;
+  max-height:var(--alfie-ranch-wide-height)!important;
+}
+
+#main_ui.camera-compact .ui{
+  width:var(--alfie-ranch-compact-width)!important;
+  max-width:calc(100vw - (var(--alfie-ranch-safe-gap) * 2))!important;
+  height:var(--alfie-ranch-compact-height)!important;
+  max-height:var(--alfie-ranch-compact-height)!important;
+}
+
+#main_ui .ui>.farm-header,
+#main_ui .ui>.tabs{
+  flex:0 0 auto!important;
+}
+
+#main_ui .ui>.view.active{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+}
+
+/* Keep both the temporary layout page and its spine on the viewport centre. */
+#main_ui .ranch-book-ghost-shell{
+  transform-origin:50% 50%!important;
+}
+#main_ui .ranch-book-page-ghost{
+  transform-origin:50% 50%!important;
+}
+#main_ui.ranch-layout-transitioning,
+#main_ui.ranch-tab-transitioning{
+  perspective-origin:50vw 50vh!important;
+}
+
+/* The tab turn origin is supplied by JS in viewport-relative pixels. */
+#main_ui .ranch-tab-page-turn{
+  backface-visibility:hidden!important;
+  transform-style:preserve-3d!important;
+}
+
+/* Narrow screens keep the same exact centre; only dimensions change. */
+@media (max-width:900px), (max-height:720px) and (max-width:1280px){
+  #main_ui{
+    --alfie-ranch-wide-width:96vw;
+    --alfie-ranch-wide-height:94vh;
+    --alfie-ranch-compact-width:96vw;
+    --alfie-ranch-compact-height:94vh;
+  }
+}
+
+/* High-resolution and 4K screens: retain proportional scale with no rem cap. */
+@media (min-width:2560px) and (min-height:1300px){
+  #main_ui{
+    --alfie-ranch-safe-gap:1.6vh;
+    --alfie-ranch-wide-width:min(108vh,62vw);
+    --alfie-ranch-wide-height:91vh;
+    --alfie-ranch-compact-width:min(52vh,31vw);
+    --alfie-ranch-compact-height:84vh;
+  }
+}
+
+/* Never put CSS perspective on #main_ui itself: perspective creates a new
+   containing block for fixed descendants and was the exact reason the ranch
+   jumped upward by half a screen at the start of a page turn. Each animation
+   already carries its own perspective() transform. */
+#main_ui.ranch-layout-transitioning,
+#main_ui.ranch-tab-transitioning{
+  perspective:none!important;
+  transform:none!important;
+}
+
+
+/* ========================================================================== 
+   ALFIE RANCH 3.2.6 — centred main ranch + restored left camera panel
+   - The normal ranch stays exactly centred on every resolution.
+   - Camera compact mode returns to the original left-side placement.
+   - The Barn search row has a fixed compact height and can never stretch into
+     an empty panel; the animal list receives the remaining vertical space.
+   ========================================================================== */
+#main_ui{
+  --alfie-ranch-compact-left:clamp(.75rem,1.15vw,2.6rem);
+}
+
+/* Main management interface remains centred. */
+#main_ui:not(.camera-compact) .ui{
+  inset:auto!important;
+  top:50%!important;
+  left:50%!important;
+  right:auto!important;
+  bottom:auto!important;
+  transform:translate3d(-50%,-50%,0)!important;
+  transform-origin:50% 50%!important;
+}
+
+/* Farm camera interface returns to its familiar compact position on the left. */
+#main_ui.camera-compact .ui{
+  inset:auto!important;
+  top:50%!important;
+  left:var(--alfie-ranch-compact-left)!important;
+  right:auto!important;
+  bottom:auto!important;
+  width:clamp(29rem,42vw,40rem)!important;
+  min-width:0!important;
+  max-width:calc(100vw - (var(--alfie-ranch-compact-left) * 2))!important;
+  height:min(90vh,58rem)!important;
+  min-height:min(32rem,calc(100vh - 1.5rem))!important;
+  max-height:90vh!important;
+  transform:translate3d(0,-50%,0)!important;
+  transform-origin:50% 50%!important;
+}
+
+/* On true 4K displays preserve the same left placement while allowing a
+   slightly larger readable compact page instead of a tiny fixed-pixel card. */
+@media (min-width:2560px) and (min-height:1300px){
+  #main_ui.camera-compact .ui{
+    width:clamp(40rem,22vw,52rem)!important;
+    height:min(88vh,68rem)!important;
+    max-height:88vh!important;
+  }
+}
+
+/* Narrow screens cannot keep a desktop-width left panel; keep it safely
+   inside the viewport while still left-aligned rather than re-centring it. */
+@media (max-width:560px){
+  #main_ui.camera-compact .ui{
+    left:2vw!important;
+    width:96vw!important;
+    max-width:96vw!important;
+    height:94vh!important;
+    min-height:0!important;
+    max-height:94vh!important;
+    transform:translate3d(0,-50%,0)!important;
+  }
+}
+
+/* Barn is a stable column: heading/search/details never expand, the list does. */
+#main_ui #view-barn > .section{
+  display:flex!important;
+  flex-direction:column!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+#main_ui #view-barn > .section > .sec-head,
+#main_ui #view-barn > .section > .gender-tabs,
+#main_ui #view-barn > .section > .list-search,
+#main_ui #view-barn > .section > #shopDetails{
+  flex:0 0 auto!important;
+}
+
+/* Authoritative shop search-bar sizing. This overrides any old vh/flex rule
+   that could make the artwork wrapper fill a large empty vertical row. */
+#main_ui #view-barn .list-search[data-target="shopList"]{
+  position:relative!important;
+  display:flex!important;
+  align-items:center!important;
+  width:100%!important;
+  height:clamp(2.35rem,3.25vh,3rem)!important;
+  min-height:clamp(2.35rem,3.25vh,3rem)!important;
+  max-height:clamp(2.35rem,3.25vh,3rem)!important;
+  margin:.38rem 0 .48rem!important;
+  padding:.2rem!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+  align-self:stretch!important;
+}
+#main_ui #view-barn .list-search[data-target="shopList"] > i{
+  position:absolute!important;
+  left:.82rem!important;
+  top:50%!important;
+  width:1rem!important;
+  height:1rem!important;
+  display:grid!important;
+  place-items:center!important;
+  transform:translateY(-50%)!important;
+  line-height:1!important;
+  z-index:2!important;
+  pointer-events:none!important;
+}
+#main_ui #view-barn .list-search[data-target="shopList"] > input{
+  display:block!important;
+  flex:1 1 auto!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:0 2.15rem 0 2.35rem!important;
+  line-height:1.2!important;
+  box-sizing:border-box!important;
+}
+#main_ui #view-barn .list-search[data-target="shopList"] > input::-webkit-search-cancel-button{
+  cursor:pointer!important;
+}
+
+#main_ui #view-barn > .section > .scroll-area.tall{
+  flex:1 1 auto!important;
+  width:100%!important;
+  min-height:5rem!important;
+  max-height:none!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+}
+#main_ui #view-barn #shopList{
+  align-content:start!important;
+  grid-auto-rows:max-content!important;
+  min-height:0!important;
+}
+#main_ui #view-barn #shopDetails{
+  width:100%!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+}
+
+/* ========================================================================== 
+   ALFIE RANCH 3.2.8 — grazing-style Barn search, wide + camera compact
+   - Correct five-row Barn grid: header, gender, search, results, inspector.
+   - The search card never owns the flexible row, fixing the large dead gap.
+   - One internal scrollbar only; the catalog begins directly under search.
+   ========================================================================== */
+#main_ui[data-active-tab="barn"] #view-barn.active > .section,
+#main_ui #view-barn.active > .section{
+  grid-template-rows:auto auto auto minmax(0,1fr) auto!important;
+  row-gap:clamp(.3rem,.55vh,.5rem)!important;
+}
+
+#main_ui #view-barn .grazing-list-search[data-target="shopList"]{
+  position:relative!important;
+  display:grid!important;
+  grid-template-columns:clamp(2.35rem,3.4vh,3rem) minmax(0,1fr)!important;
+  align-items:center!important;
+  gap:clamp(.42rem,.7vh,.65rem)!important;
+  width:100%!important;
+  height:clamp(3.7rem,5.6vh,4.55rem)!important;
+  min-height:clamp(3.7rem,5.6vh,4.55rem)!important;
+  max-height:clamp(3.7rem,5.6vh,4.55rem)!important;
+  margin:0!important;
+  padding:clamp(.34rem,.52vh,.48rem) clamp(.45rem,.7vh,.68rem)!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+  color:#f1f1f1!important;
+  background-color:rgba(8,8,8,.8)!important;
+  background-image:linear-gradient(90deg,rgba(255,255,255,.018),rgba(0,0,0,.12)),url('../../../img/box_a_bg_1.png')!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  background-size:100% 100%!important;
+  border:.065rem solid rgba(255,255,255,.16)!important;
+  box-shadow:0 .42rem .8rem rgba(0,0,0,.22)!important;
+  filter:none!important;
+  align-self:stretch!important;
+}
+#main_ui #view-barn .grazing-list-search[data-target="shopList"]:focus-within{
+  border-color:rgba(255,255,255,.36)!important;
+  background-image:linear-gradient(90deg,rgba(255,255,255,.035),rgba(0,0,0,.08)),url('../../../img/box_a_bg_1_2.png')!important;
+}
+#main_ui #view-barn .grazing-list-search .grazing-search-icon{
+  width:clamp(2.35rem,3.4vh,3rem)!important;
+  height:clamp(2.35rem,3.4vh,3rem)!important;
+  display:grid!important;
+  place-items:center!important;
+  color:#f1f1f1!important;
+  background:rgba(0,0,0,.28)!important;
+  border:.06rem solid rgba(255,255,255,.16)!important;
+  box-sizing:border-box!important;
+}
+#main_ui #view-barn .grazing-list-search i{
+  position:static!important;
+  inset:auto!important;
+  width:auto!important;
+  height:auto!important;
+  display:inline-block!important;
+  transform:none!important;
+  color:inherit!important;
+  font-size:inherit!important;
+  line-height:1!important;
+  pointer-events:none!important;
+}
+#main_ui #view-barn .grazing-search-icon > i{
+  font-size:clamp(.95rem,1.22vh,1.18rem)!important;
+}
+#main_ui #view-barn .grazing-search-body{
+  min-width:0!important;
+  display:grid!important;
+  grid-template-rows:auto minmax(1.55rem,1fr) .14rem!important;
+  gap:clamp(.16rem,.26vh,.24rem)!important;
+  align-self:stretch!important;
+}
+#main_ui #view-barn .grazing-search-head{
+  min-width:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:.75rem!important;
+  line-height:1!important;
+}
+#main_ui #view-barn .grazing-search-head strong{
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  color:#f2f2f2!important;
+  font:700 clamp(.67rem,.82vh,.82rem) 'Roboto Condensed','Inter',sans-serif!important;
+  letter-spacing:.035em!important;
+  text-transform:uppercase!important;
+}
+#main_ui #view-barn .grazing-search-count{
+  flex:0 0 auto!important;
+  color:rgba(255,255,255,.6)!important;
+  font:600 clamp(.58rem,.68vh,.7rem) 'Roboto Condensed','Inter',sans-serif!important;
+  white-space:nowrap!important;
+}
+#main_ui #view-barn .grazing-search-field{
+  position:relative!important;
+  min-width:0!important;
+  height:100%!important;
+  display:grid!important;
+  grid-template-columns:1.2rem minmax(0,1fr) 1.45rem!important;
+  align-items:center!important;
+  gap:.28rem!important;
+  padding:0 .36rem!important;
+  box-sizing:border-box!important;
+  background:rgba(0,0,0,.34)!important;
+  border:.06rem solid rgba(255,255,255,.14)!important;
+}
+#main_ui #view-barn .grazing-search-field:focus-within{
+  border-color:rgba(255,255,255,.38)!important;
+  box-shadow:inset .12rem 0 rgba(255,255,255,.8)!important;
+}
+#main_ui #view-barn .grazing-search-field > i{
+  justify-self:center!important;
+  color:rgba(255,255,255,.55)!important;
+  font-size:clamp(.64rem,.76vh,.76rem)!important;
+}
+#main_ui #view-barn .grazing-search-field > input{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:0!important;
+  outline:0!important;
+  border:0!important;
+  box-shadow:none!important;
+  color:#f2f2f2!important;
+  background:transparent!important;
+  font:500 clamp(.65rem,.77vh,.78rem) 'Inter','Roboto Condensed',sans-serif!important;
+  line-height:1!important;
+  box-sizing:border-box!important;
+}
+#main_ui #view-barn .grazing-search-field > input::placeholder{
+  color:rgba(255,255,255,.4)!important;
+}
+#main_ui #view-barn .grazing-search-field > input::-webkit-search-cancel-button{
+  display:none!important;
+}
+#main_ui #view-barn .grazing-search-field > button{
+  width:1.35rem!important;
+  height:1.35rem!important;
+  min-width:0!important;
+  min-height:0!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:0!important;
+  color:rgba(255,255,255,.72)!important;
+  background:rgba(255,255,255,.06)!important;
+  border:.05rem solid rgba(255,255,255,.12)!important;
+  cursor:pointer!important;
+}
+#main_ui #view-barn .grazing-search-field > button[hidden]{display:none!important}
+#main_ui #view-barn .grazing-search-field > button:hover{
+  color:#fff!important;
+  background:rgba(255,255,255,.14)!important;
+}
+#main_ui #view-barn .grazing-search-track{
+  height:.14rem!important;
+  overflow:hidden!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.12)!important;
+}
+#main_ui #view-barn .grazing-search-track > i{
+  display:block!important;
+  width:100%;
+  height:100%!important;
+  border-radius:inherit!important;
+  background:rgba(255,255,255,.88)!important;
+  transition:width .18s ease!important;
+}
+#main_ui #view-barn .grazing-list-search.no-results .grazing-search-count{
+  color:#dfb6b6!important;
+}
+#main_ui #view-barn .grazing-list-search.no-results .grazing-search-track > i{
+  background:rgba(210,116,116,.88)!important;
+}
+
+/* Results begin immediately below the grazing-style search card. */
+#main_ui #view-barn > .section > .scroll-area.tall{
+  margin:0!important;
+  padding-top:.12rem!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+}
+#main_ui #view-barn #shopList{
+  display:grid!important;
+  align-content:start!important;
+  min-height:0!important;
+  height:auto!important;
+  overflow:visible!important;
+}
+#main_ui #view-barn .scroll-area.search-empty{
+  min-height:3.4rem!important;
+  background:linear-gradient(rgba(0,0,0,.12),rgba(0,0,0,.12))!important;
+}
+#main_ui #view-barn .scroll-area.search-empty::after{
+  content:'No animals match your search';
+  min-height:3.2rem;
+  display:grid;
+  place-items:center;
+  color:rgba(255,255,255,.48);
+  font:600 clamp(.65rem,.75vh,.76rem) 'Roboto Condensed','Inter',sans-serif;
+  letter-spacing:.02em;
+}
+
+/* Camera compact: same grazing design, one tighter readable row group. */
+#main_ui.camera-compact #view-barn .grazing-list-search[data-target="shopList"]{
+  grid-template-columns:clamp(2rem,3vh,2.45rem) minmax(0,1fr)!important;
+  gap:.4rem!important;
+  height:clamp(3.25rem,5.1vh,3.8rem)!important;
+  min-height:clamp(3.25rem,5.1vh,3.8rem)!important;
+  max-height:clamp(3.25rem,5.1vh,3.8rem)!important;
+  padding:.3rem .4rem!important;
+}
+#main_ui.camera-compact #view-barn .grazing-search-icon{
+  width:clamp(2rem,3vh,2.45rem)!important;
+  height:clamp(2rem,3vh,2.45rem)!important;
+}
+#main_ui.camera-compact #view-barn .grazing-search-body{
+  grid-template-rows:auto minmax(1.35rem,1fr) .11rem!important;
+  gap:.12rem!important;
+}
+#main_ui.camera-compact #view-barn .grazing-search-head strong{
+  font-size:clamp(.58rem,.68vh,.68rem)!important;
+}
+#main_ui.camera-compact #view-barn .grazing-search-count{
+  font-size:clamp(.52rem,.58vh,.6rem)!important;
+}
+#main_ui.camera-compact #view-barn .grazing-search-field{
+  grid-template-columns:1rem minmax(0,1fr) 1.2rem!important;
+  padding:0 .26rem!important;
+}
+#main_ui.camera-compact #view-barn .grazing-search-field > input{
+  font-size:clamp(.58rem,.65vh,.66rem)!important;
+}
+#main_ui.camera-compact #view-barn .grazing-search-field > button{
+  width:1.1rem!important;
+  height:1.1rem!important;
+}
+
+@media (max-height:720px){
+  #main_ui #view-barn .grazing-list-search[data-target="shopList"]{
+    height:3.35rem!important;
+    min-height:3.35rem!important;
+    max-height:3.35rem!important;
+  }
+  #main_ui #view-barn .grazing-search-icon{
+    width:2.15rem!important;
+    height:2.15rem!important;
+  }
+  #main_ui #view-barn .grazing-search-body{
+    grid-template-rows:auto 1.35rem .1rem!important;
+    gap:.11rem!important;
+  }
+}
+
+/* Search filtering must beat card display:grid!important declarations. */
+#main_ui .search-filtered-out{
+  display:none!important;
+}

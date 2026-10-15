@@ -1,0 +1,162 @@
+.matriceContainer p {
+    color: white;
+    font-size: 14px;
+    padding: 7px;
+    font-family: 'Hapna';
+    width: 80px;
+    text-align: center;
+}
+
+
+
+.matrice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.matriceContainer {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.matriceElem {
+    position: relative;
+    width: 135px;
+    height: 135px;
+    background: url("../img/matrice.png");
+    background-size: 100% 100%;
+    cursor: crosshair;
+}
+
+.selecteur {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: url("../img/knob.png");
+    background-size: 100% 100%;
+    transform: translate(-50%, -50%);
+    cursor: grab;
+}
+
+.selecteur:active {
+    cursor: grabbing;
+}
+
+.sliderContainer {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+.sliderContainer p {
+    color: white;
+    font-size: 14px;
+    padding: 7px;
+    font-family: 'Hapna';
+    width: 80px;
+    text-align: center;
+    margin-bottom: 3px;
+}
+
+
+
+.creatorSlider {
+    -webkit-appearance: none;
+    width: 135px;
+    height: 27px;
+    background: url(../img/slider/slider_grid.png);
+    background-size: 100% 100%;
+    background-position: center;
+
+}
+
+.creatorSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 17px;
+    height: 17px;
+    margin-top: -5px;
+    opacity: 1 !important;
+
+    background-image: url(../img/slider/handler.png);
+    background-size: 100% 100%;
+    background-position: center;
+    opacity: 1;
+}
+
+.creatorSlider::-webkit-slider-runnable-track {
+    cursor: pointer;
+    height: 8px;
+}
+
+.creator-matrix-replacement {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.creator-matrix-replacement-inner {
+    width: 86%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.creator-expression-slider {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.creator-expression-slider-title {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.creator-expression-slider-title p,
+.creator-expression-end {
+    color: white;
+    font-size: 14px;
+    font-family: 'Hapna';
+}
+
+.creator-expression-name {
+    text-align: left;
+    padding: 0;
+    width: auto;
+}
+
+.creator-expression-value {
+    text-align: right;
+    padding: 0;
+    width: auto;
+}
+
+.creator-expression-slider-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.creator-expression-end {
+    width: 72px;
+    text-align: center;
+    user-select: none;
+}
+
+.creatorSliderArrow {
+    width: 170px;
+    margin: 0 4px;
+}

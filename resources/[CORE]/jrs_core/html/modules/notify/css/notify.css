@@ -1,0 +1,224 @@
+/* ==========================================================================
+   jrs_notify - JRS unified notification toasts.
+
+   These rules are the jrs_ranch (farm) notification look, lifted verbatim from
+   html/assets/css/ranch.css so every script on the server shows the exact same
+   toast the farm menu shows. Two blocks in ranch.css touched the toast (the
+   original definition and the later performance pass that replaced the border
+   with the box_a_bg_1 artwork); they are merged here into their final values.
+   ========================================================================== */
+
+@font-face {
+    font-family: 'RanchRoboto';
+    src: url('../fonts/robotoslab.ttf') format('truetype');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'RanchCrock';
+    src: url('../fonts/crock.ttf') format('truetype');
+    font-display: swap;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: transparent !important;
+    color: #f1f1f1;
+    font-family: 'RanchRoboto', 'Segoe UI', Tahoma, 'Traditional Arabic', Arial, sans-serif;
+    /* The page covers the whole screen but must never eat a click. */
+    pointer-events: none;
+    user-select: none;
+}
+
+/* --------------------------------------------------------------------------
+   Stack
+   -------------------------------------------------------------------------- */
+.notify-stack {
+    position: fixed;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    z-index: 10040;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: clamp(6px, .65vh, calc(9px * var(--jrs-screen-scale, 1)));
+    pointer-events: none;
+    width: min(85vw, clamp(210px, 14vw, calc(260px * var(--jrs-screen-scale, 1))));
+    transition: none;
+}
+
+.notify-stack.pos-top-right    { top: clamp(46px, 4.8vh, calc(52px * var(--jrs-screen-scale, 1))); right: clamp(12px, 1.2vw, calc(18px * var(--jrs-screen-scale, 1))); align-items: flex-end; }
+.notify-stack.pos-top-left     { top: clamp(14px, 2vh, calc(32px * var(--jrs-screen-scale, 1))); left: clamp(14px, 2vh, calc(32px * var(--jrs-screen-scale, 1))); align-items: flex-start; }
+.notify-stack.pos-top-center   { top: clamp(14px, 2vh, calc(32px * var(--jrs-screen-scale, 1))); left: 50%; transform: translateX(-50%); align-items: center; }
+.notify-stack.pos-bottom-center{ left: 50%; bottom: clamp(14px, 2.4vh, calc(36px * var(--jrs-screen-scale, 1))); transform: translateX(-50%); align-items: center; }
+.notify-stack.pos-bottom-right { right: clamp(14px, 2vh, calc(32px * var(--jrs-screen-scale, 1))); bottom: clamp(14px, 2.4vh, calc(36px * var(--jrs-screen-scale, 1))); align-items: flex-end; }
+.notify-stack.pos-bottom-left  { left: clamp(14px, 2vh, calc(32px * var(--jrs-screen-scale, 1))); bottom: clamp(14px, 2.4vh, calc(36px * var(--jrs-screen-scale, 1))); align-items: flex-start; }
+
+/* --------------------------------------------------------------------------
+   Toast
+   -------------------------------------------------------------------------- */
+.notify-toast {
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    width: 100%;
+    min-height: clamp(28px, 3.2vh, calc(38px * var(--jrs-screen-scale, 1)));
+    max-height: 18vh;
+    padding: clamp(3px, .4vh, calc(6px * var(--jrs-screen-scale, 1))) clamp(7px, .8vw, calc(11px * var(--jrs-screen-scale, 1)));
+    gap: clamp(4px, .5vw, calc(8px * var(--jrs-screen-scale, 1)));
+    margin-bottom: clamp(6px, .65vh, calc(8px * var(--jrs-screen-scale, 1)));
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+    background-image: url('../img/box_a_bg_1.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    box-shadow: none;
+    filter: drop-shadow(0 .25vh .5vh rgba(0, 0, 0, .45));
+    color: #ffffff;
+    opacity: 0;
+    transform: translateX(14px);
+    transition: opacity .24s ease-out, transform .24s cubic-bezier(0.16, 1, 0.3, 1), max-height .25s ease, padding .25s ease, margin .25s ease;
+    box-sizing: border-box;
+}
+
+.notify-toast:last-child {
+    margin-bottom: 0;
+}
+
+.notify-stack.pos-top-left .notify-toast,
+.notify-stack.pos-bottom-left .notify-toast {
+    transform: translateX(-14px);
+}
+
+.notify-stack.pos-top-center .notify-toast {
+    transform: translateY(-8px);
+}
+
+.notify-stack.pos-bottom-center .notify-toast {
+    transform: translateY(8px);
+}
+
+.notify-toast.show {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) !important;
+}
+
+.notify-toast.hide {
+    opacity: 0;
+    transform: translateX(14px);
+    max-height: 0 !important;
+    min-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none;
+}
+
+.notify-stack.pos-top-left .notify-toast.hide,
+.notify-stack.pos-bottom-left .notify-toast.hide {
+    transform: translateX(-14px);
+}
+
+.notify-stack.pos-top-center .notify-toast.hide {
+    transform: translateY(-8px);
+}
+
+.notify-stack.pos-bottom-center .notify-toast.hide {
+    transform: translateY(8px);
+}
+
+@keyframes notifyRefreshPulse {
+    0%   { transform: scale(1); filter: drop-shadow(0 .25vh .5vh rgba(0, 0, 0, .34)); }
+    40%  { transform: scale(1.02); filter: drop-shadow(0 0 .8vh rgba(255, 255, 255, .5)); }
+    100% { transform: scale(1); filter: drop-shadow(0 .25vh .5vh rgba(0, 0, 0, .34)); }
+}
+
+.notify-toast.pulse {
+    animation: notifyRefreshPulse .32s ease-out;
+}
+
+.notify-toast .notify-icon {
+    flex: 0 0 auto;
+    width: clamp(18px, 2.2vh, calc(24px * var(--jrs-screen-scale, 1)));
+    height: clamp(18px, 2.2vh, calc(24px * var(--jrs-screen-scale, 1)));
+    border-radius: 0;
+    border: .08vh solid rgba(255, 255, 255, .25);
+    background: rgba(0, 0, 0, .35);
+    color: #fff;
+    font-size: clamp(9px, 1.1vh, calc(12px * var(--jrs-screen-scale, 1)));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* Optional item artwork (legacy DisplayLeftNotification icons). Hidden until
+   the image actually loads, so a missing item png falls back to the FA glyph
+   instead of leaving an empty square. */
+.notify-toast .notify-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.notify-toast .notify-body { flex: 1 1 auto; min-width: 0; }
+
+.notify-toast .notify-title {
+    font-weight: 800;
+    font-size: clamp(9.5px, 1.05vh, calc(12px * var(--jrs-screen-scale, 1)));
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    color: #ffffff;
+    margin-bottom: 1px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+}
+
+.notify-toast .notify-text {
+    font-size: clamp(8.5px, 0.95vh, calc(11px * var(--jrs-screen-scale, 1)));
+    line-height: 1.28;
+    color: #f0ebe0;
+    word-break: break-word;
+    unicode-bidi: plaintext;
+    direction: auto;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.85);
+}
+
+.notify-toast.has-arabic-text .notify-text,
+body.jrs-rtl .notify-toast .notify-text {
+    direction: rtl;
+    text-align: right;
+    unicode-bidi: plaintext;
+    font-family: 'Cairo', 'Segoe UI', Tahoma, 'Traditional Arabic', Arial, sans-serif !important;
+    font-size: clamp(9px, 1.0vh, calc(11.5px * var(--jrs-screen-scale, 1))) !important;
+    letter-spacing: normal !important;
+    line-height: 1.3;
+}
+
+.notify-toast.has-arabic-title .notify-title,
+body.jrs-rtl .notify-toast.has-arabic-title .notify-title {
+    direction: rtl;
+    text-align: right;
+    font-family: 'Cairo', 'Segoe UI', Tahoma, 'Traditional Arabic', Arial, sans-serif !important;
+    font-size: clamp(9.5px, 1.05vh, calc(12px * var(--jrs-screen-scale, 1))) !important;
+    letter-spacing: normal !important;
+}
+
+/* All notification types share the same monochrome look - the farm never
+   coloured them per type, only the icon changes. */
+.notify-toast.type-success,
+.notify-toast.type-error,
+.notify-toast.type-warning,
+.notify-toast.type-reward,
+.notify-toast.type-info { color: #ffffff; }

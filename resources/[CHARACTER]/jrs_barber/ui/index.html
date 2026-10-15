@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JRS Barber</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <section id="panel" class="hidden">
+        <header>
+            <div id="title">BARBER</div>
+            <div id="subtitle"></div>
+        </header>
+        <div id="rows"></div>
+        <div id="desc"></div>
+        <div id="total"><span id="totalLabel">Total</span><span id="price">$0.00</span></div>
+        <footer>
+            <div id="buy" class="btn primary"><span class="key">&#8629;</span><span id="buyLabel">Buy</span></div>
+            <div id="count"></div>
+            <div id="close" class="btn"><span class="key">&#9003;</span><span id="closeLabel">Back</span></div>
+        </footer>
+    </section>
+    <div id="hints" class="hidden">
+        <div class="hint"><span class="key">&#8593;&#8595;</span><span id="hSelect">Select</span></div>
+        <div class="hint"><span class="key">&#8592;&#8594;</span><span id="hChange">Change</span></div>
+        <div class="hint"><span class="key">A D</span><span id="hRotate">Rotate</span></div>
+        <div class="hint"><span class="key">&#9673;</span><span id="hZoom">Zoom</span></div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

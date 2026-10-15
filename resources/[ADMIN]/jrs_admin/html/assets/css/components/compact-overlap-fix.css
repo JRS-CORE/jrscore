@@ -1,0 +1,532 @@
+/* ========================================================================== 
+   ALFIE RANCH 3.2.12 — complete camera-compact overlap repair
+   Authoritative final compact rules. Loaded after every legacy stylesheet.
+   ========================================================================== */
+
+/* Generic compact safety: no child may force the side panel wider. */
+#main_ui.camera-compact .ui,
+#main_ui.camera-compact .ui *{
+  min-width:0 !important;
+  box-sizing:border-box !important;
+}
+#main_ui.camera-compact .ui{
+  overflow:hidden !important;
+}
+#main_ui.camera-compact .ui > .view.active{
+  width:100% !important;
+  min-height:0 !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+}
+#main_ui.camera-compact :is(.section,.sec-head,.actions,.filters,.slot,.animal-card,.market-row,.market-card,.pair-slot,.pregnancy-stat,.birth-record-card,.guard-dog-card,.guard-dog-owned-card,.building-card,.manage-row,.test-card){
+  max-width:100% !important;
+}
+#main_ui.camera-compact :is(.section,.sec-head,.actions,.filters,.slot,.animal-card,.market-row,.market-card,.pair-slot,.pregnancy-stat,.birth-record-card,.guard-dog-card,.guard-dog-owned-card,.building-card,.manage-row,.test-card) > *{
+  min-width:0 !important;
+}
+#main_ui.camera-compact :is(.muted,.mini,.meta,b,strong,small,span,p,h2,h3,h4,td,th,label){
+  overflow-wrap:anywhere !important;
+  word-break:normal !important;
+}
+#main_ui.camera-compact :is(.sec-head,.actions,.filters){
+  flex-wrap:wrap !important;
+}
+#main_ui.camera-compact .sec-head > :first-child{
+  flex:1 1 11rem !important;
+}
+#main_ui.camera-compact .actions{
+  flex:0 1 auto !important;
+  gap:.35rem !important;
+}
+#main_ui.camera-compact :is(button,.btn,.mini-tab,.tab,.pill,.gender-tab){
+  max-width:100% !important;
+}
+#main_ui.camera-compact :is(input,select,textarea){
+  width:100% !important;
+  max-width:100% !important;
+}
+
+/* Stable compact page shell. The page itself does not horizontally scroll. */
+#main_ui.camera-compact .tabs{
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+}
+#main_ui.camera-compact .tabs > .tab{
+  white-space:normal !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+#main_ui.camera-compact :is(#careCenterTabs,#businessCenterTabs,#breedingCenterTabs,.tools-center-tabs,#careSubtabs){
+  width:100% !important;
+  max-width:100% !important;
+}
+
+/* --------------------------------------------------------------------------
+   CARE: one scroll surface, identity row + non-overlapping meter grid.
+   -------------------------------------------------------------------------- */
+#main_ui.camera-compact #view-care.active{
+  display:flex !important;
+  flex-direction:column !important;
+  min-height:0 !important;
+  overflow:hidden !important;
+}
+#main_ui.camera-compact #view-care > #careCenterTabs{
+  flex:0 0 auto !important;
+}
+#main_ui.camera-compact #view-care > .care-center-panes{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  height:auto !important;
+  overflow:hidden !important;
+}
+#main_ui.camera-compact #view-care .care-center-pane{
+  width:100% !important;
+  height:100% !important;
+  min-height:0 !important;
+  overflow:hidden !important;
+}
+#main_ui.camera-compact #view-care .care-center-pane.active{
+  display:flex !important;
+  flex-direction:column !important;
+}
+#main_ui.camera-compact #view-care #careSubtabs{
+  flex:0 0 auto !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+}
+#main_ui.camera-compact #view-care #careListSection{
+  flex:1 1 auto !important;
+  display:flex !important;
+  flex-direction:column !important;
+  min-height:0 !important;
+  margin:0 !important;
+  overflow:hidden !important;
+}
+#main_ui.camera-compact #view-care #careListSection > :is(.sec-head,.filters){
+  flex:0 0 auto !important;
+}
+#main_ui.camera-compact #view-care #careListSection .care-list-scroll{
+  flex:1 1 auto !important;
+  width:100% !important;
+  min-height:0 !important;
+  max-height:none !important;
+  padding-right:.2rem !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+}
+#main_ui.camera-compact #careAnimals{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:.45rem !important;
+  width:100% !important;
+  align-content:start !important;
+}
+#main_ui.camera-compact #careAnimals .care-barn-row{
+  position:relative !important;
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) auto !important;
+  grid-template-areas:
+    "identity return"
+    "meters meters" !important;
+  align-items:center !important;
+  width:100% !important;
+  min-height:0 !important;
+  height:auto !important;
+  padding:.62rem .68rem .58rem !important;
+  padding-left:1.65rem !important;
+  gap:.48rem .55rem !important;
+  overflow:hidden !important;
+}
+#main_ui.camera-compact #careAnimals .care-barn-row .animal-left{
+  grid-area:identity !important;
+  display:grid !important;
+  grid-template-columns:3.35rem minmax(0,1fr) !important;
+  align-items:center !important;
+  gap:.58rem !important;
+  width:100% !important;
+  padding:0 !important;
+}
+#main_ui.camera-compact #careAnimals .care-animal-thumb{
+  width:3.25rem !important;
+  height:3.25rem !important;
+  min-width:3.25rem !important;
+}
+#main_ui.camera-compact #careAnimals .care-animal-thumb .avatar{
+  width:2.85rem !important;
+  height:2.85rem !important;
+  min-width:2.85rem !important;
+  padding:.12rem !important;
+}
+#main_ui.camera-compact #careAnimals .name-row{
+  display:flex !important;
+  align-items:center !important;
+  gap:.35rem !important;
+  width:100% !important;
+  min-width:0 !important;
+}
+#main_ui.camera-compact #careAnimals .animal-name{
+  flex:0 1 auto !important;
+  max-width:calc(100% - 2rem) !important;
+  font-size:.96rem !important;
+  line-height:1.12 !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+#main_ui.camera-compact #careAnimals .rename{
+  flex:0 0 1.55rem !important;
+  width:1.55rem !important;
+  height:1.55rem !important;
+  min-height:1.55rem !important;
+  padding:0 !important;
+}
+#main_ui.camera-compact #careAnimals .meta .muted{
+  display:block !important;
+  width:100% !important;
+  margin-top:.18rem !important;
+  font-size:.66rem !important;
+  line-height:1.28 !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+#main_ui.camera-compact #careAnimals .care-return-animal{
+  grid-area:return !important;
+  position:static !important;
+  align-self:center !important;
+  justify-self:end !important;
+  width:auto !important;
+  min-width:4.65rem !important;
+  max-width:5.4rem !important;
+  min-height:2rem !important;
+  padding:.3rem .42rem !important;
+  font-size:.64rem !important;
+  line-height:1.05 !important;
+}
+#main_ui.camera-compact #careAnimals .care-card-bars{
+  grid-area:meters !important;
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:.42rem .55rem !important;
+  width:100% !important;
+  margin:0 !important;
+  padding-top:.42rem !important;
+  border-top:1px solid rgba(255,255,255,.08) !important;
+}
+#main_ui.camera-compact #careAnimals .care-card-meter{
+  width:100% !important;
+  min-width:0 !important;
+  padding:0 !important;
+}
+#main_ui.camera-compact #careAnimals .care-card-meter-head{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) auto !important;
+  align-items:center !important;
+  gap:.25rem !important;
+  width:100% !important;
+  margin:0 0 .18rem !important;
+  font-size:.62rem !important;
+  line-height:1.1 !important;
+}
+#main_ui.camera-compact #careAnimals .care-card-meter-head span{
+  display:flex !important;
+  align-items:center !important;
+  gap:.22rem !important;
+  min-width:0 !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+#main_ui.camera-compact #careAnimals .care-card-meter-head b{
+  font-size:.62rem !important;
+  white-space:nowrap !important;
+}
+#main_ui.camera-compact #careAnimals .care-card-meter-track{
+  width:100% !important;
+  height:3px !important;
+  margin:0 !important;
+}
+#main_ui.camera-compact #careAnimals .delete-btn{
+  top:.48rem !important;
+  left:.35rem !important;
+  width:1.1rem !important;
+  height:1.1rem !important;
+  min-width:1.1rem !important;
+  min-height:1.1rem !important;
+  padding:0 !important;
+}
+#main_ui.camera-compact #careAnimals .status-tag{
+  top:.28rem !important;
+  right:.35rem !important;
+  max-width:7rem !important;
+  font-size:.55rem !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+
+/* Care details become a single readable column in the side panel. */
+#main_ui.camera-compact #careDetailsSection{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  overflow:hidden !important;
+}
+#main_ui.camera-compact #careDetailsSection .care-details{
+  height:100% !important;
+  min-height:0 !important;
+  max-height:none !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+}
+#main_ui.camera-compact #careDetails .care-profile{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:.65rem !important;
+  padding:.65rem !important;
+}
+#main_ui.camera-compact #careDetails .care-profile > :is(img,.avatar){
+  width:5.75rem !important;
+  height:5.75rem !important;
+  justify-self:center !important;
+}
+#main_ui.camera-compact #careDetails .care-profile-head{
+  min-height:0 !important;
+  gap:.45rem !important;
+}
+#main_ui.camera-compact #careDetails .care-profile-head h3{
+  font-size:1.05rem !important;
+}
+#main_ui.camera-compact #careDetails .care-profile-head p{
+  font-size:.7rem !important;
+}
+#main_ui.camera-compact #careDetails .care-facts{
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+}
+#main_ui.camera-compact #careDetails .care-bars{
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+}
+#main_ui.camera-compact #careDetails .care-fact{
+  min-height:3rem !important;
+}
+
+/* --------------------------------------------------------------------------
+   BARN / MARKET / GUARD / UPKEEP: stack controls before they can collide.
+   -------------------------------------------------------------------------- */
+#main_ui.camera-compact #shopList .barn-animal-card{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) !important;
+  gap:.48rem !important;
+  padding:.55rem !important;
+}
+#main_ui.camera-compact #shopList .barn-purchase-stack{
+  width:100% !important;
+  min-width:0 !important;
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) minmax(7rem,.72fr) !important;
+  align-items:stretch !important;
+  gap:.35rem !important;
+}
+#main_ui.camera-compact #shopList .barn-shop-quantity{
+  width:100% !important;
+  grid-template-columns:2.25rem minmax(3rem,1fr) 2.25rem 3.15rem !important;
+}
+#main_ui.camera-compact #shopList .barn-purchase-stack > .btn{
+  width:100% !important;
+}
+#main_ui.camera-compact #shopDetails{
+  max-height:12rem !important;
+  overflow-y:auto !important;
+}
+
+#main_ui.camera-compact #view-market .market-columns,
+#main_ui.camera-compact #view-business .market-columns{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:.55rem !important;
+}
+#main_ui.camera-compact #view-market .market-cart-column{
+  position:static !important;
+}
+#main_ui.camera-compact #view-market .market-row{
+  display:grid !important;
+  grid-template-columns:2.6rem minmax(0,1fr) auto !important;
+  grid-template-areas:
+    "icon meta price"
+    "qty qty action" !important;
+  gap:.4rem !important;
+  padding:.48rem !important;
+}
+#main_ui.camera-compact #view-market .market-row-icon{grid-area:icon !important}
+#main_ui.camera-compact #view-market .market-row-meta{grid-area:meta !important}
+#main_ui.camera-compact #view-market .market-price{grid-area:price !important;white-space:nowrap !important}
+#main_ui.camera-compact #view-market .market-qty-control{
+  grid-area:qty !important;
+  width:100% !important;
+  grid-template-columns:2.25rem minmax(3rem,1fr) 2.25rem 3.2rem !important;
+}
+#main_ui.camera-compact #view-market .market-action{
+  grid-area:action !important;
+  min-width:5rem !important;
+}
+#main_ui.camera-compact #view-market .market-cart{
+  max-height:none !important;
+}
+#main_ui.camera-compact #view-market .market-cart-list{
+  max-height:13rem !important;
+}
+
+#main_ui.camera-compact #view-guard :is(.guard-dog-owned-card,.guard-dog-card){
+  display:grid !important;
+  grid-template-columns:3rem minmax(0,1fr) !important;
+  gap:.5rem !important;
+  height:auto !important;
+  min-height:0 !important;
+  padding:.55rem !important;
+}
+#main_ui.camera-compact #view-guard :is(.guard-owned-actions,.guard-dog-actions){
+  grid-column:1 / -1 !important;
+  grid-row:auto !important;
+  width:100% !important;
+  display:grid !important;
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:.35rem !important;
+}
+#main_ui.camera-compact #view-guard :is(.guard-owned-actions,.guard-dog-actions) .btn{
+  width:100% !important;
+}
+
+#main_ui.camera-compact #choreList{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+}
+#main_ui.camera-compact #choreList .upkeep-chore.task-card{
+  display:grid !important;
+  grid-template-columns:3.35rem minmax(0,1fr) !important;
+  gap:.55rem !important;
+  min-height:0 !important;
+  padding:.55rem !important;
+}
+#main_ui.camera-compact #choreList .chore-task-thumb{
+  width:3.25rem !important;
+  height:3.25rem !important;
+}
+#main_ui.camera-compact #choreList .chore-task-thumb img{
+  width:2.65rem !important;
+  height:2.65rem !important;
+}
+#main_ui.camera-compact #choreList .chore-do{
+  grid-column:1 / -1 !important;
+  width:100% !important;
+  min-height:2.25rem !important;
+}
+#main_ui.camera-compact .tax-summary{
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+}
+
+/* --------------------------------------------------------------------------
+   BREEDING / RECORDS / TOOLS / CALL: compact-safe wrapping and scrolling.
+   -------------------------------------------------------------------------- */
+#main_ui.camera-compact #view-breed .pair-grid,
+#main_ui.camera-compact #view-breed .breed-choice-grid,
+#main_ui.camera-compact #view-breed .breeding-info-grid,
+#main_ui.camera-compact #view-records .birth-records-grid,
+#main_ui.camera-compact #view-build #buildCats,
+#main_ui.camera-compact #view-build .build-cats,
+#main_ui.camera-compact #view-upgrade #upgradeList{
+  grid-template-columns:1fr !important;
+}
+#main_ui.camera-compact #view-breed .breed-animal-choice{
+  grid-template-columns:3rem minmax(0,1fr) 1.4rem !important;
+  min-height:0 !important;
+}
+#main_ui.camera-compact #view-pregnancy :is(.pregnancy-card,.slot),
+#main_ui.camera-compact #view-records .birth-record-card{
+  min-width:0 !important;
+  overflow:hidden !important;
+}
+#main_ui.camera-compact #view-records .birth-record-facts{
+  grid-template-columns:1fr !important;
+}
+#main_ui.camera-compact #view-tools :is(.tools-center-panes,.view.active),
+#main_ui.camera-compact #view-business :is(.business-center-panes,.view.active),
+#main_ui.camera-compact #view-breeding :is(.breeding-center-panes,.view.active){
+  min-height:0 !important;
+  max-width:100% !important;
+}
+#main_ui.camera-compact #view-call .scroll-area{
+  overflow-x:auto !important;
+  overflow-y:auto !important;
+}
+#main_ui.camera-compact #view-call table{
+  min-width:34rem !important;
+}
+#main_ui.camera-compact #callBulkBar{
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+}
+#main_ui.camera-compact #buildSubTabBar,
+#main_ui.camera-compact .business-center-tabs{
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+}
+#main_ui.camera-compact #view-build :is(.building-card,.build-shop-card,.build-manage-head),
+#main_ui.camera-compact #view-upgrade .slot,
+#main_ui.camera-compact #view-staff .manage-row{
+  width:100% !important;
+  min-width:0 !important;
+  grid-template-columns:1fr !important;
+  height:auto !important;
+}
+
+/* Extremely narrow panels use two meter columns and simpler header/tab grids. */
+@media (max-width:760px){
+  #main_ui.camera-compact .tabs{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+  #main_ui.camera-compact #careAnimals .care-barn-row{
+    grid-template-columns:1fr !important;
+    grid-template-areas:"identity" "return" "meters" !important;
+  }
+  #main_ui.camera-compact #careAnimals .care-return-animal{
+    justify-self:stretch !important;
+    width:100% !important;
+    max-width:none !important;
+  }
+  #main_ui.camera-compact #careAnimals .care-card-bars{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+  #main_ui.camera-compact #shopList .barn-purchase-stack{
+    grid-template-columns:1fr !important;
+  }
+  #main_ui.camera-compact #careDetails .care-facts,
+  #main_ui.camera-compact #careDetails .care-bars,
+  #main_ui.camera-compact .tax-summary,
+  #main_ui.camera-compact #callBulkBar{
+    grid-template-columns:1fr !important;
+  }
+}
+
+/* Compact Ranch Level overview cannot keep its desktop three-column minimums. */
+#main_ui.camera-compact .farm-level-overview{
+  width:100% !important;
+  max-width:100% !important;
+  margin:.4rem 0 !important;
+  padding:.5rem !important;
+  overflow:hidden !important;
+}
+#main_ui.camera-compact .farm-level-overview-main{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:.4rem !important;
+  width:100% !important;
+}
+#main_ui.camera-compact :is(.farm-level-rank,.farm-level-current,.farm-level-next){
+  width:100% !important;
+  min-height:3.4rem !important;
+}
+#main_ui.camera-compact .farm-level-benefit-grid,
+#main_ui.camera-compact .farm-level-milestones{
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+}
+#main_ui.camera-compact #careAnimals .care-animal-thumb img{
+  display:block !important;
+  max-width:100% !important;
+  max-height:100% !important;
+  overflow:hidden !important;
+}

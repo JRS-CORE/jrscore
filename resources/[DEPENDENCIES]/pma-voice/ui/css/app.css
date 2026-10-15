@@ -1,0 +1,10 @@
+/* JRS: voice HUD in the jrs_stores skin (palette, Georgia, store tab texture). */
+:root{--vc-accent:#d9d4c7;--vc-text:#f4f0e7;--vc-muted:#c3bdb1;--vc-dim:#8f887c;--vc-success:#7ad6a3;--vc-tab:url('../img/store-tab.png')}
+html,body{background:transparent}
+p{margin:0}
+.voiceInfo{position:fixed;right:10px;bottom:10px;padding:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-family:Georgia,'Times New Roman',serif;font-size:12px;font-weight:700;letter-spacing:.03em;color:var(--vc-muted)}
+.voiceInfo p{display:flex;align-items:center;gap:7px;min-width:92px;justify-content:flex-end;padding:4px 11px;border:1px solid rgba(255,255,255,.075);border-radius:3px;background-image:var(--vc-tab);background-color:transparent;background-size:100% 100%;background-position:center;background-repeat:no-repeat;box-shadow:0 4px 10px rgba(0,0,0,.45);text-shadow:0 1px 2px #000;unicode-bidi:plaintext;transition:color .15s,border-color .15s,filter .15s}
+.voiceInfo p::before{content:"";flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--vc-dim);box-shadow:0 0 0 1px rgba(0,0,0,.6);order:2}
+.voiceInfo p.talking{color:#fff;border-color:rgba(217,212,199,.45);filter:brightness(1.12)}
+.voiceInfo p.talking::before{background:var(--vc-success);box-shadow:0 0 6px var(--vc-success)}
+html[lang=ar] .voiceInfo{font-family:'Cairo','Segoe UI',Tahoma,'Almarai','Traditional Arabic',Arial,sans-serif;letter-spacing:0;font-size:12.5px}

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HUNTING PETS</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="nui://jrs_core/html/theme/jrs-stores-skin.css">
+</head>
+<body>
+    
+
+    <div id="app" class="hidden">
+        <!-- MAIN PANEL -->
+        <div id="mainPanel" class="panel">
+            <header class="panel-header">
+                <button class="icon-btn" id="backBtn" data-i18n-title="ui_back" title="Back"><i class="ic">&#10096;</i></button>
+                <div class="header-titles">
+                    <h1 class="header-title" data-i18n="ui_header_title">Hunting Pets</h1>
+                    <p class="header-subtitle" data-i18n="ui_header_subtitle">Trapper &amp; Kennel</p>
+                </div>
+                <button class="icon-btn" id="closeBtn" data-i18n-title="ui_close" title="Close"><i class="ic">&#10005;</i></button>
+            </header>
+
+            <div class="divider"><span>&#10070;</span></div>
+
+            <nav class="tabs">
+                <button class="tab-btn active" id="tabShop" type="button" data-i18n="ui_tab_shop">Shop</button>
+                <button class="tab-btn" id="tabMyPets" type="button" data-i18n="ui_tab_mypets">My Pets</button>
+            </nav>
+
+            <div class="wallet">
+                <span class="wallet-label" data-i18n="ui_wallet_cash">Cash</span>
+                <span class="wallet-value" id="pcash">0</span>
+            </div>
+
+            <!-- SHOP VIEW -->
+            <div id="viewShop" class="view">
+                <div id="categoryList" class="rowlist"></div>
+                <div id="petList" class="rowlist hidden"></div>
+            </div>
+
+            <!-- MY PETS VIEW -->
+            <div id="viewMyPets" class="view hidden">
+                <div id="ownedPetList" class="rowlist"></div>
+                <div id="petDetail" class="detail hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BUY MODAL -->
+    <div id="buyModal" class="modal-overlay hidden">
+        <div class="modal">
+            <h2 class="modal-title" data-i18n="ui_purchase_pet_title">Purchase Pet</h2>
+            <div class="ink-divider"></div>
+            <p class="modal-sub" id="buyPetName"></p>
+            <div class="money-type">
+                <button class="tab-btn active" id="typeCash" type="button" data-i18n="ui_wallet_cash">Cash</button>
+                <button class="tab-btn" id="typeGold" type="button" data-i18n="ui_gold">Gold</button>
+            </div>
+            <label class="field-label" for="petName" data-i18n="ui_pet_name_label">Pet Name</label>
+            <input type="text" id="petName" maxlength="32" data-i18n-placeholder="ui_pet_name_placeholder" placeholder="Name your pet" autocomplete="off">
+            <div class="modal-actions">
+                <button class="wood-btn muted" id="buyCancel" type="button" data-i18n="ui_cancel">Cancel</button>
+                <button class="wood-btn" id="buyConfirm" type="button" data-i18n="ui_buy">Buy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ANIMATIONS MODAL -->
+    <div id="animModal" class="modal-overlay hidden">
+        <div class="modal">
+            <h2 class="modal-title" id="animTitle" data-i18n="ui_animations_title">Animations</h2>
+            <div class="ink-divider"></div>
+            <div id="animList" class="rowlist"></div>
+            <div class="modal-actions single">
+                <button class="wood-btn danger" id="animPutAway" type="button" data-i18n="ui_put_dog_away">Put Dog Away</button>
+                <button class="wood-btn" id="animClose" type="button" data-i18n="ui_close">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMMANDS MODAL -->
+    <div id="commandModal" class="modal-overlay hidden">
+        <div class="modal">
+            <h2 class="modal-title" data-i18n="ui_commands_title">Commands</h2>
+            <div class="ink-divider"></div>
+            <div id="commandList" class="rowlist"></div>
+            <div class="modal-actions single">
+                <button class="wood-btn" id="commandClose" type="button" data-i18n="ui_close">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toasts"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

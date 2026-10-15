@@ -1,0 +1,299 @@
+@font-face {
+    font-family: 'crock';
+    src: url('../assets/fonts/crock.ttf') format('truetype');
+    font-display: swap;
+
+}
+
+@font-face {
+    font-family: 'rdr';
+    src: url('../assets/fonts/rdr.ttf') format('truetype');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'cowboy';
+    src: url('../assets/fonts/cowboy.ttf') format('truetype');
+    font-display: swap;
+}
+
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes textPulse {
+
+    0%,
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        text-shadow: 0 0 10px rgba(218, 165, 32, 0.6), 0 0 20px rgba(218, 165, 32, 0.4);
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.08);
+        text-shadow: 0 0 20px rgba(218, 165, 32, 1), 0 0 30px rgba(218, 165, 32, 0.8), 0 0 40px rgba(218, 165, 32, 0.6);
+    }
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+*:focus {
+    outline: none !important;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background: #111 url('../assets/images/image_1.jpg') center center / cover no-repeat;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+body.loaded {
+    display: flex;
+}
+
+/* Local first-frame fallback: visible from the first browser paint. */
+#instant-background {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: #111 url('../assets/images/image_1.jpg') center center / cover no-repeat;
+    pointer-events: none;
+}
+
+#loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 50;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+}
+
+
+#server-name {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10rem;
+    color: white;
+    text-align: center;
+    z-index: 250;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    pointer-events: none;
+    font-family: 'cowboy';
+}
+
+#server-name.active {
+    opacity: 1;
+}
+
+
+#server-logo {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 50%;
+    max-height: 30%;
+    object-fit: contain;
+    z-index: 250;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    pointer-events: none;
+    display: none;
+}
+
+#server-logo.active {
+    opacity: 1;
+    display: block;
+}
+
+
+#server-description {
+    position: fixed;
+    top: 60%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-align: center;
+    z-index: 202;
+    opacity: 0;
+    transition: opacity 0.18s ease-out;
+    font-family: rdr;
+    letter-spacing: 2px;
+    display: none;
+}
+
+#server-description.active {
+    opacity: 1;
+    display: block;
+}
+
+
+#server-warning {
+    position: fixed;
+    bottom: 2%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 1);
+    text-align: center;
+    z-index: 202;
+    opacity: 0;
+    transition: opacity 0.18s ease-out;
+    font-family: rdr;
+    letter-spacing: 2px;
+    display: none;
+    padding: 15px 30px;
+    border-radius: 8px;
+}
+
+#server-warning.active {
+    opacity: 1;
+    display: block;
+}
+
+#loading-screen * {
+    pointer-events: auto;
+}
+
+
+#loading-progress-container {
+    position: fixed;
+    right: clamp(24px, 2vw, 52px);
+    bottom: clamp(24px, 3vh, 48px);
+    z-index: 250;
+    width: clamp(280px, 22vw, 430px);
+    opacity: 0;
+    transition: opacity 0.18s ease-out;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    pointer-events: none;
+}
+
+#loading-progress-container.visible {
+    opacity: 1;
+}
+
+#loading-text {
+    align-self: flex-end;
+    margin: 0 0 7px 0;
+    color: #fff;
+    font-family: crock;
+    font-size: clamp(0.82rem, 0.85vw, 1rem);
+    letter-spacing: 2px;
+    text-align: right;
+    text-transform: uppercase;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
+    white-space: nowrap;
+}
+
+#loading-progress-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: clamp(8px, 0.65vw, 14px);
+}
+
+#loading-progress-track {
+    position: relative;
+    flex: 1;
+    height: clamp(5px, 0.42vh, 8px);
+    min-width: 180px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+#loading-progress-fill {
+    width: 0%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+    transition: width 0.18s linear;
+}
+
+#loading-progress-icon {
+    width: clamp(38px, 2.5vw, 50px);
+    height: clamp(38px, 2.5vw, 50px);
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: url(../assets/images/selection_box_square.png);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.65));
+}
+
+#loading-progress-icon .progress-glyph {
+    color: #fff;
+    font-size: clamp(18px, 1.25vw, 25px);
+    transform-origin: center;
+    transition: transform 0.22s ease-out;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.85);
+}
+
+#loading-progress-percent {
+    align-self: flex-end;
+    margin-top: 5px;
+    color: rgba(255, 255, 255, 0.72);
+    font-family: rdr;
+    font-size: clamp(0.72rem, 0.72vw, 0.9rem);
+    letter-spacing: 1.5px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
+}
+
+#video {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.28s ease-out;
+    background: transparent;
+}
+
+#video.ready {
+    opacity: 1;
+}

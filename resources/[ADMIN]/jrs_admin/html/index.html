@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>JRS Administration</title>
+  <link rel="stylesheet" href="lib/fa/all.min.css">
+  <link rel="stylesheet" href="assets/css/ranch.css">
+  <link rel="stylesheet" href="assets/css/components/ranch-v3-controls.css">
+  <link rel="stylesheet" href="assets/css/components/responsive-small.css">
+  <link rel="stylesheet" href="assets/css/components/performance-lite.css">
+  <link rel="stylesheet" href="assets/css/components/scrollbars.css">
+  <link rel="stylesheet" href="assets/css/components/compact-overlap-fix.css">
+  <link rel="stylesheet" href="assets/css/components/compact-scale-fix.css">
+  <link rel="stylesheet" href="assets/css/components/compact-header-center-fix.css">
+  <link rel="stylesheet" href="assets/css/components/ui-clarity-lite.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="index.js" defer></script>
+</head>
+<body>
+  <div id="panel" class="jrs-admin-root" hidden aria-hidden="true">
+    <div id="main_ui" data-ui-mode="classic-tabs-restored">
+      <div id="adminShell" class="ui jrs-admin-shell">
+        <header id="adminHeader" class="farm-header">
+          <div id="farmLevelBadge" class="farm-level-badge">
+            <img class="admin-brand-image" src="img/jrs_admin_badge.png" alt="">
+            <div class="farm-level-copy"><small>JRS ADMIN</small><strong id="languageBadge">English</strong></div>
+          </div>
+          <div class="farm-header-center"><h1 id="title" class="title">JRS Administration</h1><p class="subtitle" data-text="console"></p></div>
+          <div class="global-view-tools">
+            <button id="positionReset" type="button" class="btn camera-tab-button"><i class="fa-solid fa-arrows-to-dot" aria-hidden="true"></i><span data-text="center"></span></button>
+            <button id="close" type="button" class="btn camera-tab-button"><i class="fa-solid fa-xmark" aria-hidden="true"></i><span data-text="close"></span></button>
+          </div>
+        </header>
+        <div class="admin-layout">
+          <aside class="admin-sidebar"><nav id="navigation" class="tabs" aria-label="Sections"></nav></aside>
+          <main class="admin-content view active">
+            <section class="admin-detail section">
+              <div class="sec-head admin-detail-head">
+                <div><h2 id="subtitle"></h2><p class="mini" data-text="mouse"></p></div>
+                <div class="admin-counts"><span class="badge"><span data-text="options"></span> <b id="metricOptions">0</b></span><span class="badge"><span data-text="available"></span> <b id="metricAvailable">0</b></span><button id="back" type="button" class="btn"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span data-text="back"></span></button></div>
+              </div>
+              <label class="admin-search slot"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input id="search" type="search" autocomplete="off"><span id="count">0</span></label>
+              <section id="list" class="slots" aria-label="Menu options"></section>
+              <div id="empty" class="admin-empty" hidden><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><p data-text="empty"></p></div>
+              <button id="more" type="button" class="btn" hidden data-text="more"></button>
+            </section>
+          </main>
+        </div>
+        <footer class="admin-footer"><span data-text="drag"></span><span data-text="escape"></span></footer>
+        <span id="metricSection" hidden></span><span id="metricLanguage" hidden></span>
+        <div id="modal" hidden>
+          <form id="inputForm" class="admin-dialog slot" role="dialog" aria-modal="true" aria-labelledby="inputTitle">
+            <div class="admin-dialog-body">
+            <div class="admin-dialog-title"><img id="inputIcon" class="admin-tool-image" src="img/jrs_admin_badge.png" alt=""><span><small data-text="input"></small><b id="inputTitle"></b></span></div>
+            <p id="inputHelp"></p>
+            <input id="inputValue" autocomplete="off"><textarea id="inputArea" rows="5" hidden></textarea>
+            <p id="inputError" role="alert"></p>
+            </div>
+            <div class="admin-control-actions"><button id="cancelInput" type="button" class="btn" data-text="cancel"></button><button id="submitInput" type="submit" class="btn" data-text="confirm"></button></div>
+          </form>
+        </div>
+        <div id="toast" class="slot" role="status" hidden></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

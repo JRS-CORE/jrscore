@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://docs.jrs-core.com
+    about: Installation, configuration, API reference and one page per script.
+  - name: Discord support
+    url: https://discord.gg/jrscore
+    about: Setup questions and community help.

@@ -1,0 +1,412 @@
+#user-info-card {
+    position: fixed;
+    top: clamp(16px, 2.1vh, 28px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 201;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 20px;
+    background-image: url(../assets/images/selection_box.png);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 0.18s ease-out;
+    width: clamp(350px, 23vw, 460px);
+    min-width: 350px;
+    min-height: 6vh;
+}
+
+#user-info-card.visible {
+    opacity: 1;
+}
+
+#social-links {
+    position: absolute;
+    top: calc(100% + clamp(8px, 0.8vh, 14px));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 202;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(8px, 0.55vw, 14px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease-out;
+}
+
+#user-info-card.visible #social-links {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.social-icon-btn {
+    width: clamp(38px, 2.35vw, 52px);
+    height: clamp(38px, 2.35vw, 52px);
+    box-sizing: border-box;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-decoration: none;
+    background: transparent url(../assets/images/selection_box_square.png) center / 100% 100% no-repeat;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.65));
+    transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.social-icon-btn span {
+    color: #fff;
+    font-family: crock;
+    font-size: clamp(1rem, 1vw, 1.3rem);
+    line-height: 1;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9);
+}
+
+.social-icon-btn:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.2) drop-shadow(0 4px 7px rgba(0, 0, 0, 0.7));
+}
+
+.social-icon-btn:active {
+    transform: scale(0.92);
+}
+
+#user-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+#user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#user-details {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+#user-name {
+    color: white;
+    font-size: 1.1rem;
+    font-family: rdr;
+    letter-spacing: 1px;
+}
+
+#user-role {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.85rem;
+    font-family: rdr;
+    letter-spacing: 0.5px;
+    font-style: italic;
+}
+
+#player-count {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: rdr;
+    font-size: 0.9rem;
+}
+
+#player-count .player-count-glyph {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+#player-count-text {
+    letter-spacing: 1px;
+}
+
+#btn-toggle-controls {
+    position: fixed;
+    bottom: 3vh;
+    left: 1.5%;
+    background: transparent;
+    background-image: url(../assets/images/selection_box_square.png);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    padding: 13px;
+    color: white;
+    border: none;
+    z-index: 201;
+    opacity: 0;
+    transition: all 0.3s ease;
+    display: none;
+}
+
+#btn-toggle-controls:hover {
+    transform: translateY(-2px);
+}
+
+#btn-toggle-controls.active {
+    display: block;
+}
+
+#btn-toggle-controls.visible {
+    opacity: 1;
+}
+
+#music-controls {
+    position: fixed;
+    bottom: 3vh;
+    left: 4%;
+    display: none;
+    flex-direction: column;
+    z-index: 200;
+    transform: translateX(0);
+    opacity: 0;
+    transition: transform 0.4s ease-in-out, opacity 0.3s ease-in-out;
+    overflow: hidden;
+    max-width: 0;
+}
+
+#music-controls.active {
+    display: flex;
+}
+
+#music-controls.visible {
+    opacity: 1;
+}
+
+#music-controls.active.visible.hidden {
+    transform: translateX(0);
+    opacity: 0;
+    max-width: 0;
+    pointer-events: none;
+}
+
+#music-controls.active.visible:not(.hidden) {
+    transform: translateX(0);
+    opacity: 1;
+    max-width: 500px;
+}
+
+#music-info {
+    text-align: center;
+    margin-bottom: 5px;
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition-delay: 0s;
+}
+
+#music-controls.hidden:not(.visible) #music-info {
+    opacity: 0;
+    transform: translateX(-20px);
+}
+
+#music-title {
+    color: white;
+    font-size: 16px;
+    display: block;
+    font-family: crock;
+    margin-right: 7vw;
+}
+
+#music-controls.visible:not(.hidden) #music-info {
+    opacity: 1;
+    transform: translateX(0);
+    transition-delay: 0s;
+}
+
+
+#btn-favorite.active {
+    color: black;
+    background-image: url(../assets/images/tooltip_white.png);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+#music-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#music-controls button {
+    background: transparent;
+    color: white;
+    padding: 12px 15px;
+    font-size: 14px;
+    font-family: rdr;
+    border: none;
+    background-image: url(../assets/images/selection_box.png);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition-delay: 0s;
+}
+
+#music-controls button:hover {
+    transform: translateY(-4px) translateX(0) !important;
+    transition: transform 0.1s ease !important;
+    transition-delay: 0s !important;
+}
+
+#music-controls button:active {
+    transform: translateY(0) translateX(0) !important;
+    transition: transform 0.1s ease !important;
+    transition-delay: 0s !important;
+}
+
+#music-controls.hidden:not(.visible) #btn-previous,
+#music-controls.hidden:not(.visible) #btn-play-pause,
+#music-controls.hidden:not(.visible) #btn-next,
+#music-controls.hidden:not(.visible) #btn-favorite,
+#music-controls.hidden:not(.visible) #btn-mute {
+    opacity: 0;
+    transform: translateX(-20px);
+}
+
+#music-controls.visible:not(.hidden) #btn-previous {
+    opacity: 1;
+    transform: translateX(0);
+    transition-delay: 0.1s;
+}
+
+#music-controls.visible:not(.hidden) #btn-play-pause {
+    opacity: 1;
+    transform: translateX(0);
+    transition-delay: 0.2s;
+}
+
+#music-controls.visible:not(.hidden) #btn-next {
+    opacity: 1;
+    transform: translateX(0);
+    transition-delay: 0.3s;
+}
+
+#music-controls.visible:not(.hidden) #btn-favorite {
+    opacity: 1;
+    transform: translateX(0);
+    transition-delay: 0.4s;
+}
+
+#music-controls.visible:not(.hidden) #btn-mute {
+    opacity: 1;
+    transform: translateX(0);
+    transition-delay: 0.5s;
+}
+
+
+#volume-slider {
+    width: 6vw;
+    height: 0.7vh;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    background: transparent;
+    background-image: url(../assets/images/wheel_slot_gutter_line_0.png);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition-delay: 0s;
+}
+
+#music-controls.hidden:not(.visible) #volume-slider {
+    opacity: 0;
+    transform: translateX(-20px);
+}
+
+#music-controls.visible:not(.hidden) #volume-slider {
+    opacity: 1;
+    transform: translateX(0);
+    transition-delay: 0.6s;
+}
+
+
+#volume-slider::-webkit-slider-track {
+    width: 100%;
+    height: 0.7vh;
+    border: none;
+}
+
+
+#volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+#volume-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+/* JRS v2.3.3: loading-screen controls must stay above decorative layers and accept input. */
+#btn-toggle-controls,
+#music-controls,
+#music-controls button,
+#music-controls input {
+    pointer-events: auto !important;
+}
+
+#btn-toggle-controls,
+#music-controls {
+    z-index: 320;
+}
+
+#music-controls.hidden {
+    pointer-events: none !important;
+}
+
+#music-audio {
+    display: none !important;
+}
+
+
+/* JRS v2.4.6: transport controls are visible by default, including with video enabled. */
+#music-controls.active.visible:not(.hidden) {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    max-width: min(44vw, 1700px) !important;
+    pointer-events: auto !important;
+}
+
+#btn-toggle-controls.active.visible {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+
+.control-glyph,
+.music-toggle-glyph,
+.player-count-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
+}
+
+#music-controls button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}

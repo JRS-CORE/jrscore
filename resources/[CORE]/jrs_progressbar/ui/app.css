@@ -1,0 +1,85 @@
+/* jrs_progressbar | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE */
+:root {
+  --pb-color: rgb(242, 238, 231);
+  --pb-width: 20vw;
+}
+
+html, body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  font-family: Georgia, 'Times New Roman', serif;
+  color: #fff;
+}
+
+.pb {
+  position: fixed;
+  left: 50%;
+  bottom: 190px;
+  transform: translateX(-50%);
+  z-index: 50;
+  pointer-events: none;
+}
+.pb[hidden] { display: none; }
+
+.pb-text {
+  letter-spacing: .04em;
+  text-shadow: 0 1px 2px #000;
+}
+
+/* ---- linear ---- */
+.pb-line {
+  display: none;
+  position: relative;
+  width: var(--pb-width);
+  height: 30px;
+  background: rgba(0, 0, 0, .55);
+  border: 1px solid rgba(255, 255, 255, .09);
+}
+.pb[data-theme="linear"] .pb-line { display: block; }
+
+.pb-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: var(--pb-color);
+  opacity: .9;
+}
+.pb-line-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- ring themes ---- */
+.pb-ring {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, .55);
+  border: 1px solid rgba(255, 255, 255, .09);
+}
+.pb[data-theme="circle"] .pb-ring,
+.pb[data-theme="innercircle"] .pb-ring { display: flex; }
+
+.pb-dial { position: relative; width: 64px; height: 64px; }
+.pb-track, .pb-arc { fill: none; transform: rotate(-90deg); transform-origin: 32px 32px; }
+.pb-track { stroke: rgba(255, 255, 255, .22); stroke-width: 8; }
+.pb-arc   { stroke: var(--pb-color); stroke-width: 8; stroke-dasharray: 100; stroke-dashoffset: 100; }
+
+.pb-count {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+}
+.pb[data-theme="innercircle"] .pb-count { display: flex; }

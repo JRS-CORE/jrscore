@@ -1,0 +1,17 @@
+# local-only files: never publish
+server.local.cfg
+START_SERVER.bat
+console.log
+.replxx_history
+/cache/
+/db/
+/txData/
+/*.log
+
+# big archives never go on GitHub
+*.rar
+*.zip
+*.7z
+
+# test fixture keys inside npm packages trip GitHub secret scanning
+*.pem

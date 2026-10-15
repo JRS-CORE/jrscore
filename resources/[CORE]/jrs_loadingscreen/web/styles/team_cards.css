@@ -1,0 +1,436 @@
+#info-buttons {
+    position: fixed;
+    top: clamp(24px, 2.2vh, 44px);
+    right: clamp(24px, 1.6vw, 42px);
+    left: auto;
+    z-index: 201;
+    width: clamp(165px, 10vw, 210px);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: clamp(6px, 0.55vh, 10px);
+    opacity: 0;
+    transition: opacity 0.18s ease-out;
+}
+
+#info-buttons.visible {
+    opacity: 1;
+}
+
+.info-btn {
+    width: 100%;
+    box-sizing: border-box;
+    text-decoration: none;
+    min-height: clamp(44px, 4.4vh, 58px);
+    background: transparent;
+    border: none;
+    padding: 10px 14px;
+    background-image: url(../assets/images/selection_box.png);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    transition: transform 0.12s ease, filter 0.12s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.info-btn:hover {
+    transform: translateX(-5px);
+    filter: brightness(1.15);
+}
+
+.info-btn:active {
+    transform: scale(0.95);
+}
+
+.info-btn .info-symbol {
+    width: 24px;
+    flex: 0 0 24px;
+    color: white;
+    font-size: clamp(0.95rem, 1vw, 1.15rem);
+    text-align: center;
+}
+
+.info-btn span {
+    color: white;
+    font-family: crock;
+    font-size: clamp(0.78rem, 0.82vw, 1rem);
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.info-btn.active {
+    background-image: url(../assets/images/selection_box.png);
+    filter: brightness(1.2);
+}
+
+.external-info-btn {
+    color: inherit;
+}
+
+.external-info-btn:visited {
+    color: inherit;
+}
+
+.carousel-wrapper {
+    perspective: 1200px;
+    transform-style: preserve-3d;
+}
+
+.cards-container {
+    position: fixed;
+    top: 14%;
+    left: 20%;
+    width: 60vw;
+    height: 70vh;
+    z-index: 250;
+    display: none;
+    opacity: 1;
+
+}
+
+.cards-container.active {
+    display: block;
+
+}
+
+.cards-wrapper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 2000px;
+    transform-style: preserve-3d;
+    transition: opacity 8s ease-in-out;
+}
+
+.cards-wrapper::before,
+.cards-wrapper::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 6px;
+    background-image: url(../assets/images/wanted_location_divider.png);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    pointer-events: none;
+}
+
+.cards-wrapper::before {
+    top: 0;
+}
+
+.cards-wrapper::after {
+    bottom: 0;
+}
+
+.team-card,
+.hint-card,
+.news-card,
+.rules-card {
+    width: 17vw;
+    height: 48vh;
+    background-image: url(../assets/images/hud_menu_grey_dark.png), url(../assets/images/home2.png);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    transition: none !important;
+    transform-style: preserve-3d;
+}
+
+
+.team-card.hiding,
+.hint-card.hiding,
+.news-card.hiding,
+.rules-card.hiding {
+    opacity: 0 !important;
+    transition: opacity 0.15s ease-in;
+}
+
+.card-image {
+    width: 15vw;
+    height: 14vh;
+    object-fit: cover;
+    margin-bottom: 20px;
+}
+
+.card-title {
+    font-family: crock;
+    font-size: 1.0rem;
+    color: white;
+    letter-spacing: 2px;
+    text-align: center;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.card-role {
+    font-family: rdr;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 1px;
+    text-align: center;
+    margin-bottom: 15px;
+    font-style: italic;
+}
+
+.card-description {
+    font-family: rdr;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    letter-spacing: 0.5px;
+    text-align: center;
+    line-height: 1.5;
+    padding: 0 10px;
+    height: 28vh;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.hint-card .card-title {
+    font-size: 1.0rem;
+
+}
+
+.hint-card .card-description {
+    font-size: 1rem;
+    height: 28vh;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.news-card .card-title {
+    font-size: 1.0rem;
+}
+
+
+.rules-card .card-title {
+    font-size: 1.0rem;
+}
+
+.rules-card .card-description {
+    font-size: 1rem;
+    height: 45vh;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.hint-card .card-description::-webkit-scrollbar,
+.rules-card .card-description::-webkit-scrollbar {
+    display: none;
+}
+
+.news-card .card-description {
+    font-size: 1rem;
+    height: 28vh;
+    overflow-y: auto;
+
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.news-card .card-description::-webkit-scrollbar {
+    display: none;
+}
+
+
+/* --------------------------------------------------------------------------
+ * JRS compact side feeds
+ * Right side: RULES + TEAM
+ * Left side: NEWS + HINTS
+ * Each feed keeps three compact slots in view and advances vertically
+ * from top to bottom.
+ * -------------------------------------------------------------------------- */
+.side-feed {
+    --side-feed-width: clamp(180px, 12.4vw, 255px);
+    --side-slot-height: clamp(58px, 6.2vh, 74px);
+    --side-slot-gap: clamp(6px, 0.7vh, 10px);
+    --side-column-gap: clamp(10px, 0.85vw, 22px);
+    position: fixed;
+    top: clamp(18px, 2.1vh, 36px);
+    width: var(--side-feed-width);
+    z-index: 220;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
+}
+
+.side-feed.visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.side-feed-right {
+    right: clamp(18px, 1.45vw, 36px);
+}
+
+.side-feed-right-secondary {
+    right: calc(clamp(18px, 1.45vw, 36px) + var(--side-feed-width) + var(--side-column-gap));
+}
+
+.side-feed-left {
+    left: clamp(18px, 1.45vw, 36px);
+}
+
+.side-feed-left-secondary {
+    left: calc(clamp(18px, 1.45vw, 36px) + var(--side-feed-width) + var(--side-column-gap));
+}
+
+.side-feed-title {
+    min-height: clamp(30px, 3.3vh, 40px);
+    display: flex;
+    align-items: center;
+    gap: clamp(7px, 0.55vw, 12px);
+    padding: 5px 12px 6px;
+    color: #fff;
+    font-family: crock;
+    font-size: clamp(0.72rem, 0.78vw, 0.95rem);
+    letter-spacing: clamp(1px, 0.08vw, 1.8px);
+    text-transform: uppercase;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95);
+}
+
+.side-feed-right .side-feed-title {
+    justify-content: flex-end;
+}
+
+.side-feed-left .side-feed-title {
+    justify-content: flex-start;
+}
+
+.side-feed-symbol {
+    width: 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.side-feed-viewport {
+    position: relative;
+    width: 100%;
+    height: calc((var(--side-slot-height) * 3) + (var(--side-slot-gap) * 2));
+    overflow: hidden;
+    perspective: 900px;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 7%, #000 93%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 7%, #000 93%, transparent 100%);
+}
+
+.side-feed-track {
+    position: absolute;
+    inset: 0;
+}
+
+.side-feed-card {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: var(--side-slot-height);
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 0.6vw, 13px);
+    padding: clamp(7px, 0.55vw, 11px) clamp(9px, 0.7vw, 14px);
+    background-image: url(../assets/images/selection_box.png);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    transform-origin: center center;
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.55s cubic-bezier(0.22, 0.75, 0.2, 1), opacity 0.45s ease, filter 0.45s ease;
+    will-change: transform, opacity;
+}
+
+.side-feed-card.is-visible {
+    visibility: visible;
+}
+
+.side-feed-card.is-current {
+    filter: brightness(1.14);
+}
+
+.side-feed-thumb {
+    width: clamp(42px, 3.1vw, 58px);
+    height: calc(var(--side-slot-height) - clamp(14px, 1vw, 22px));
+    flex: 0 0 auto;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    filter: saturate(0.82) contrast(1.05);
+}
+
+.side-feed-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+}
+
+.side-feed-card-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #fff;
+    font-family: crock;
+    font-size: clamp(0.67rem, 0.7vw, 0.86rem);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95);
+}
+
+.side-feed-card-subtitle,
+.side-feed-card-description {
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.68);
+    font-family: rdr;
+    font-size: clamp(0.59rem, 0.61vw, 0.76rem);
+    line-height: 1.2;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+.side-feed-card-subtitle {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    letter-spacing: 0.5px;
+}
+
+.side-feed-card-description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+/* TEAM / RULES / NEWS / HINTS are now persistent feeds, so their old buttons stay hidden. */
+#btn-team,
+#btn-news,
+#btn-hints,
+#btn-rules {
+    display: none !important;
+}
+
+/* Leave room below the upper-right feed pair for the remaining navigation. */
+#info-buttons {
+    top: calc(clamp(18px, 2.1vh, 36px) + clamp(30px, 3.3vh, 40px) + (clamp(58px, 6.2vh, 74px) * 3) + (clamp(6px, 0.7vh, 10px) * 2) + clamp(12px, 1.4vh, 20px));
+}

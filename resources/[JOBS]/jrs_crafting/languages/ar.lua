@@ -1,0 +1,30 @@
+--------------------------------------------------------------------------------------
+---------------------------------- العربية -------------------------------------------
+
+Locales["ar_lang"] = {
+    InputHeader = 'كم {{msg}} تبي تصنع',
+    InputCraft = 'صنع',
+    InputCancel = 'إلغاء',
+    BackButton = 'رجوع',
+    ExitButton = 'خروج',
+    CraftHeader = 'الصناعة',
+    CraftText = 'ابدأ الصناعة',
+    InvalidAmount = 'كمية غير صحيحة',
+    Crafting = 'جاري الصنع...',
+    FinishedCrafting = 'خلصت الصنع',
+    PlaceFire = 'جاري وضع نار المخيم...',
+    PutOutFire = 'جاري إطفاء النار...',
+    NotEnough = 'ما عندك مواد كافية لهالوصفة',
+    NotJob = 'ما عندك الوظيفة المطلوبة',
+    TooFull = 'شنطتك ممتلئة',
+    WeaponsFull = 'ما تقدر تشيل أسلحة أكثر',
+    WebhookItem = 'صنع الغرض:',
+    WebhookWeapon = 'صنع السلاح:',
+    Amount = 'الكمية',
+    AmountDesc = 'يمين / يسار لتغيير الكمية.',
+    CraftNow = 'اصنع',
+    Ingredients = 'المكونات',
+    Rewards = 'تحصل على',
+    Close = 'إغلاق',
+    NothingHere = 'ما فيه شي تصنعه هنا',
+}

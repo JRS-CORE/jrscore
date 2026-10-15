@@ -1,0 +1,178 @@
+/* ========================================================================== 
+   ALFIE RANCH 3.2.18 — compact header alignment
+   Loaded last. Keeps the compact ranch title on the exact horizontal centre
+   while the level badge remains small and readable on the left.
+   ========================================================================== */
+
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] .farm-header{
+  display:grid!important;
+  grid-template-columns:7rem minmax(0,1fr) 7rem!important;
+  grid-template-rows:minmax(2.25rem,auto) auto!important;
+  align-items:center!important;
+  column-gap:.35rem!important;
+  row-gap:.3rem!important;
+  min-height:4.55rem!important;
+  height:auto!important;
+  padding:.36rem .46rem .42rem!important;
+  overflow:hidden!important;
+}
+
+/* Small level card: one-line MAX, no wrapping or oversized square. */
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge{
+  grid-column:1!important;
+  grid-row:1!important;
+  justify-self:start!important;
+  align-self:center!important;
+  width:6.75rem!important;
+  min-width:0!important;
+  max-width:100%!important;
+  min-height:2.12rem!important;
+  height:2.12rem!important;
+  padding:.22rem .28rem!important;
+  gap:.24rem!important;
+  overflow:hidden!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge>i{
+  width:1.42rem!important;
+  height:1.42rem!important;
+  min-width:1.42rem!important;
+  flex:0 0 1.42rem!important;
+  font-size:.62rem!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge .farm-level-copy{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:.2rem!important;
+  width:100%!important;
+  min-width:0!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge small{
+  min-width:0!important;
+  font-size:clamp(.46rem,.38vw,.56rem)!important;
+  line-height:1!important;
+  letter-spacing:.035em!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  overflow-wrap:normal!important;
+  word-break:keep-all!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge strong{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:auto!important;
+  min-width:1.72rem!important;
+  max-width:2.05rem!important;
+  min-height:1.32rem!important;
+  height:1.32rem!important;
+  padding:.06rem .2rem!important;
+  font-size:clamp(.64rem,.5vw,.8rem)!important;
+  line-height:1!important;
+  letter-spacing:.015em!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:clip!important;
+  overflow-wrap:normal!important;
+  word-break:keep-all!important;
+}
+
+/* Equal side columns keep this block centred on the whole compact page. */
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] .farm-header-center{
+  grid-column:2!important;
+  grid-row:1!important;
+  justify-self:center!important;
+  align-self:center!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  text-align:center!important;
+  transform:none!important;
+  overflow:hidden!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] .farm-header-center .title{
+  display:block!important;
+  width:100%!important;
+  margin:0!important;
+  font-size:clamp(.9rem,.72vw,1.14rem)!important;
+  line-height:1.08!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] .farm-header-center .subtitle{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:.18rem!important;
+  width:100%!important;
+  margin:.12rem 0 0!important;
+  font-size:clamp(.47rem,.38vw,.59rem)!important;
+  line-height:1.05!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] .farm-header-center .subtitle span{
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+
+/* Owner and camera stay on their own balanced row below the centred title. */
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] .farm-header .global-view-tools{
+  grid-column:1/-1!important;
+  grid-row:2!important;
+  justify-self:stretch!important;
+  align-self:stretch!important;
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:.28rem!important;
+  width:100%!important;
+  max-width:none!important;
+  height:1.58rem!important;
+  min-height:1.58rem!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] .farm-header .global-view-tools :is(#dutyRankBadge,.camera-tab-button,.duty-button){
+  width:100%!important;
+  min-width:0!important;
+  min-height:1.58rem!important;
+  height:1.58rem!important;
+  padding:.16rem .28rem!important;
+  justify-content:center!important;
+  font-size:clamp(.47rem,.38vw,.58rem)!important;
+  line-height:1!important;
+  overflow:hidden!important;
+}
+#main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] .farm-header .global-view-tools :is(#dutyRankBadge strong,.camera-tab-button span,.duty-button span){
+  min-width:0!important;
+  font-size:inherit!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+
+/* Very narrow game windows retain the same centred composition. */
+@media(max-width:720px){
+  #main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] .farm-header{
+    grid-template-columns:6.25rem minmax(0,1fr) 6.25rem!important;
+  }
+  #main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge{
+    width:6.05rem!important;
+  }
+  #main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge small{
+    font-size:.43rem!important;
+  }
+  #main_ui.camera-compact[data-ui-mode="classic-tabs-restored"] #farmLevelBadge strong{
+    min-width:1.58rem!important;
+    max-width:1.72rem!important;
+    font-size:.61rem!important;
+  }
+}

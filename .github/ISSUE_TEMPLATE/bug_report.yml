@@ -1,0 +1,53 @@
+name: Bug report
+description: Something in JRS Core does not work the way it should
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. Setup questions belong in the [Discord](https://discord.gg/jrscore).
+        Never paste licence keys, server keys or passwords.
+  - type: input
+    id: resource
+    attributes:
+      label: Resource
+      description: Which resource has the problem?
+      placeholder: jrs_inventory
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the inventory
+        2. Drop an item
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console errors
+      description: Errors from the F8 console and the server console
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: JRS Core version, game build and artifact
+      placeholder: JRS Core 1.0.0, build 1491, artifact 12345
+    validations:
+      required: true

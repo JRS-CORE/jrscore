@@ -1,0 +1,150 @@
+/* VARIATIONS MENU */
+
+#VariationSettings {
+    position: absolute;
+    right: 15px;
+    top: 20px;
+    background-image: url(../img/bg.png);
+    background-size: 100% 100%;
+    background-position: center;
+    width: 450px;
+    height: auto;
+    padding-top: 20px;
+    padding-bottom: 30px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.ContextTitle {
+    display: flex;
+    flex-direction: row;
+    justify-content: left;
+    align-items: center;
+    width: 80%;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.ContextTitle h2 {
+    color: #E1E1E1;
+    font-size: 18px;
+    font-family: 'RDRLino';
+    letter-spacing: 0.01em;
+    font-weight: 400;
+
+    margin-top: 2.5px;
+    margin-left: 10px;
+}
+
+.ContextSettings {
+    width: 80%;
+    display: flex;
+    flex-direction: column;
+}
+
+
+.ContextTitle img {
+    width: 35px;
+    height: 35px;
+}
+
+.ContextElem {
+    display: flex;
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+
+    margin-top: 5px;
+}
+
+.ContextElem div {
+    width: 77%;
+    display: flex;
+    flex-direction: row;
+    justify-content: left;
+    align-items: center;
+}
+
+.ContextElem p {
+    color: #E1E1E1;
+    font-size: 15px;
+    font-family: 'Hapna';
+    letter-spacing: 0.01em;
+    font-weight: 400;
+}
+
+.ContextElem span {
+    color: #ACACAC;
+}
+
+#rangeContext,
+#rangeVariation,
+.contRange {
+    width: 100% !important;
+    height: 6px !important;
+    max-height: 6px !important;
+    min-height: 6px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    background: rgba(0, 0, 0, 0.65) !important;
+    border-radius: 3px !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    cursor: pointer !important;
+}
+
+#rangeContext::-webkit-slider-thumb,
+#rangeVariation::-webkit-slider-thumb,
+.contRange::-webkit-slider-thumb {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin-top: -5px !important;
+    cursor: pointer !important;
+    background: url('../img/slider/handler.png') no-repeat center center !important;
+    background-size: 100% 100% !important;
+    border: none !important;
+    border-radius: 50% !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+}
+
+#rangeContext::-webkit-slider-runnable-track,
+#rangeVariation::-webkit-slider-runnable-track,
+.contRange::-webkit-slider-runnable-track {
+    cursor: pointer !important;
+    height: 6px !important;
+    max-height: 6px !important;
+    min-height: 6px !important;
+    border: none !important;
+    -webkit-appearance: none !important;
+    background: transparent !important;
+    border-radius: 3px !important;
+}
+
+#rangeContext::-moz-range-track,
+#rangeVariation::-moz-range-track,
+.contRange::-moz-range-track {
+    height: 6px !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+#rangeContext::-moz-range-thumb,
+#rangeVariation::-moz-range-thumb,
+.contRange::-moz-range-thumb {
+    width: 16px !important;
+    height: 16px !important;
+    background: url('../img/slider/handler.png') no-repeat center center !important;
+    background-size: 100% 100% !important;
+    border: none !important;
+    border-radius: 50% !important;
+    cursor: pointer !important;
+}

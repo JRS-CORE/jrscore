@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title data-i18n="core_redempire_hud">JRS HUD</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" type="text/css" href="grid.css">
+	<link rel="stylesheet" type="text/css" href="style.css?v=progress-inv-header-3">
+	<link rel="stylesheet" type="text/css" href="editor.css?v=no-scrollbar-v1">
+	<script src="vendor/jquery.min.js"></script>
+	<script src="vendor/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="hud-icons.js"></script>
+	<script type="text/javascript" src="hud-export-clipboard.js"></script>
+	<script type="text/javascript" src="main.js?v=215"></script>
+	<script type="text/javascript" src="level.js?v=rdo-right-level-3" defer></script>
+	<script type="text/javascript" src="doublexp.js" defer></script>
+    <link rel="stylesheet" href="jrs-i18n.css">
+    <script src="jrs-i18n.js"></script>
+    <script src="locales/en.js"></script>
+    <script src="locales/ar.js"></script>
+    <script type="text/javascript" src="devtools_guard.js"></script>
+    <script src="jrs-pad.js"></script>
+</head>
+<body class="hud-suppressed">
+
+<!-- Custom aiming reticle. Independent of #ui/hud-suppressed on purpose - a
+     player can be aiming while the compact HUD itself is hidden (menus,
+     pause, etc still block aiming at the game level, so this only ever shows
+     when client/crosshair.lua's thread says the player is actually aiming). -->
+<img id="crosshairReticle" class="crosshair-overlay" src="img/crosshair/crosshair1.png?v=2" alt="">
+
+<div id="ui" style="display:none;">
+	<div class="playerStats">
+		<div class="stat hud-user-hidden" id="PlayerGold">
+			<div class="icon"><div class="icon-slot" data-jrs-icon="gold"></div></div><span>0 𝕲</span>
+		</div>
+		<div class="stat hud-user-hidden" id="PlayerMoney">
+			<div class="icon"><div class="icon-slot" data-jrs-icon="money"></div></div><span>$ 0</span>
+		</div>
+		<div class="stat hud-user-hidden" id="PlayerDirtyMoney">
+			<div class="icon"><img src="img/dirtymoney.png"></div><span>$ 0</span>
+		</div>
+		<div class="stat-divider"></div>
+		<div class="stat hud-user-hidden" id="id">
+			<div class="icon"><div class="icon-slot" data-jrs-icon="userId"></div></div><span data-i18n="core_id">ID: 1</span>
+		</div>
+		<div class="stat hud-user-hidden" id="job">
+			<div class="icon"><div class="icon-slot" data-jrs-icon="job"></div></div><span data-i18n="job_unemployed">Unemployed</span>
+		</div>
+		<div class="stat hud-user-hidden" id="xp">
+			<div class="icon"><img src="img/jobs/xp.png"></div><span data-i18n="core_level_sample">LV 1</span>
+		</div>
+		<div class="stat hud-user-hidden" id="town">
+			<div class="icon"><img src="img/jobs/Town.png"></div><span>.</span>
+		</div>
+		<div class="stat pvp-enabled hud-user-hidden" id="pvp">
+			<div class="icon"><div class="icon-slot" data-jrs-icon="pvp"></div></div><span data-i18n="core_pvp_on">PVP ON</span>
+		</div>
+	</div>
+</div>
+
+<!-- HUD editor - jrs_metabolism's "jrs-editor" layout ported onto jrs_core.
+     Every control keeps the id/data-attribute the existing main.js editor
+     code already reads, so only the presentation changed. -->
+<div id="hudEditorPanel" aria-hidden="true">
+	<div id="hudEditorMenu" class="jrs-editor">
+		<div class="editor-header" id="editorHeader">
+			<h2 data-i18n="core_hud_editor">HUD Editor</h2>
+			<div class="editor-controls">
+				<button data-i18n-title="core_minimize" type="button" class="editor-header-btn" id="editorMinimize" title="Minimize" aria-label="Minimize"><svg xmlns="http://www.w3.org/2000/svg" class="editor-header-btn__svg" viewBox="0 0 15 15" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M5.5 2a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H5V2.5a.5.5 0 0 1 .5-.5Zm4 0a.5.5 0 0 1 .5.5V5h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5ZM2 9.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V10H2.5a.5.5 0 0 1-.5-.5Zm7 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1H10v2.5a.5.5 0 0 1-1 0v-3Z" clip-rule="evenodd"></path></svg></button>
+				<button data-i18n-title="core_reset_all" type="button" class="editor-header-btn" data-hud-action="reset" title="Reset All" aria-label="Reset All"><svg xmlns="http://www.w3.org/2000/svg" class="editor-header-btn__svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m16.325 18.8l-2.2 2.2L12 18.875l2.2-2.2q-.1-.275-.15-.575t-.05-.6q0-1.45 1.025-2.475T17.5 12q.45 0 .875.113t.8.312L16.8 14.8l1.4 1.4l2.375-2.35q.2.375.313.788T21 15.5q0 1.45-1.025 2.475T17.5 19q-.325 0-.613-.05t-.562-.15Zm4.45-8.8H18.7q-.65-2.2-2.475-3.6T12 5Q9.075 5 7.037 7.038T5 12q0 1.8.813 3.3T8 17.75V15h2v6H4v-2h2.35Q4.8 17.75 3.9 15.937T3 12q0-1.875.713-3.513t1.924-2.85q1.213-1.212 2.85-1.924T12 3q3.225 0 5.663 1.988T20.775 10Z"></path></svg></button>
+				<button data-i18n-title="core_save_changes" type="button" class="editor-header-btn" data-hud-action="save" title="Save Changes" aria-label="Save Changes"><svg xmlns="http://www.w3.org/2000/svg" class="editor-header-btn__svg editor-header-btn__svg--save" viewBox="0 0 376 384" aria-hidden="true"><path fill="currentColor" d="M119 282L346 55l29 30l-256 256L0 222l30-30z"></path></svg></button>
+				<button data-i18n-title="core_cancel" type="button" class="editor-header-btn" data-hud-action="cancel" title="Cancel" aria-label="Cancel"><svg xmlns="http://www.w3.org/2000/svg" class="editor-header-btn__svg" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10L4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></button>
+			</div>
+		</div>
+
+		<div class="editor-content">
+			<div class="settings-tabs" id="editorTabs" role="tablist" aria-label="HUD editor sections">
+				<div data-i18n="core_general" class="tab-group-header">GENERAL</div>
+				<div class="tab active" data-hud-tab="general" role="tab" aria-selected="true" tabindex="0">
+					<span class="tab-icon-wrap"><svg class="editor-header-btn__svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 17v2h6v-2H3ZM3 5v2h10V5H3Zm10 16v-2h8v-2h-8v-2h-2v6h2ZM7 9v2H3v2h4v2h2V9H7Zm14 4v-2H11v2h10Zm-6-4h2V7h4V5h-4V3h-2v6Z"></path></svg></span>
+					<span data-i18n="core_general_settings" class="tab-label">General Settings</span>
+				</div>
+
+				<div data-i18n="core_economy" class="tab-group-header">ECONOMY</div>
+				<div class="tab is-hidden" data-hud-tab="element" data-hud-element="PlayerGold" role="tab" aria-selected="false" tabindex="0">
+					<span class="tab-icon-wrap" data-jrs-icon="gold"></span>
+					<span data-i18n="core_gold" class="tab-label">Gold</span>
+					<small data-i18n="core_not_active" class="tab-state">NOT ACTIVE</small>
+				</div>
+				<div class="tab is-hidden" data-hud-tab="element" data-hud-element="PlayerMoney" role="tab" aria-selected="false" tabindex="0">
+					<span class="tab-icon-wrap" data-jrs-icon="money"></span>
+					<span data-i18n="core_money" class="tab-label">Money</span>
+					<small data-i18n="core_not_active" class="tab-state">NOT ACTIVE</small>
+				</div>
+				<div class="tab is-hidden" data-hud-tab="element" data-hud-element="PlayerDirtyMoney" role="tab" aria-selected="false" tabindex="0">
+					<span class="tab-icon-wrap"><img src="img/dirtymoney.png" alt=""></span>
+					<span data-i18n="core_dirty_money" class="tab-label">Dirty Money</span>
+					<small data-i18n="core_not_active" class="tab-state">NOT ACTIVE</small>
+				</div>
+				<div class="tab is-hidden" data-hud-tab="element" data-hud-element="xp" role="tab" aria-selected="false" tabindex="0">
+					<span class="tab-icon-wrap"><img src="img/jobs/xp.png" alt=""></span>
+					<span data-i18n="core_level" class="tab-label">Level</span>
+					<small data-i18n="core_not_active" class="tab-state">NOT ACTIVE</small>
+				</div>
+				<div class="tab is-hidden" data-hud-tab="element" data-hud-element="doubleXpHud" role="tab" aria-selected="false" tabindex="0">
+					<span class="tab-icon-wrap"><img src="img/jobs/xp.png" alt=""></span>
+					<span data-i18n="core_xp_boost_event" class="tab-label">XP Boost Event</span>
+					<small data-i18n="core_not_active" class="tab-state">NOT ACTIVE</small>
+				</div>
+
+				<div data-i18n="core_gameplay" class="tab-group-header">GAMEPLAY</div>
+				<div class="tab" data-hud-tab="crosshair" role="tab" aria-selected="false" tabindex="0">
+					<span class="tab-icon-wrap"><img src="img/crosshair/crosshair1.png?v=2" alt=""></span>
+					<span data-i18n="core_crosshair" class="tab-label">Crosshair</span>
+				</div>
+
+				<div data-i18n="core_information" class="tab-group-header">INFORMATION</div>
+				<div class="tab is-hidden" data-hud-tab="element" data-hud-element="id" role="tab" aria-selected="false" tabindex="0">
+					<span class="tab-icon-wrap" data-jrs-icon="userId"></span>
+					<span data-i18n="core_player_id" class="tab-label">Player ID</span>
+					<small data-i18n="core_not_active" class="tab-state">NOT ACTIVE</small>
+				</div>
+				<div class="tab is-hidden" data-hud-tab="element" data-hud-element="job" role="tab" aria-selected="false" tabindex="0">
+					<span class="tab-icon-wrap" data-jrs-icon="job"></span>
+					<span data-i18n="core_job" class="tab-label">Job</span>
+					<small data-i18n="core_not_active" class="tab-state">NOT ACTIVE</small>
+				</div>
+				<div class="tab is-hidden" data-hud-tab="element" data-hud-element="town" role="tab" aria-selected="false" tabindex="0">
+					<span class="tab-icon-wrap"><img src="img/jobs/Town.png" alt=""></span>
+					<span data-i18n="core_town" class="tab-label">Town</span>
+					<small data-i18n="core_not_active" class="tab-state">NOT ACTIVE</small>
+				</div>
+				<div class="tab is-hidden" data-hud-tab="element" data-hud-element="pvp" role="tab" aria-selected="false" tabindex="0">
+					<span class="tab-icon-wrap" data-jrs-icon="pvp"></span>
+					<span data-i18n="core_pvp_status" class="tab-label">PVP Status</span>
+					<small data-i18n="core_not_active" class="tab-state">NOT ACTIVE</small>
+				</div>
+			</div>
+
+			<div data-i18n-title="core_drag_to_resize_the_tab_list" class="resize-handle" id="editorResize" title="Drag to resize the tab list">
+				<div class="resize-handle-grip"><div class="grip-dot"></div><div class="grip-dot"></div><div class="grip-dot"></div></div>
+			</div>
+
+			<div class="settings-panel" id="editorPanel">
+				<section class="settings-section active" data-hud-page="general" role="tabpanel">
+					<h3 data-i18n="core_general_settings">General Settings<span data-i18n="core_pick_a_hud_element_from_the" class="h3-sub">Pick a HUD element from the rail, drag it on screen, then save your layout.</span></h3>
+
+					<div class="setting-section">
+						<h4 data-i18n="core_editing">Editing</h4>
+						<div class="help-card">
+							<strong data-i18n="core_drag_drop">Drag &amp; Drop</strong>
+							<span data-i18n="core_click_any_highlighted_hud_element_on">Click any highlighted HUD element on the game screen and drag it to a new position.</span>
+						</div>
+						<div class="help-card">
+							<strong data-i18n="core_multi_select">Multi Select</strong>
+							<span data-i18n="core_ctrl_click_element_tabs_in_the">Ctrl-click element tabs in the rail to select several at once, then press Link to edit them together.</span>
+						</div>
+						<div class="help-card">
+							<strong data-i18n="core_save_changes">Save Changes</strong>
+							<span data-i18n="core_press_the_tick_in_the_header">Press the tick in the header to store this layout for your character. The cross closes without saving.</span>
+						</div>
+						<div class="help-card">
+							<strong data-i18n="core_reset_all">Reset All</strong>
+							<span data-i18n="core_reset_restores_every_element_to_its">Reset restores every element to its default position, size and colour.</span>
+						</div>
+					</div>
+
+					<div class="setting-section">
+						<h4 data-i18n="core_element_visibility">Element Visibility</h4>
+						<div class="visibility-grid" id="hudVisibilityGrid">
+							<button type="button" class="core-item" data-hud-toggle="PlayerGold"><span class="dot"></span><span data-i18n="core_gold" class="core-item-label">Gold</span></button>
+							<button type="button" class="core-item" data-hud-toggle="PlayerMoney"><span class="dot"></span><span data-i18n="core_money" class="core-item-label">Money</span></button>
+							<button type="button" class="core-item" data-hud-toggle="PlayerDirtyMoney"><span class="dot"></span><span data-i18n="core_dirty_money" class="core-item-label">Dirty Money</span></button>
+							<button type="button" class="core-item" data-hud-toggle="xp"><span class="dot"></span><span data-i18n="core_level" class="core-item-label">Level</span></button>
+							<button type="button" class="core-item" data-hud-toggle="doubleXpHud"><span class="dot"></span><span data-i18n="core_xp_boost" class="core-item-label">XP Boost</span></button>
+							<button type="button" class="core-item" data-hud-toggle="id"><span class="dot"></span><span data-i18n="core_player_id" class="core-item-label">Player ID</span></button>
+							<button type="button" class="core-item" data-hud-toggle="job"><span class="dot"></span><span data-i18n="core_job" class="core-item-label">Job</span></button>
+							<button type="button" class="core-item" data-hud-toggle="town"><span class="dot"></span><span data-i18n="core_town" class="core-item-label">Town</span></button>
+							<button type="button" class="core-item" data-hud-toggle="pvp"><span class="dot"></span><span data-i18n="core_pvp" class="core-item-label">PVP</span></button>
+						</div>
+						<div data-i18n="core_turn_any_element_on_or_off" class="setting-help">Turn any element on or off without hunting through the tabs. An amber dot means the server has switched that element off for everyone.</div>
+					</div>
+
+					<!-- Cross-HUD hand-off. Stays hidden until Lua sends a `link`
+					     payload with hudEditor:open - see Config.HudEditor.link. -->
+					<div class="setting-section" id="hudLinkSection" hidden>
+						<h4 data-i18n="core_other_hud">Other HUD</h4>
+						<div class="setting-item">
+							<button type="button" id="hudSwitchBtn" class="editor-btn editor-btn--wide" data-hud-action="switch" data-i18n="core_other_hud">Other HUD</button>
+							<div class="setting-help" id="hudSwitchHint"></div>
+						</div>
+					</div>
+
+					<!-- Admin/developer only - stays hidden until Lua confirms it with
+					     hudEditor:open's canExportDefaults flag (server/hud_export.lua). -->
+					<div class="setting-section" id="hudDeveloperSection" hidden>
+						<h4 data-i18n="core_developer">Developer</h4>
+						<div data-i18n="core_admin_only_writes_the_current_layout" class="setting-help">Admin only. Writes the current layout out as config Lua.</div>
+						<div class="setting-item">
+							<button data-i18n="core_export_defaults" type="button" id="hudExportBtn" class="editor-btn editor-btn--wide" data-hud-action="export">Export Defaults</button>
+						</div>
+					</div>
+				</section>
+
+				<section class="settings-section" data-hud-page="element" role="tabpanel">
+					<h3 id="hudSelectedName" data-i18n="core_gold">Gold</h3>
+
+					<div class="setting-section">
+						<h4 data-i18n="core_selection">Selection</h4>
+						<div class="setting-item">
+							<button type="button" id="hudVisibilityToggle" class="custom-checkbox" role="switch" aria-checked="true">
+								<span class="checkmark"></span>
+								<span data-i18n="core_visible_2" class="checkbox-label">Visible</span>
+							</button>
+							<div data-i18n="core_show_or_hide_this_element_during" class="setting-help">Show or hide this element during normal gameplay.</div>
+						</div>
+						<div class="setting-item">
+							<label data-i18n="core_link_selection">Link Selection</label>
+							<div class="link-buttons">
+								<button data-i18n="core_link" type="button" id="hudLinkBtn" class="jrs-selection-link" hidden>Link</button>
+								<button data-i18n="core_unlink" type="button" id="hudUnlinkBtn" class="jrs-selection-link" hidden>Unlink</button>
+							</div>
+							<div class="selection-note" id="hudSelectionNote"></div>
+							<div data-i18n="core_ctrl_click_more_elements_in_the" class="setting-help">Ctrl-click more elements in the rail, then Link to edit them together - each still saves its own position, size and colour separately.</div>
+						</div>
+					</div>
+
+					<div class="setting-section">
+						<h4 data-i18n="core_appearance">Appearance</h4>
+						<div class="setting-item">
+							<div class="custom-slider-container">
+								<label data-i18n="core_element_size" for="hudScaleInput">Element Size</label>
+								<div class="slider-wrapper">
+									<button data-i18n="core_text" type="button" class="slider-step" data-hud-scale-step="-0.05" aria-label="Decrease size">&minus;</button>
+									<input id="hudScaleInput" type="range" min="50" max="180" step="5" value="100">
+									<button type="button" class="slider-step" data-hud-scale-step="0.05" aria-label="Increase size">+</button>
+								</div>
+								<span class="slider-value" id="hudScaleValue">100%</span>
+							</div>
+							<div data-i18n="core_changes_the_icon_and_text_scale" class="setting-help">Changes the icon and text scale of this element.</div>
+						</div>
+						<div class="setting-item">
+							<label data-i18n="core_text_colour" for="hudColorInput">Text Colour</label>
+							<div class="color-input">
+								<input id="hudColorInput" type="color" value="#ffffff">
+								<input id="hudColorHex" type="text" value="#ffffff" spellcheck="false" maxlength="7">
+								<button data-i18n="core_reset" data-i18n-title="core_reset_to_this_element_s_default" type="button" id="hudColorReset" class="editor-btn" title="Reset to this element's default colour">Reset</button>
+							</div>
+							<div data-i18n="core_reset_keeps_this_element_s_own" class="setting-help">Reset keeps this element's own default colour instead of forcing one.</div>
+						</div>
+					</div>
+				</section>
+
+				<section class="settings-section" data-hud-page="crosshair" role="tabpanel">
+					<h3 data-i18n="core_crosshair">Crosshair<span data-i18n="core_crosshair_sub" class="h3-sub">Pick a reticle shape and colour for aiming down sights.</span></h3>
+
+					<div class="setting-section">
+						<h4 data-i18n="core_shape">Shape</h4>
+						<div class="crosshair-shape-grid" id="crosshairShapeGrid">
+							<button type="button" class="crosshair-shape-card crosshair-shape-default" data-crosshair-shape="0" data-i18n-title="core_crosshair_shape_default" title="Game Default Reticle"><span data-i18n="core_crosshair_default_short">Default</span></button>
+							<button type="button" class="crosshair-shape-card" data-crosshair-shape="1"><img src="img/crosshair/crosshair1.png?v=2" alt=""></button>
+							<button type="button" class="crosshair-shape-card" data-crosshair-shape="2"><img src="img/crosshair/crosshair2.png?v=2" alt=""></button>
+							<button type="button" class="crosshair-shape-card" data-crosshair-shape="3"><img src="img/crosshair/crosshair3.png?v=2" alt=""></button>
+							<button type="button" class="crosshair-shape-card" data-crosshair-shape="4"><img src="img/crosshair/crosshair4.png?v=2" alt=""></button>
+							<button type="button" class="crosshair-shape-card" data-crosshair-shape="5"><img src="img/crosshair/crosshair5.png?v=2" alt=""></button>
+							<button type="button" class="crosshair-shape-card" data-crosshair-shape="6"><img src="img/crosshair/crosshair6.png?v=2" alt=""></button>
+							<button type="button" class="crosshair-shape-card" data-crosshair-shape="7"><img src="img/crosshair/crosshair7.png?v=2" alt=""></button>
+							<button type="button" class="crosshair-shape-card" data-crosshair-shape="8"><img src="img/crosshair/crosshair8.png?v=2" alt=""></button>
+							<button type="button" class="crosshair-shape-card" data-crosshair-shape="9"><img src="img/crosshair/crosshair9.png?v=2" alt=""></button>
+							<button type="button" class="crosshair-shape-card" data-crosshair-shape="10"><img src="img/crosshair/crosshair10.png?v=2" alt=""></button>
+							<button type="button" class="crosshair-shape-card" data-crosshair-shape="11"><img src="img/crosshair/crosshair11.png?v=2" alt=""></button>
+							<button type="button" class="crosshair-shape-card" data-crosshair-shape="12"><img src="img/crosshair/crosshair12.png?v=2" alt=""></button>
+						</div>
+					</div>
+
+					<div class="setting-section">
+						<h4 data-i18n="core_preview">Preview</h4>
+						<div class="crosshair-preview-box">
+							<img id="crosshairEditorPreview" src="img/crosshair/crosshair1.png?v=2" alt="Preview" hidden>
+							<span id="crosshairEditorPreviewDefault" class="crosshair-preview-default" data-i18n="core_crosshair_shape_default">Game Default Reticle</span>
+						</div>
+					</div>
+
+					<div class="setting-section">
+						<h4 data-i18n="core_colour">Colour</h4>
+						<div class="crosshair-color-grid" id="crosshairColorGrid">
+							<button type="button" class="crosshair-color-swatch crosshair-color-white" data-crosshair-color="white" data-i18n-title="core_white" title="White"></button>
+							<button type="button" class="crosshair-color-swatch crosshair-color-red" data-crosshair-color="red" data-i18n-title="core_red" title="Red"></button>
+							<button type="button" class="crosshair-color-swatch crosshair-color-green" data-crosshair-color="green" data-i18n-title="core_green" title="Green"></button>
+							<button type="button" class="crosshair-color-swatch crosshair-color-blue" data-crosshair-color="blue" data-i18n-title="core_blue" title="Blue"></button>
+							<button type="button" class="crosshair-color-swatch crosshair-color-yellow" data-crosshair-color="yellow" data-i18n-title="core_yellow" title="Yellow"></button>
+							<button type="button" class="crosshair-color-swatch crosshair-color-pink" data-crosshair-color="pink" data-i18n-title="core_pink" title="Pink"></button>
+							<button type="button" class="crosshair-color-swatch crosshair-color-purple" data-crosshair-color="purple" data-i18n-title="core_purple" title="Purple"></button>
+							<button type="button" class="crosshair-color-swatch crosshair-color-cyan" data-crosshair-color="cyan" data-i18n-title="core_cyan" title="Cyan"></button>
+							<button type="button" class="crosshair-color-swatch crosshair-color-orange" data-crosshair-color="orange" data-i18n-title="core_orange" title="Orange"></button>
+							<button type="button" class="crosshair-color-swatch crosshair-color-black" data-crosshair-color="black" data-i18n-title="core_black" title="Black"></button>
+						</div>
+						<div data-i18n="core_crosshair_colour_help" class="setting-help">Tints the reticle. Changes apply live so you can preview it while aiming.</div>
+					</div>
+				</section>
+			</div>
+		</div>
+	</div>
+
+	<div class="editor-minimized-dock" id="editorDock">
+		<button data-i18n-title="core_restore_the_editor" type="button" class="editor-restore-fab" id="editorRestore" title="Restore the editor"><svg xmlns="http://www.w3.org/2000/svg" class="editor-restore-fab__svg" viewBox="0 0 15 15" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M2 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1H3.707l2.147 2.146a.5.5 0 1 1-.708.708L3 3.707V5.5a.5.5 0 0 1-1 0v-3Zm11 0a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0 0 1h1.793L9.146 5.146a.5.5 0 1 0 .708.708L12 3.707V5.5a.5.5 0 0 0 1 0v-3ZM2.5 13a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 1 0v1.793l2.146-2.147a.5.5 0 1 1 .708.708L3.707 12H5.5a.5.5 0 0 1 0 1h-3Zm10.5-.5a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1h1.793L9.146 9.854a.5.5 0 0 1 .708-.708L12 11.293V9.5a.5.5 0 0 1 1 0v3Z" clip-rule="evenodd"></path></svg></button>
+		<div data-i18n="core_hud_editor_minimised_drag_your_hud" class="editor-minimized-selection">HUD editor minimised - drag your HUD, then reopen</div>
+	</div>
+</div>
+
+<!-- JRS level display: visual layer adapted from alfie_level. -->
+<div id="levelHud" class="levelHud">
+    <div id="levelHudCard" class="levelHud__card" aria-hidden="true">
+        <!-- Tier 1: Double / Multiplier XP Boost (Top row inside the unified UI card) -->
+        <div id="doubleXpHud" class="levelHud__tier levelHud__tier--boost tier-hidden hud-user-hidden" aria-hidden="true">
+            <div class="levelHud__inner">
+                <div class="rankBadge" aria-hidden="true">
+                    <img src="img/level/mp_rank_toast.png" alt="">
+                    <div id="doubleXpMultiplier" class="rankBadge__number" data-digits="2">2X</div>
+                </div>
+
+                <div class="xpWrap">
+                    <div class="xpBar" aria-hidden="true">
+                        <img class="xpBar__track" src="img/level/weapon_stats_bar.png" alt="">
+                        <div id="doubleXpFillClip" class="xpBar__fillClip">
+                            <img class="xpBar__fill" src="img/level/weapon_stats_bar_mask.png" alt="">
+                        </div>
+                    </div>
+
+                    <div class="xpMeta">
+                        <span id="doubleXpTitle" class="xpMeta__label" data-i18n="core_double_xp">DOUBLE XP</span>
+                        <span id="doubleXpTimer" class="xpMeta__value">19:35</span>
+                    </div>
+                </div>
+            </div>
+            <div class="levelHud__divider"></div>
+        </div>
+
+        <!-- Tier 2: Level (Bottom row inside the unified UI card) -->
+        <div class="levelHud__tier levelHud__tier--level">
+            <div class="levelHud__inner">
+                <div class="rankBadge" aria-hidden="true">
+                    <img src="img/level/mp_rank_toast.png" alt="">
+                    <div id="rankNumber" class="rankBadge__number">1</div>
+                </div>
+
+                <div class="xpWrap" id="xpWrap">
+                    <div class="xpBar" id="xpBar" aria-hidden="true">
+                        <img class="xpBar__track" src="img/level/weapon_stats_bar.png" alt="">
+                        <div id="xpFillClip" class="xpBar__fillClip">
+                            <img class="xpBar__fill" src="img/level/weapon_stats_bar_mask.png" alt="">
+                        </div>
+                    </div>
+
+                    <div class="xpMeta" id="xpMeta">
+                        <span data-i18n="core_level_2" class="xpMeta__label">LEVEL</span>
+                        <span id="xpMetaValue" class="xpMeta__value" data-i18n="core_0_200_xp">0 / 200 XP</span>
+                    </div>
+
+                    <div id="levelMaxText" class="levelMax" data-i18n="core_level_max">LEVEL MAX</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="levelToast" class="levelToast" aria-hidden="true">
+    <div class="levelToast__card">
+        <div id="levelToastTitle" class="levelToast__title" data-i18n="core_level_up">LEVEL UP</div>
+        <div class="levelToast__levels">
+            <span id="levelToastOld" class="levelToast__num">1</span>
+            <span class="levelToast__arrow">→</span>
+            <span id="levelToastNew" class="levelToast__num">2</span>
+        </div>
+    </div>
+</div>
+
+
+<section id="core-progressbar" class="core-progressbar" aria-hidden="true">
+    <div class="core-progress-card">
+        <div class="core-progress-head">
+            <span id="core-progress-brand" class="core-progress-brand" data-i18n="core_redempire">JRS</span>
+            <span id="core-progress-label" class="core-progress-label" data-i18n="core_working">Working...</span>
+        </div>
+        <div class="core-progress-row">
+            <div class="core-progress-track">
+                <div id="core-progress-fill" class="core-progress-fill"></div>
+            </div>
+            <span id="core-progress-pct" class="core-progress-pct">0%</span>
+        </div>
+    </div>
+</section>
+
+<iframe data-i18n-title="core_jrs_library_dialogs" id="jrsLibUi" src="jrslib/index.html" title="JRS library dialogs" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none;z-index:2147483000"></iframe>
+
+<iframe data-i18n-title="core_jrs_input" id="jrsInputModule" src="modules/input/index.html" title="JRS input" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none;visibility:hidden;z-index:2147483400"></iframe>
+<iframe data-i18n-title="core_jrs_menu" id="jrsMenuModule" src="modules/menu/ui.html" title="JRS menu" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none;visibility:visible;z-index:2147483350"></iframe>
+<iframe id="jrsExtInputModule" src="modules/extinput/index.html" title="JRS advanced input" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none;visibility:hidden;z-index:2147483460"></iframe>
+<iframe id="jrsExtLibModule" src="modules/extlib/index.html" title="JRS lib" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none;visibility:visible;z-index:2147483300"></iframe>
+<iframe data-i18n-title="core_jrs_optional_toast" id="jrsNotifyModule" src="modules/notify/index.html" title="JRS optional toast" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none;visibility:visible;z-index:2147483450"></iframe>
+<script src="module-relay.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest an idea for JRS Core
+title: "[Idea] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What do you want?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does it help?
+      description: Who benefits, server owners or players, and how?
+    validations:
+      required: true
+  - type: input
+    id: resource
+    attributes:
+      label: Resource (if it is about one)
+      placeholder: jrs_housing

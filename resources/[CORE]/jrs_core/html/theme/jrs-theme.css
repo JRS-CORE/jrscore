@@ -1,0 +1,18 @@
+/* JRS Core theme - link it from any resource:
+   <link rel="stylesheet" href="nui://jrs_core/html/theme/jrs-theme.css"> */
+@font-face{font-family:'JRS Title';src:url(../RDRLino-Regular.ttf)}
+@font-face{font-family:'JRS Body';src:url(../Hapna-Regular.ttf)}
+:root{--jrs-text:#f2eee7;--jrs-muted:#c8c3bb;--jrs-dim:#85817b;--jrs-line:rgba(255,255,255,.09);--jrs-field:rgba(0,0,0,.44);--jrs-danger:#c77f79;--jrs-success:#9db5a7}
+.jrs-panel{background:url(../storeui/panel-background.png) center/100% 100% no-repeat;color:var(--jrs-text);font-family:'JRS Body',Arial,sans-serif;filter:drop-shadow(0 18px 34px rgba(0,0,0,.72));padding:18px}
+.jrs-header{background:url(../storeui/ui-header.png) center/100% 100% no-repeat;padding:22px 18px 14px;text-align:center}
+.jrs-title{font-family:Georgia,'Times New Roman',serif;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#fff;text-shadow:0 2px 4px #000;margin:0}
+.jrs-muted{color:var(--jrs-muted)}
+.jrs-btn{background:url(../storeui/tab.png) center/100% 100% no-repeat;border:0;border-radius:0;color:var(--jrs-text);text-shadow:0 1px 2px #000;padding:10px 18px;font:inherit;cursor:pointer}
+.jrs-btn:hover{filter:brightness(1.12)}
+.jrs-btn.active,.jrs-btn.primary{color:#fff;box-shadow:inset 3px 0 0 rgba(255,255,255,.85),inset 0 -2px 0 rgba(255,255,255,.35);filter:brightness(1.18)}
+.jrs-btn:disabled{opacity:.5;cursor:default}
+.jrs-card{background:url(../storeui/card.png) center/100% 100% no-repeat;padding:10px 12px;margin-bottom:6px}
+.jrs-card.active{background-image:url(../storeui/card-active.png);box-shadow:inset 3px 0 0 rgba(255,255,255,.85);filter:brightness(1.12)}
+.jrs-input{background:var(--jrs-field);border:1px solid var(--jrs-line);color:var(--jrs-text);padding:8px 10px;font:inherit;outline:none}
+.jrs-input:focus{border-color:rgba(255,255,255,.35)}
+.jrs-line{border-top:1px solid var(--jrs-line)}

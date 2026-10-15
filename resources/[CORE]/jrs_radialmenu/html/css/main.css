@@ -1,0 +1,115 @@
+:root {
+    --rdr-black: #000000;
+    --rdr-panel: #0a0a0a;
+    --rdr-panel-2: #141414;
+    --rdr-leather: #1c1c1c;
+    --rdr-red-bright: #2a2a2a;
+    --rdr-gold: #ffffff;
+    --rdr-gold-dim: #5a5a5a;
+    --rdr-text: #f2f2f2;
+    --rdr-muted: #9a9a9a;
+    --rdr-shadow: rgba(0, 0, 0, 0.85);
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    background: transparent;
+    overflow: hidden;
+    user-select: none;
+    font-family: 'Roboto', sans-serif;
+}
+
+div.menuHolder {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    filter: drop-shadow(0 10px 30px var(--rdr-shadow));
+}
+
+svg.menu {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    transition: transform 0.15s ease-out, opacity 0.15s ease-out, visibility 0.15s;
+}
+
+svg.menu.inner {
+    transform: scale(0.66) rotate(-10deg);
+    opacity: 0;
+    visibility: hidden;
+}
+
+svg.menu.outer {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* Sectors */
+svg.menu > g > path {
+    fill: rgba(10, 10, 10, 0.88);
+    stroke: var(--rdr-gold-dim);
+    stroke-width: 0.25;
+    transition: fill 0.15s ease, stroke 0.15s ease;
+}
+
+svg.menu > g.dummy > path {
+    fill: rgba(10, 10, 10, 0.55);
+    stroke: rgba(90, 90, 90, 0.4);
+}
+
+svg.menu > g.sector { cursor: pointer; }
+
+svg.menu > g.sector:hover > path,
+svg.menu > g.sector.selected > path {
+    fill: rgba(42, 42, 42, 0.95);
+    stroke: var(--rdr-gold);
+    stroke-width: 0.4;
+}
+
+svg.menu text {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    font-size: 2.8px;
+    letter-spacing: 0.25px;
+    text-transform: uppercase;
+    fill: var(--rdr-text);
+    pointer-events: none;
+}
+
+svg.menu > g.sector:not(.selected):not(:hover) > text {
+    fill: var(--rdr-muted);
+}
+
+svg.menu foreignObject.icon {
+    overflow: visible;
+    pointer-events: none;
+}
+
+svg.menu .icon-wrap {
+    width: 10px;
+    height: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 6.5px;
+    line-height: 1;
+    color: var(--rdr-text);
+}
+
+/* Center button */
+svg.menu > g.center { cursor: pointer; }
+
+svg.menu > g.center > circle {
+    fill: rgba(20, 20, 20, 0.92);
+    stroke: var(--rdr-gold-dim);
+    stroke-width: 0.35;
+    transition: fill 0.15s ease, stroke 0.15s ease;
+}
+
+svg.menu > g.center:hover > circle {
+    fill: var(--rdr-red-bright);
+    stroke: var(--rdr-gold);
+}

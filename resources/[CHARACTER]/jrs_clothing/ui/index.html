@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JRS Store</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="panel" class="hidden">
+        <header>
+            <div id="title">STORE</div>
+            <div id="tabs"></div>
+        </header>
+        <div id="rows"></div>
+        <footer>
+            <div class="total"><span id="totalLabel">Total</span><span id="price">$0.00</span></div>
+            <div class="buttons">
+                <button id="close" class="ghost">Close</button>
+                <button id="buy">Buy</button>
+            </div>
+        </footer>
+    </div>
+    <div id="rotate" class="hidden">
+        <button data-dir="left">&#10226;</button>
+        <button data-dir="right">&#10227;</button>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

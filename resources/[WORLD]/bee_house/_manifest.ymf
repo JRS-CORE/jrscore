@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CPackFileMetaData>
+  <MapDataGroups/>
+ <HDTxdBindingArray/>
+  <imapDependencies/>
+  <imapDependencies_2/>
+  <itypDependencies_2>
+    <Item>
+    <itypName>bee_house_gk_ytyp</itypName>
+    <manifestFlags>INTERIOR_DATA</manifestFlags>
+    <itypDepArray/>
+  </Item>
+  </itypDependencies_2>
+  <Interiors>
+    <Item>
+      <Name>bee_house_gk_col</Name>
+      <Bounds>
+        <Item>bee_house_gk_col</Item>
+      </Bounds>
+    </Item>
+  </Interiors>
+  <redm_loves_you_7cc2afb2d40476ed/>
+  <redm_loves_you_c1fa8cdfbc6c9972/>
+  <txdRelationships/>
+  <redm_loves_you_faf7283fa0923550/>
+  <redm_loves_you_5179f30cceb03389/>
+</CPackFileMetaData>
+ 

@@ -1,0 +1,2 @@
+INSERT INTO `items`(`item`, `label`, `limit`, `can_remove`, `type`, `usable`, `desc`, `weight` ) VALUES ('animal_crawfish', 'Crawfish', 10, 1, 'item_standard', 1, 'A small freshwater crustacean.', 0.25);
+INSERT INTO `items`(`item`, `label`, `limit`, `can_remove`, `type`, `usable`, `desc`, `weight` ) VALUES ('provision_meat_crustacean', 'Raw Crustacean Meat', 25, 1, 'item_standard', 1, '', 0.05);

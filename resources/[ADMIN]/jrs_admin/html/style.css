@@ -1,0 +1,91 @@
+/* JRS bindings for the original html.zip menu and its original texture assets. */
+html,body,#panel,#main_ui{background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+[hidden]{display:none!important}button,input,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed}
+#panel{position:fixed;inset:0;z-index:2147482000;color:#f5f1e8}
+#main_ui{display:block!important}
+#panel #adminShell{transition:none!important;animation:none!important}
+#panel #adminHeader{grid-template-rows:minmax(0,1fr)!important}
+#panel #adminHeader .farm-header-center{grid-column:2!important;grid-row:1!important}
+#panel #adminHeader .global-view-tools{grid-column:3!important;grid-row:1!important}
+#panel #list .option-label{font-size:15px!important;line-height:1.3!important}
+#panel #list .option-desc{font-size:12px!important;line-height:1.45!important}
+#panel #search{font-size:13px!important}
+html[dir=rtl] #panel #title,html[dir=rtl] #panel #list .option-label,html[dir=rtl] #panel #list .option-desc{font-family:Tahoma,Arial,sans-serif!important}
+@media(max-width:700px){#panel #adminHeader .farm-header-center{grid-column:1!important}#panel #adminHeader .global-view-tools{grid-column:2!important}#panel #list .option-label{font-size:14px!important}#panel #list .option-desc{font-size:11px!important}}
+#panel #adminShell{display:flex!important;flex-direction:column!important;overflow:hidden!important;background-image:url('img/bg_1.png')!important;background-size:100% 100%!important;background-position:center!important;background-repeat:no-repeat!important;box-shadow:none!important;border:0!important;border-radius:0!important}
+#panel #adminHeader{position:relative;flex-shrink:0;display:grid!important;grid-template-columns:10rem minmax(0,1fr) 10rem!important;min-height:100px!important;height:auto!important;padding:14px 18px!important;gap:12px!important;align-items:center!important;background:url('img/jrs_admin_header.png') center/100% 100% no-repeat!important;border:0!important;border-radius:0!important;cursor:move;user-select:none}
+#panel #farmLevelBadge{position:static!important;width:auto!important;height:auto!important;min-height:48px!important;padding:6px!important;gap:8px!important;display:flex!important;background:url('img/box_a_bg_1.png') center/100% 100% no-repeat!important;border:0!important;border-radius:0!important}
+#panel #farmLevelBadge .farm-level-copy{display:flex!important;flex-direction:column!important;min-width:0!important;gap:3px!important}
+#panel #farmLevelBadge small{font-size:10px!important;white-space:nowrap!important;letter-spacing:.08em!important}
+#panel #farmLevelBadge strong{width:auto!important;height:auto!important;background:none!important;border:0!important;font-size:13px!important;line-height:1.3!important;white-space:nowrap!important}
+.admin-brand-image{width:34px;height:34px;object-fit:contain;flex:0 0 34px}
+#panel .farm-header-center{position:static!important;transform:none!important;margin:0!important;padding:0!important;min-width:0!important;text-align:center!important}
+#panel #title{display:block!important;font-family:'RanchCrock',Georgia,serif!important;font-size:clamp(24px,2.5vh,32px)!important;line-height:1.1!important;margin:0!important;color:#fff!important;text-shadow:0 2px 4px #000;overflow-wrap:anywhere}
+#panel .farm-header-center .subtitle{justify-content:center!important;font-size:12px!important;line-height:1.4!important;margin:5px 0 0!important;color:#eee!important;text-shadow:0 1px 3px #000}
+#panel .global-view-tools{position:static!important;display:flex!important;flex-direction:column!important;width:auto!important;max-width:none!important;gap:5px!important;margin:0!important}
+#panel .global-view-tools .btn{width:100%!important;min-height:30px!important;height:auto!important;font-size:12px!important}
+.admin-layout{display:flex;flex-direction:column;flex:1;min-height:0}.admin-sidebar{flex-shrink:0;min-width:0}
+#panel #navigation{grid-template-columns:repeat(6,minmax(0,1fr))!important;margin:4px 0 0!important;padding:6px 12px!important;gap:5px!important}
+#panel #navigation .tab{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-height:50px!important;height:auto!important;padding:7px!important;font-size:12px!important;white-space:normal!important;background:url('img/box_a_bg_1.png') center/100% 100% no-repeat!important;border:0!important;border-radius:0!important;color:#eee!important}
+#panel #navigation .tab:hover,#panel #navigation .tab[aria-selected=true]{background-image:url('img/box_a_bg_1_2.png')!important}
+.admin-farm-thumb{width:28px;height:28px;object-fit:contain;flex:0 0 28px}.admin-farm-card-body{min-width:0}.admin-farm-card-body strong{font-size:inherit}.admin-farm-card-body small{display:none}
+#panel .admin-content{display:flex!important;flex-direction:column;flex:1;min-height:0;overflow:hidden!important;padding:12px 18px!important}
+.admin-detail{display:flex;flex-direction:column;flex:1;min-height:0;margin:0;gap:12px}.admin-detail-head{flex-shrink:0;min-width:0;gap:12px;margin:0}.admin-detail-head>div:first-child{min-width:0}.admin-detail-head h2{font-size:18px!important;line-height:1.2;overflow-wrap:anywhere}.admin-detail-head p{margin:4px 0 0;line-height:1.4;font-size:12px!important}
+.admin-counts{display:flex;align-items:center;gap:6px;flex-shrink:0}.admin-counts .badge{font-size:11px!important;white-space:nowrap}
+#panel .admin-search{display:flex;align-items:center;flex-shrink:0;gap:10px;min-height:38px;padding:8px 12px!important;background:url('img/box_a_bg_1.png') center/100% 100% no-repeat!important;border:0!important;border-radius:0!important}.admin-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#fff;font-size:13px}.admin-search input::placeholder{color:#c3beb4}.admin-search #count{font-size:12px;min-width:2rem;text-align:center}
+#panel #list{display:grid;grid-template-columns:minmax(0,1fr);flex:1;min-height:0;overflow:auto;align-content:start;gap:8px;padding:0 4px 6px 0;scrollbar-width:thin;scrollbar-color:#777 transparent}#list::-webkit-scrollbar{width:5px}#list::-webkit-scrollbar-thumb{background:#777}
+#panel #list .option{position:relative;width:100%;min-width:0;min-height:72px;display:flex!important;align-items:center;gap:12px;padding:10px 14px!important;appearance:none;text-align:start;font:inherit;background:url('img/box_a_bg_1.png') center/100% 100% no-repeat!important;border:0!important;border-radius:0!important;color:#f5f1e8!important;transition:none!important}
+#panel #list .option:enabled:hover{background-image:url('img/box_a_bg_1_2.png')!important}#list .option:disabled{opacity:.5}.option-copy{flex:1;min-width:0}.option-label{display:block;font-size:15px;line-height:1.3;white-space:pre-line;overflow-wrap:anywhere}.option-desc{display:block;color:#c4beb2;font-size:12px;line-height:1.45;margin-top:4px;white-space:pre-line;overflow-wrap:anywhere}.option-index{position:absolute;inset-inline-end:10px;top:7px;opacity:.55;font-size:10px}.option-arrow{margin-inline-start:auto;flex-shrink:0;font-size:20px}.option:disabled .option-arrow{display:none}
+#panel .admin-tool-image{width:52px;height:52px;object-fit:contain;flex:0 0 52px;padding:4px;background:url('img/box_s_bg_1.png') center/100% 100% no-repeat;border:0;border-radius:0}
+#panel .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 12px!important;font-size:12px!important;color:#fff!important;background:url('img/box_s_bg_1_b.png') center/100% 100% no-repeat!important;border:0!important;border-radius:0!important;box-shadow:none!important;text-shadow:0 1px 2px #000}
+#panel .btn:enabled:hover{background-image:url('img/box_s_bg_1.png')!important}#panel button:focus-visible{outline:1px solid #eee;outline-offset:-3px}
+.admin-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#c4beb2}.admin-empty i{font-size:26px}.admin-empty p{font-size:14px}#more{align-self:center;flex-shrink:0;min-height:34px}
+.admin-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;margin:0 18px 14px;padding-top:10px;border-top:1px solid #ffffff20;font-size:11px;color:#c4beb2}
+#modal{position:absolute;inset:12px;display:grid;place-items:center;background:rgba(0,0,0,.72);z-index:10;padding:14px}#panel #inputForm{display:flex;flex-direction:column;align-items:stretch;gap:12px;width:min(520px,100%);max-height:100%;overflow:auto;padding:24px!important;background:url('img/bg_1.png') center/100% 100% no-repeat!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+.admin-dialog-title{display:flex;align-items:center;gap:12px}.admin-dialog-title span{min-width:0;flex:1}.admin-dialog-title small{display:block;font-size:11px;color:#c4beb2}.admin-dialog-title b{display:block;font-size:19px;overflow-wrap:anywhere}.admin-dialog p{margin:0;font-size:13px;line-height:1.6;white-space:pre-line}#inputValue,#inputArea{width:100%;padding:12px;min-height:42px;outline:none;resize:vertical;background:#151515!important;border:1px solid #ffffff30!important;border-radius:0!important;color:#fff;font-size:15px}#inputValue:focus,#inputArea:focus{border-color:#eee!important}#inputArea{min-height:100px}#inputError{color:#f7bcbc}#inputError:empty{display:none}.admin-control-actions{display:flex;justify-content:flex-end;gap:10px}.admin-control-actions .btn{min-height:38px;min-width:90px}
+#toast{position:absolute;inset-inline:20px;bottom:50px;z-index:20;padding:12px;background:url('img/box_a_bg_1.png') center/100% 100% no-repeat;font-size:13px;pointer-events:none}
+html[dir=rtl] #panel :not(.fa-solid){font-family:Tahoma,Arial,sans-serif!important;letter-spacing:0!important}html[dir=rtl] #panel #back i,html[dir=rtl] .option-arrow{transform:rotate(180deg)}
+@media(max-width:980px){#panel #adminHeader{grid-template-columns:8rem minmax(0,1fr) 8rem!important;min-height:86px!important;padding:10px!important;gap:8px!important}.admin-farm-thumb{width:24px;height:24px;flex-basis:24px}#panel #navigation .tab{font-size:11px!important;gap:4px!important}.admin-counts .badge{font-size:10px!important}}
+@media(max-width:700px){#panel #adminShell{width:96vw!important;height:94vh!important;max-height:94vh!important;max-width:96vw!important}#panel #adminHeader{grid-template-columns:1fr auto!important;min-height:80px!important;gap:5px!important}#panel #farmLevelBadge{display:none!important}#panel .farm-header-center{grid-column:1!important}#panel #title{font-size:23px!important}#panel .farm-header-center .subtitle{font-size:10px!important}#panel .global-view-tools{grid-column:2!important;grid-row:1!important}#panel .global-view-tools .btn{padding:5px 8px!important;min-height:26px!important}#panel #navigation{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:4px!important;padding:4px 8px!important}#panel #navigation .tab{min-height:38px!important;padding:5px!important}.admin-farm-thumb{width:23px;height:23px;flex-basis:23px}#panel .admin-content{padding:10px!important}.admin-detail{gap:8px}.admin-detail-head{flex-wrap:wrap;gap:8px}.admin-counts{margin-inline-start:auto}.admin-detail-head h2{font-size:16px!important}.admin-detail-head p{font-size:11px!important}#panel #list .option{min-height:66px;padding:9px 12px!important;gap:9px}.option-label{font-size:14px}.option-desc{font-size:11px}.admin-footer{margin:0 10px 12px;font-size:10px}.admin-footer>span:first-child{max-width:70%}#panel .admin-tool-image{width:44px;height:44px;flex-basis:44px}#panel #inputForm{padding:18px!important}}
+@media(max-height:700px) and (min-width:701px){#panel #adminHeader{min-height:76px!important;padding:8px 14px!important}#panel #title{font-size:25px!important}#panel #navigation .tab{min-height:40px!important;padding:5px!important}#panel .admin-content{padding:8px 16px!important}.admin-detail{gap:8px}#panel #list .option{min-height:64px;padding:8px 12px!important}.admin-footer{margin-bottom:12px;padding-top:6px}.admin-detail-head p{font-size:11px!important}}
+
+/* Constrain the option list instead of letting the imported .view rule expand it. */
+#panel #main_ui #adminShell .admin-layout,
+#panel #main_ui #adminShell .admin-content.view.active,
+#panel #main_ui #adminShell .admin-detail.section{
+ display:flex!important;flex-direction:column!important;flex:1 1 0!important;
+ min-height:0!important;min-width:0!important;overflow:hidden!important;
+}
+#panel #main_ui #adminShell #list{
+ flex:1 1 0!important;min-height:0!important;min-width:0!important;
+ overflow-y:auto!important;overflow-x:hidden!important;grid-auto-rows:max-content;
+ overscroll-behavior:contain!important;scrollbar-gutter:stable!important;
+}
+#panel #main_ui #adminShell .admin-detail-head,
+#panel #main_ui #adminShell .admin-search,
+#panel #main_ui #adminShell #more{flex-shrink:0!important}
+#panel #main_ui #adminShell #modal{min-height:0;overflow:hidden}
+#panel #main_ui #adminShell #inputForm{
+ min-height:0!important;max-height:100%!important;overflow:hidden!important;
+ box-sizing:border-box;
+}
+.admin-dialog-body{
+ display:flex;flex-direction:column;gap:12px;flex:1 1 auto;min-height:0;
+ overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;
+}
+.admin-dialog-body>*{flex-shrink:0}
+#panel #main_ui #list,#panel #main_ui .admin-dialog-body{scrollbar-width:auto!important;scrollbar-color:auto!important}
+#panel #main_ui #adminShell .admin-control-actions{flex-shrink:0}
+#panel #main_ui #list::-webkit-scrollbar,
+#panel #main_ui .admin-dialog-body::-webkit-scrollbar{
+ display:block!important;width:8px!important;height:8px!important;
+}
+#panel #main_ui #list::-webkit-scrollbar-track,
+#panel #main_ui .admin-dialog-body::-webkit-scrollbar-track{background:#ffffff0a!important}
+#panel #main_ui #list::-webkit-scrollbar-thumb,
+#panel #main_ui .admin-dialog-body::-webkit-scrollbar-thumb{
+ background:#b3aa99aa!important;min-height:32px!important;border:1px solid #00000044!important;border-radius:3px!important;
+}
+#panel #main_ui #list::-webkit-scrollbar-thumb:hover,
+#panel #main_ui .admin-dialog-body::-webkit-scrollbar-thumb:hover{background:#d9d0bccc!important}

@@ -1,0 +1,1408 @@
+/*
+ * JRS Character - jrs_stores skin (v4.1.0).
+ * A straight port of jrs_stores/html/theme/unified-ui.css + store/css/style.css:
+ *   - the same black panel-background.png shell and ui-header.png title plate
+ *   - every button / row / card on the store's single master texture under the
+ *     store's dark overlays (.62 surface, .73 inputs, .54 hover)
+ *   - tabs and selectable chips use the store tab frame: #292929 border, #4a4a4a
+ *     hover, #c4c0b8 double frame when active
+ *   - square corners, Georgia headings, small Arial letter-spaced labels
+ *   - neutral greys only (no cream/gold accent), green/red kept for status
+ * appearance-theme/panel-background.png, header.png and tab-active.png are
+ * byte-identical to jrs_stores' panel-background.png, ui-header.png and
+ * requested-master-texture.png, so nothing is loaded cross-resource.
+ * Loads last; layout rules at the bottom of this file are unchanged.
+ */
+
+:root {
+    --jc-text: #f4f0e7;
+    --jc-muted: #c3bdb1;
+    --jc-dim: #8f887c;
+    --jc-success: #7ad6a3;
+    --jc-danger: #e57373;
+    --jc-frame: #292929;
+    --jc-frame-hover: #4a4a4a;
+    --jc-frame-active: #c4c0b8;
+    /* kept for the layout block below and older references */
+    --jc-accent: #c4c0b8;
+    --jc-accent-rgb: 196, 192, 184;
+
+    --jc-panel: url("../appearance-theme/panel-background.png");
+    --jc-header: url("../appearance-theme/header.png");
+    --jc-master: url("../appearance-theme/tab-active.png");
+
+    --jc-surface: linear-gradient(rgba(12, 12, 12, .62), rgba(12, 12, 12, .62)), var(--jc-master);
+    --jc-surface-strong: linear-gradient(rgba(7, 7, 7, .73), rgba(7, 7, 7, .73)), var(--jc-master);
+    --jc-surface-active: linear-gradient(rgba(10, 10, 10, .54), rgba(10, 10, 10, .54)), var(--jc-master);
+    --jc-tab: linear-gradient(rgba(8, 8, 8, .68), rgba(8, 8, 8, .68)), var(--jc-master);
+    --jc-tab-hover: linear-gradient(rgba(8, 8, 8, .60), rgba(8, 8, 8, .60)), var(--jc-master);
+    --jc-tab-active: linear-gradient(rgba(8, 8, 8, .54), rgba(8, 8, 8, .54)), var(--jc-master);
+
+    --jc-serif: Georgia, 'Times New Roman', serif;
+    --jc-label: Arial, sans-serif;
+}
+
+* {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
+*::-webkit-scrollbar-track { display: none !important; background: transparent !important; }
+*::-webkit-scrollbar-thumb { display: none !important; background: transparent !important; }
+
+body {
+    color: var(--jc-text) !important;
+    font-family: var(--jc-serif) !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Shells - store .ranch-ui-shell                                          */
+/* ---------------------------------------------------------------------- */
+.CharactersMenuContent,
+#EditionMenuContent,
+#PedSelectionMenuContent,
+#saveCharacter,
+#OutfitVariationContent,
+#OutfitListMenuContent,
+#OutfitMenuContent,
+#VariationSettings,
+#TintSettings,
+#CameraSettings,
+#CreatorPlayerControls.creator-player-controls,
+#DeletionConfirmationElem,
+#CreationConfirmationElem,
+#LanguageMenuContent {
+    background-color: transparent !important;
+    background-image: var(--jc-panel) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: 0 18px 34px rgba(0, 0, 0, .62) !important;
+}
+
+/* The view-controls panel used to paint a flat black slab over its own
+   texture; the store shell shows the texture itself. */
+#CreatorPlayerControls.creator-player-controls::before {
+    display: none !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Title plates - store .ranch-header                                     */
+/* ---------------------------------------------------------------------- */
+.title,
+#title {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px;
+    min-height: 104px;
+    padding: 18px 20px !important;
+    background-color: transparent !important;
+    background-image: var(--jc-header) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, .055) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Store brand line above the heading ("JRS STORES"). The selector
+   already has its own "CHAR NAME" caption in that slot. */
+.title::before,
+#title::before {
+    content: 'JRS';
+    color: var(--jc-muted);
+    font: 700 11px/1 var(--jc-label);
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px #000;
+}
+
+#ChooseCharacterMenu .title::before {
+    content: none;
+}
+
+.title h1,
+#title h1 {
+    margin: 0 !important;
+    color: #fff !important;
+    font-family: var(--jc-serif) !important;
+    font-size: 30px !important;
+    font-weight: 800 !important;
+    letter-spacing: .09em !important;
+    text-transform: uppercase;
+    text-align: center;
+    text-shadow: 0 2px 4px #000 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The character's own name is not shouted. */
+#ChooseCharacterMenu .title h1 {
+    text-transform: none;
+    letter-spacing: .03em !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Section headings - store .section-heading on the surface texture       */
+/* ---------------------------------------------------------------------- */
+#EditionTitle,
+#EditionTitleGlobSet,
+#EditionTitleSkin,
+#EyeEditionTitle,
+#PedTitle,
+#CamTitle,
+.ContextTitle,
+.creator-player-controls-contexttitle {
+    padding: 11px 14px !important;
+    background-color: transparent !important;
+    background-image: var(--jc-surface) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    border: 1px solid rgba(255, 255, 255, .075) !important;
+    border-radius: 0 !important;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18), 0 2px 7px rgba(0, 0, 0, .18) !important;
+}
+
+#CamTitle {
+    width: 100% !important;
+    box-sizing: border-box;
+}
+
+#EditionTitle h2,
+#EditionTitleGlobSet h2,
+#EditionTitleSkin h2,
+#EyeEditionTitle h2,
+#PedTitle h2,
+#CamTitle h2,
+.ContextTitle h2,
+.creator-player-controls-contexttitle h2 {
+    margin-top: 0 !important;
+    color: #fff !important;
+    font-family: var(--jc-serif) !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    letter-spacing: .06em !important;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px #000 !important;
+}
+
+#EditionTitle img,
+#EditionTitleGlobSet img,
+#EditionTitleSkin img,
+#EyeEditionTitle img,
+#PedTitle img,
+#CamTitle img,
+.ContextTitle img,
+.creator-player-controls-contexttitle img {
+    width: 20px !important;
+    height: 20px !important;
+    opacity: .82;
+    filter: grayscale(1) drop-shadow(0 1px 2px #000);
+}
+
+/* Small language switcher pinned to the far end of the Character Info
+   header. margin-inline-start: auto pushes it away from the icon/title
+   group without needing justify-content: space-between (which would also
+   split the icon away from the title); it stays correct in RTL for free. */
+.edition-language-button {
+    margin-inline-start: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px !important;
+    background-color: transparent !important;
+    background-image: var(--jc-surface) !important;
+    background-size: 100% 100% !important;
+    border: 1px solid rgba(255, 255, 255, .12) !important;
+    border-radius: 3px !important;
+    cursor: pointer;
+    color: var(--jc-text);
+    font-family: var(--jc-label);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+
+.edition-language-button:hover {
+    border-color: rgba(var(--jc-accent-rgb), .6) !important;
+}
+
+.edition-language-button.hidden {
+    display: none;
+}
+
+.edition-language-button svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: var(--jc-muted);
+    stroke-width: 1.4;
+}
+
+.edition-language-button span {
+    color: var(--jc-muted);
+}
+
+/* Ornamental separator PNGs become the store's hairline rule. The padding
+   pushes the image's content box to zero width so only the background paints. */
+img.separator,
+img.separatorEdition,
+img.separatorLanguage,
+img.creator-player-controls-separator {
+    box-sizing: border-box !important;
+    height: 1px !important;
+    padding-left: 100% !important;
+    overflow: hidden;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .14) 18%, rgba(255, 255, 255, .14) 82%, transparent) !important;
+    opacity: 1 !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Buttons - store .action-button / .ranch-button                         */
+/* ---------------------------------------------------------------------- */
+.button,
+.button_del,
+.buttonOutfit,
+.buttonOutfitLeft,
+.buttonStyleOutfit,
+.newOutfit,
+.creator-view-button,
+.character-selector-action,
+.spawn-select-button,
+.inline-reset-item,
+#LoadingScreenSkipButton,
+#SelectedOutfitSection {
+    background-color: transparent !important;
+    background-image: var(--jc-surface) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    color: var(--jc-text) !important;
+    border: 1px solid rgba(255, 255, 255, .075) !important;
+    border-radius: 0 !important;
+    font-family: var(--jc-serif) !important;
+    font-weight: 800 !important;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px #000 !important;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18), 0 2px 7px rgba(0, 0, 0, .18) !important;
+    transition: filter .12s ease, transform .12s ease, border-color .12s ease !important;
+}
+
+.button,
+.button_del {
+    font-size: 15px !important;
+}
+
+.button:hover,
+.button_del:hover,
+.buttonOutfit:hover,
+.buttonOutfitLeft:hover,
+.buttonStyleOutfit:hover,
+.newOutfit:hover,
+.creator-view-button:hover,
+.creator-view-button:focus-visible,
+.character-selector-action:hover,
+.spawn-select-button:hover,
+.inline-reset-item:hover,
+#LoadingScreenSkipButton:hover {
+    background-color: transparent !important;
+    background-image: var(--jc-surface-active) !important;
+    border-color: rgba(255, 255, 255, .15) !important;
+    color: #fff !important;
+    filter: brightness(1.05) !important;
+    cursor: pointer;
+}
+
+.button:active,
+.button_del:active,
+.creator-view-button:active,
+.character-selector-action:active,
+.spawn-select-button:active {
+    transform: translateY(1px);
+}
+
+/* Destructive actions: store .danger - red text/border, no red fill. */
+.character-selector-action.delete-action,
+.button_del {
+    color: #efb0aa !important;
+    border-color: rgba(229, 115, 115, .34) !important;
+}
+
+.character-selector-action.delete-action:hover,
+.button_del:hover {
+    color: #ffd2cf !important;
+    border-color: rgba(229, 115, 115, .5) !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Tabs / selectable chips - store .mode-tab / .page-tab                  */
+/* ---------------------------------------------------------------------- */
+#Categories a,
+.tabs_btn,
+.head-indicator,
+.head-indicator-right,
+.head-indicator-select,
+.clothing-body-pin,
+.barber-body-pin,
+.under_elem,
+.under_elem-right,
+#LanguageOptions .languageOption {
+    background-color: transparent !important;
+    background-image: var(--jc-tab) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    color: var(--jc-text) !important;
+    border: 1px solid var(--jc-frame) !important;
+    border-radius: 0 !important;
+    font-family: var(--jc-serif) !important;
+    text-shadow: 0 1px 2px #000 !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .015), 0 1px 2px rgba(0, 0, 0, .58) !important;
+    filter: none;
+    transition: border-color .12s ease, box-shadow .12s ease, color .12s ease !important;
+}
+
+#Categories a:hover,
+.tabs_btn:hover,
+.head-indicator:hover,
+.head-indicator-right:hover,
+.head-indicator-select:hover,
+.clothing-body-pin:hover,
+.barber-body-pin:hover,
+.under_elem:hover,
+.under_elem-right:hover,
+#LanguageOptions .languageOption:hover {
+    background-color: transparent !important;
+    background-image: var(--jc-tab-hover) !important;
+    border-color: var(--jc-frame-hover) !important;
+    color: #fff !important;
+    filter: none !important;
+    cursor: pointer;
+}
+
+#Categories a.selected,
+.tabs_btn.selected,
+.clothing-body-pin.selected,
+.barber-body-pin.selected,
+#LanguageOptions .languageOption.selected {
+    background-image: var(--jc-tab-active) !important;
+    border: 1px solid var(--jc-frame-active) !important;
+    box-shadow: inset 0 0 0 1px #080808, inset 0 0 0 2px rgba(255, 255, 255, .12), 0 0 0 1px rgba(0, 0, 0, .76) !important;
+    color: #fff !important;
+}
+
+#Categories a img {
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .7));
+}
+
+.arrow {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
+    padding: 5px !important;
+    margin: 0 2px !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 50% !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease !important;
+    cursor: pointer !important;
+}
+
+.arrow:hover {
+    background: rgba(172, 11, 16, 0.5) !important;
+    border-color: rgba(172, 11, 16, 0.85) !important;
+    transform: scale(1.12) !important;
+}
+
+.arrow:active {
+    transform: scale(0.92) !important;
+}
+
+.arrow img {
+    width: 9px !important;
+    height: 9px !important;
+    opacity: 0.85 !important;
+    filter: none !important;
+}
+
+.arrow:hover img {
+    opacity: 1 !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Rows / cards - store .product-card                                     */
+/* ---------------------------------------------------------------------- */
+.styleElem,
+.styleElemColour,
+.buttonStyleElem,
+.OutfitElement,
+.selected-detail-row,
+.tone-slider-card,
+.inline-setting-row,
+#InlineItemSettings {
+    background-color: transparent !important;
+    background-image: var(--jc-surface) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    border: 1px solid rgba(255, 255, 255, .075) !important;
+    border-radius: 0 !important;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18), 0 2px 7px rgba(0, 0, 0, .18) !important;
+}
+
+.styleElem:hover,
+.buttonStyleElem:hover,
+.OutfitElement:hover {
+    background-image: var(--jc-surface-active) !important;
+    border-color: rgba(255, 255, 255, .15) !important;
+    filter: brightness(1.05) !important;
+}
+
+.styleElem.selected,
+.buttonStyleElem.selected,
+.OutfitElement.selected {
+    background-image: var(--jc-surface-active) !important;
+    border: 1px solid var(--jc-frame-active) !important;
+    box-shadow: inset 0 0 0 1px #080808, inset 0 0 0 2px rgba(255, 255, 255, .12), 0 0 0 1px rgba(0, 0, 0, .76) !important;
+}
+
+/* An item with its settings open reads as one card with the panel below. */
+.style-item-wrapper.settings-open > .styleElem {
+    border-bottom-color: rgba(255, 255, 255, .06) !important;
+}
+
+#InlineItemSettings {
+    background-image: var(--jc-surface-strong) !important;
+    border-top: 0 !important;
+}
+
+.selected {
+    border-color: var(--jc-frame-active) !important;
+}
+
+/* Text inside rows */
+.elemTitle,
+.OutfitName,
+.OutfitValue,
+.styleElem p,
+.buttonStyleElem .elemTitle,
+.CamElem p,
+.ContextElem p,
+.TintElem p,
+.inline-setting-name,
+.inline-circular-meter-text {
+    color: var(--jc-text) !important;
+    font-family: var(--jc-serif) !important;
+    text-shadow: 0 1px 2px #000 !important;
+}
+
+.elemTitle,
+.buttonStyleElem .elemTitle {
+    font-weight: 700;
+}
+
+.OutfitPrice {
+    color: #f1eee9 !important;
+    font-family: var(--jc-serif) !important;
+    font-weight: 800;
+}
+
+/* Small captions - store .kicker */
+.ContextElem span,
+.TintElem span,
+.creator-player-controls-subtitle,
+.tone-slider-heading,
+.tone-slider-endpoints,
+.inline-settings-title span:last-child,
+.inline-setting-label,
+.inline-setting-value,
+#CharactersMenu .characterDateField label,
+#LoadingScreenSkipTimer {
+    color: var(--jc-muted) !important;
+    font-family: var(--jc-label) !important;
+    font-weight: 700 !important;
+    letter-spacing: .1em !important;
+    text-transform: uppercase;
+}
+
+.tone-slider-heading,
+.inline-settings-title span:first-child {
+    color: #fff !important;
+    font-family: var(--jc-serif) !important;
+    font-weight: 700 !important;
+    letter-spacing: .06em !important;
+    text-transform: uppercase;
+}
+
+.tone-slider-caption,
+.creator-player-controls-hint {
+    color: var(--jc-dim) !important;
+    font-family: var(--jc-label) !important;
+    font-weight: 600;
+}
+
+.creator-player-controls-subtitle {
+    font-size: 10px !important;
+}
+
+.inline-settings-title {
+    border-bottom-color: rgba(255, 255, 255, .06) !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Character selector detail rows - store .account-currency               */
+/* ---------------------------------------------------------------------- */
+.selected-detail-label {
+    color: var(--jc-muted) !important;
+    font-family: var(--jc-label) !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.selected-detail-value {
+    color: #f0ece6 !important;
+    font-family: var(--jc-serif) !important;
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    text-shadow: 0 1px 2px #000;
+}
+
+.selected-detail-value.gold {
+    color: #f0ece6 !important;
+}
+
+.selected-detail-value.dirty-money {
+    color: #efb0aa !important;
+}
+
+#ChooseCharacterMenu .selected-name-caption {
+    font-family: var(--jc-label) !important;
+    font-size: 11px !important;
+    font-weight: 700;
+    letter-spacing: .22em !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Inputs - store text fields (.73 overlay)                               */
+/* ---------------------------------------------------------------------- */
+.inputText,
+.inputTextThree,
+.inputTextGlob,
+.inputTextarea,
+.outfitInput,
+#searchPed,
+.customDropdownToggle {
+    background-color: transparent !important;
+    background-image: var(--jc-surface-strong) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    border: 1px solid rgba(255, 255, 255, .08) !important;
+    border-radius: 0 !important;
+    color: var(--jc-text) !important;
+    font-family: var(--jc-serif) !important;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, .24) !important;
+    text-shadow: none !important;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.inputText:hover,
+.inputTextThree:hover,
+.inputTextarea:hover,
+.inputTextGlob:hover,
+.customDropdownToggle:hover {
+    border-color: rgba(255, 255, 255, .16) !important;
+}
+
+.inputText:focus,
+.inputTextThree:focus,
+.inputTextarea:focus,
+.inputTextGlob:focus,
+#searchPed:focus {
+    outline: none !important;
+    border-color: rgba(var(--jc-accent-rgb), .75) !important;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, .24), 0 0 0 1px rgba(0, 0, 0, .7) !important;
+    cursor: text;
+}
+
+.inputText::placeholder,
+.inputTextThree::placeholder,
+.inputTextarea::placeholder,
+.inputTextGlob::placeholder,
+.outfitInput::placeholder {
+    color: var(--jc-dim) !important;
+}
+
+.customDropdownList {
+    background: #101010 !important;
+    border: 1px solid var(--jc-frame) !important;
+    border-radius: 0 !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .55) !important;
+}
+
+.customDropdownList .customDropdownOption {
+    color: #f2eee7 !important;
+    font-family: var(--jc-serif) !important;
+    font-weight: 700;
+}
+
+.customDropdownList .customDropdownOption:hover {
+    background: rgba(255, 255, 255, .08) !important;
+    color: #fff !important;
+}
+
+.creator-input-invalid {
+    border-color: rgba(229, 115, 115, .75) !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Sliders - Clean Red Dead Western style                                 */
+/* ---------------------------------------------------------------------- */
+.slider,
+.contRange,
+#rangeContext,
+#rangeVariation,
+.creatorSlider {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 130px;
+    height: 6px !important;
+    min-height: 6px !important;
+    max-height: 6px !important;
+    margin: 6px 0 !important;
+    padding: 0 !important;
+    outline: none !important;
+    background: rgba(0, 0, 0, .55) !important;
+    border: 1px solid rgba(255, 255, 255, .08) !important;
+    border-radius: 4px !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .7) !important;
+    cursor: pointer;
+    box-sizing: border-box !important;
+}
+
+.slider::-webkit-slider-runnable-track,
+.contRange::-webkit-slider-runnable-track,
+#rangeContext::-webkit-slider-runnable-track,
+#rangeVariation::-webkit-slider-runnable-track {
+    -webkit-appearance: none !important;
+    height: 6px !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 4px !important;
+}
+
+.slider::-moz-range-track,
+.contRange::-moz-range-track,
+#rangeContext::-moz-range-track,
+#rangeVariation::-moz-range-track {
+    height: 6px !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 4px !important;
+}
+
+.slider::-webkit-slider-thumb,
+.contRange::-webkit-slider-thumb,
+#rangeContext::-webkit-slider-thumb,
+#rangeVariation::-webkit-slider-thumb {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin-top: -6px !important;
+    background-image: url(../img/slider/handler.png) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: 50% !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .8) !important;
+    cursor: pointer;
+    transition: transform .1s ease, filter .1s ease !important;
+}
+
+.slider::-moz-range-thumb,
+.contRange::-moz-range-thumb,
+#rangeContext::-moz-range-thumb,
+#rangeVariation::-moz-range-thumb {
+    width: 18px !important;
+    height: 18px !important;
+    background-image: url(../img/slider/handler.png) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: 50% !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .8) !important;
+    cursor: pointer;
+}
+
+.slider::-webkit-slider-thumb:hover,
+.contRange::-webkit-slider-thumb:hover,
+#rangeContext::-webkit-slider-thumb:hover,
+#rangeVariation::-webkit-slider-thumb:hover {
+    transform: scale(1.15) !important;
+    filter: brightness(1.2) !important;
+}
+
+.tone-range {
+    border-color: rgba(255, 255, 255, .14) !important;
+    border-radius: 5px !important;
+    height: 8px !important;
+}
+
+.tone-range::-webkit-slider-thumb {
+    border-radius: 2px !important;
+}
+
+.sliderDiv {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    min-width: 170px !important;
+}
+
+.sliderValue {
+    font-family: 'Hapna', serif !important;
+    font-size: 13px !important;
+    color: var(--jc-muted) !important;
+    margin: 0 0 4px 0 !important;
+    padding: 0 !important;
+    text-shadow: 0 1px 2px #000 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+}
+
+.sliderElem {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    margin-top: 0 !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Colour swatches - Skin Tone / Eye Colour / Barber Pickers              */
+/* ---------------------------------------------------------------------- */
+.coloursDiv,
+#ColourListEye {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    margin: 8px 0 4px !important;
+    padding: 8px 10px !important;
+    max-height: 120px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.38) !important;
+    background-image: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 6px !important;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Eye colour swatches - circular irises */
+#EyeColourGlobalList a,
+#ColourListEye a {
+    position: relative;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 24px !important;
+    height: 24px !important;
+    aspect-ratio: 1 / 1;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden;
+    background: transparent !important;
+    border: 2px solid transparent !important;
+    border-radius: 50% !important;
+    box-shadow: none !important;
+    cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease !important;
+}
+
+#EyeColourGlobalList a img,
+#ColourListEye a img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+    border: none !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+#EyeColourGlobalList a:hover,
+#ColourListEye a:hover {
+    transform: scale(1.2);
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+#EyeColourGlobalList a.selected,
+#EyeColourGlobalList a:has(.Colour.selected),
+#ColourListEye a.selected,
+#ColourListEye a:has(.Colour.selected) {
+    transform: scale(1.15);
+    border: 2px solid #ac0b10 !important;
+    box-shadow: 0 0 8px rgba(172, 11, 16, 0.8), inset 0 0 0 1px #000 !important;
+}
+
+/* Skin tone swatches - neat rounded squares */
+#SkinToneGlobalList a {
+    position: relative;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 26px !important;
+    height: 26px !important;
+    aspect-ratio: 1 / 1;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden;
+    background: transparent !important;
+    border: 2px solid transparent !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
+    cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease !important;
+}
+
+#SkinToneGlobalList a img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 3px !important;
+    object-fit: cover !important;
+    border: none !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+#SkinToneGlobalList a:hover {
+    transform: scale(1.15);
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+#SkinToneGlobalList a.selected,
+#SkinToneGlobalList a:has(.Colour.selected) {
+    transform: scale(1.12);
+    border: 2px solid #ac0b10 !important;
+    box-shadow: 0 0 8px rgba(172, 11, 16, 0.8), inset 0 0 0 1px #000 !important;
+}
+
+.coloursDiv a img,
+.Colour {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border: 0 !important;
+}
+
+.Colour.selected {
+    border: none !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Palette chip grid - same numbered-chip component jrs_clothing's own     */
+/* native colour picker uses (.jrs-actual-color-*), rebuilt on this file's */
+/* --jc-* tokens. Only the small-discrete-count Palette control uses this; */
+/* the 0-255 continuous tint sliders keep the circular meter.             */
+/* ---------------------------------------------------------------------- */
+.jrs-actual-color-picker {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.jrs-actual-color-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px;
+    color: var(--jc-text);
+    font-family: var(--jc-serif);
+    font-size: 11px;
+    letter-spacing: .06em;
+}
+
+.jrs-actual-color-title b {
+    color: var(--jc-dim);
+    font-weight: 400;
+}
+
+.jrs-actual-color-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+}
+
+.jrs-actual-color-chip {
+    position: relative;
+    min-height: 30px;
+    background-color: transparent;
+    background-image: var(--jc-tab);
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 1px solid var(--jc-frame);
+    color: var(--jc-text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--jc-serif);
+    font-size: 11px;
+    transition: border-color .1s ease, background .1s ease, transform .1s ease;
+}
+
+.jrs-actual-color-chip:hover {
+    background-image: var(--jc-tab-hover);
+    border-color: var(--jc-frame-hover);
+}
+
+.jrs-actual-color-chip:active {
+    transform: scale(.97);
+}
+
+.jrs-actual-color-chip.selected {
+    background-image: var(--jc-tab-active);
+    border-color: var(--jc-frame-active);
+    box-shadow: inset 0 0 0 1px #080808, inset 0 0 0 2px rgba(255, 255, 255, .12);
+    color: #fff;
+}
+
+.jrs-actual-color-chip i {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .28);
+}
+
+.jrs-actual-color-chip.selected i {
+    background: #fff;
+    box-shadow: 0 0 3px rgba(255, 255, 255, .65);
+}
+
+.jrs-chip-swatch-dot {
+    width: 10px;
+    height: 10px;
+    min-width: 10px;
+    min-height: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, .45);
+    margin-right: 4px;
+    box-shadow: 0 0 2px rgba(0, 0, 0, .6);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Language step                                                          */
+/* ---------------------------------------------------------------------- */
+#LanguageMenu {
+    background: rgba(0, 0, 0, .72) !important;
+}
+
+#LanguageMenuContent {
+    color: var(--jc-text) !important;
+    font-family: var(--jc-serif) !important;
+}
+
+#LanguageMenuContent h1 {
+    margin: 0 -40px 10px !important;
+    padding: 26px 20px !important;
+    background: var(--jc-header) center / 100% 100% no-repeat;
+    border-bottom: 1px solid rgba(255, 255, 255, .055);
+    color: #fff !important;
+    font-family: var(--jc-serif) !important;
+    font-size: 26px !important;
+    font-weight: 800;
+    letter-spacing: .09em !important;
+    text-transform: uppercase;
+    text-shadow: 0 2px 4px #000 !important;
+}
+
+#LanguageMenuContent .languageSubtitle {
+    color: var(--jc-muted) !important;
+}
+
+#LanguageOptions .languageOption .languageNative {
+    font-family: var(--jc-serif) !important;
+    font-weight: 800;
+}
+
+#LanguageOptions .languageOption .languageLabel {
+    color: var(--jc-dim) !important;
+    font-family: var(--jc-label) !important;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Spawn book - shared tokens only; the book keeps its own layout         */
+/* ---------------------------------------------------------------------- */
+:root {
+    --spawn-text: var(--jc-text) !important;
+    --spawn-muted: var(--jc-muted) !important;
+    --spawn-dim: var(--jc-dim) !important;
+    --spawn-accent: var(--jc-frame-active) !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Arabic: letter-spacing splits Arabic's joined letters and uppercase    */
+/* means nothing there, so both are dropped, and the Latin display faces  */
+/* hand over to the Arabic UI face.                                       */
+/* ---------------------------------------------------------------------- */
+:is(body.lang-ar, body.jrs-rtl) .title h1,
+:is(body.lang-ar, body.jrs-rtl) #title h1,
+:is(body.lang-ar, body.jrs-rtl) .title::before,
+:is(body.lang-ar, body.jrs-rtl) #title::before,
+:is(body.lang-ar, body.jrs-rtl) h1,
+:is(body.lang-ar, body.jrs-rtl) h2,
+:is(body.lang-ar, body.jrs-rtl) .button,
+:is(body.lang-ar, body.jrs-rtl) .button_del,
+:is(body.lang-ar, body.jrs-rtl) .newOutfit,
+:is(body.lang-ar, body.jrs-rtl) .creator-view-button,
+:is(body.lang-ar, body.jrs-rtl) .character-selector-action,
+:is(body.lang-ar, body.jrs-rtl) .spawn-select-button,
+:is(body.lang-ar, body.jrs-rtl) .inline-reset-item,
+:is(body.lang-ar, body.jrs-rtl) #LoadingScreenSkipButton,
+:is(body.lang-ar, body.jrs-rtl) #LoadingScreenSkipTimer,
+:is(body.lang-ar, body.jrs-rtl) .elemTitle,
+:is(body.lang-ar, body.jrs-rtl) .OutfitName,
+:is(body.lang-ar, body.jrs-rtl) .OutfitPrice,
+:is(body.lang-ar, body.jrs-rtl) .CamElem p,
+:is(body.lang-ar, body.jrs-rtl) .ContextElem p,
+:is(body.lang-ar, body.jrs-rtl) .ContextElem span,
+:is(body.lang-ar, body.jrs-rtl) .TintElem p,
+:is(body.lang-ar, body.jrs-rtl) .TintElem span,
+:is(body.lang-ar, body.jrs-rtl) .creator-player-controls-subtitle,
+:is(body.lang-ar, body.jrs-rtl) .creator-player-controls-hint,
+:is(body.lang-ar, body.jrs-rtl) .tone-slider-heading,
+:is(body.lang-ar, body.jrs-rtl) .tone-slider-endpoints,
+:is(body.lang-ar, body.jrs-rtl) .tone-slider-caption,
+:is(body.lang-ar, body.jrs-rtl) .inline-settings-title span,
+:is(body.lang-ar, body.jrs-rtl) .inline-setting-label,
+:is(body.lang-ar, body.jrs-rtl) .inline-setting-name,
+:is(body.lang-ar, body.jrs-rtl) .inline-setting-value,
+:is(body.lang-ar, body.jrs-rtl) .selected-detail-label,
+:is(body.lang-ar, body.jrs-rtl) .selected-detail-value,
+:is(body.lang-ar, body.jrs-rtl) .selected-name-caption,
+:is(body.lang-ar, body.jrs-rtl) .characterDateField label,
+:is(body.lang-ar, body.jrs-rtl) .inputText,
+:is(body.lang-ar, body.jrs-rtl) .inputTextThree,
+:is(body.lang-ar, body.jrs-rtl) .inputTextGlob,
+:is(body.lang-ar, body.jrs-rtl) .inputTextarea,
+:is(body.lang-ar, body.jrs-rtl) .customDropdownToggle,
+:is(body.lang-ar, body.jrs-rtl) .customDropdownOption,
+:is(body.lang-ar, body.jrs-rtl) .clothing-body-pin,
+:is(body.lang-ar, body.jrs-rtl) .barber-body-pin,
+:is(body.lang-ar, body.jrs-rtl) .head-indicator,
+:is(body.lang-ar, body.jrs-rtl) .head-indicator-right,
+:is(body.lang-ar, body.jrs-rtl) .head-indicator-select,
+:is(body.lang-ar, body.jrs-rtl) .under_elem,
+:is(body.lang-ar, body.jrs-rtl) .languageLabel {
+    font-family: var(--ar-font, 'Segoe UI', Tahoma, sans-serif) !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+}
+
+/* ---------------------------------------------------------------------- */
+
+/* Arabic glyphs at the store's 11px label size are unreadable. */
+:is(body.lang-ar, body.jrs-rtl) .selected-detail-label,
+:is(body.lang-ar, body.jrs-rtl) #ChooseCharacterMenu .selected-name-caption,
+:is(body.lang-ar, body.jrs-rtl) .title::before,
+:is(body.lang-ar, body.jrs-rtl) .creator-player-controls-subtitle {
+    font-size: 14px !important;
+}
+
+:is(body.lang-ar, body.jrs-rtl) .title h1,
+:is(body.lang-ar, body.jrs-rtl) #title h1 {
+    font-size: 28px !important;
+    font-weight: 700 !important;
+}
+/* Character selector card: hug its content instead of stretching to a    */
+/* fixed 650px shell. That old min-height only matched the card at short  */
+/* (<=760px) window heights; on a normal desktop height "space-between"   */
+/* had nothing to distribute the leftover height into except a blank gap  */
+/* between the last detail row and the action buttons. Sizing the card to */
+/* its own content and giving the button row a fixed margin instead keeps */
+/* the panel a tight, correctly-proportioned card at every resolution.    */
+/* ---------------------------------------------------------------------- */
+#ChooseCharacterMenu .CharactersMenuContent {
+    min-height: 0;
+    justify-content: flex-start;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Selector + creation: one shared layout.                                */
+/* Both first-screen panels are the same width and everything inside them */
+/* sits on the same 86% column - title plate, rows/inputs, action buttons.*/
+/* Before, the selector's detail rows were 88% of an 86% column (~76% of  */
+/* the panel) under an 86% title and 88% buttons, while the creation form */
+/* used 80% for everything.                                               */
+/* ---------------------------------------------------------------------- */
+#ChooseCharacterMenu .CharactersMenuContent,
+#CharactersMenu .CharactersMenuContent {
+    width: min(600px, calc(var(--creator-layout-width) - 24px));
+    max-width: min(600px, calc(var(--creator-layout-width) - 24px));
+}
+
+#ChooseCharacterMenu .title,
+#CharactersMenu .title,
+#ChooseCharacterMenu .CharactersMenuElem,
+#CharactersMenu .CharactersMenuElem,
+#ChooseCharacterMenu .CharactersMenuInteraction.character-selector-actions,
+#CharactersMenu .CharactersMenuInteraction #NextChar,
+#CharactersMenu .CharactersMenuInteraction #CancelCharCreation {
+    width: 86%;
+}
+
+#ChooseCharacterMenu .selected-character-details {
+    width: 100%;
+    margin: 22px 0 0;
+    gap: 12px;
+}
+
+#CharactersMenu #EditionTitle {
+    margin-top: 22px;
+}
+
+/* Selector title: a small "CHAR NAME" caption above the character's name. The
+   caption carries the data-i18n key; the name h1 stays JS-owned. */
+#ChooseCharacterMenu .title {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+}
+
+#ChooseCharacterMenu .selected-name-caption {
+    color: var(--jc-muted);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 13px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px #000;
+}
+
+body.lang-ar #ChooseCharacterMenu .selected-name-caption {
+    font-family: var(--ar-font, 'Segoe UI', Tahoma, sans-serif);
+    font-size: 15px;
+    letter-spacing: 0;
+}
+
+#ChooseCharacterMenu .title h1 {
+    margin: 0;
+}
+
+#ChooseCharacterMenu .CharactersMenuList,
+#CharactersMenu .CharactersMenuList {
+    margin-bottom: 24px;
+}
+
+#ChooseCharacterMenu .CharactersMenuInteraction.character-selector-actions {
+    margin-top: 0;
+    gap: 8px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Character creation form: one even rhythm between every row instead of  */
+/* inputs butting straight into the Sexe stepper. The column's own gap    */
+/* does the spacing, so the old per-row margins are zeroed here to avoid  */
+/* doubling up.                                                           */
+/* ---------------------------------------------------------------------- */
+#CharactersMenu .CharactersMenuElem {
+    gap: 14px;
+    padding-bottom: 4px;
+}
+
+#CharactersMenu .separatorEdition,
+#CharactersMenu #CharacterProfileContainer,
+#CharactersMenu #sexe_selector,
+#CharactersMenu .characterDateField {
+    margin: 0;
+}
+
+#CharactersMenu .characterNameDiv {
+    gap: 14px;
+}
+
+#CharactersMenu .characterNameDiv .inputText {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+}
+
+#CharactersMenu .characterDateField {
+    gap: 8px;
+}
+
+#CharactersMenu .characterDateField label {
+    padding-left: 0;
+    padding-inline-start: 4px;
+    color: var(--jc-muted);
+    font-family: Georgia, 'Times New Roman', serif;
+}
+
+#CharactersMenu .characterDateSelects {
+    gap: 14px;
+}
+
+#CharactersMenu .CharactersMenuInteraction {
+    gap: 12px;
+}
+
+/* 720p / short windows keep the same proportions, just tighter. */
+@media (max-height: 760px) {
+    #ChooseCharacterMenu .selected-character-details {
+        margin-top: 12px;
+        gap: 6px;
+    }
+
+    #CharactersMenu .CharactersMenuElem,
+    #CharactersMenu .characterNameDiv,
+    #CharactersMenu .characterDateSelects {
+        gap: 8px;
+    }
+
+    #CharactersMenu #EditionTitle {
+        margin-top: 12px;
+    }
+
+    #ChooseCharacterMenu .CharactersMenuList,
+    #CharactersMenu .CharactersMenuList {
+        margin-bottom: 14px;
+    }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Arabic: the rows read right to left. The creator's panels are absolutely */
+/* positioned, so the flip is scoped to these rows rather than the document.*/
+/* Stepper arrows keep their physical meaning (left = previous).           */
+/* ---------------------------------------------------------------------- */
+body.lang-rtl #CharactersMenu #EditionTitle,
+body.lang-rtl #CharactersMenu .characterNameDiv,
+body.lang-rtl #CharactersMenu .characterDateField,
+body.lang-rtl #CharactersMenu .characterDateSelects,
+body.lang-rtl #CharactersMenu #sexe_selector,
+body.lang-rtl #CharactersMenu #ped_selector,
+body.lang-rtl #ChooseCharacterMenu .CharactersMenuInteraction.character-selector-actions {
+    direction: rtl;
+}
+
+body.lang-rtl #CharactersMenu #sexe_selector .sliderDiv,
+body.lang-rtl #CharactersMenu #ped_selector .sliderDiv {
+    direction: ltr;
+}
+
+body.lang-rtl #CharactersMenu #EditionTitle h2 {
+    margin-left: 0;
+    margin-right: 13px;
+}
+
+body.lang-rtl #CharactersMenu .characterDateField label,
+body.lang-rtl #CharactersMenu .customDropdownToggle,
+body.lang-rtl #CharactersMenu .customDropdownList {
+    text-align: right;
+}
+
+body.lang-rtl #ChooseCharacterMenu .back-action .character-action-icon {
+    transform: scaleX(-1);
+}
+
+/* ---------------------------------------------------------------------- */
+/* 4.2.45: MP | NPC switch on creator clothing sliders - same store tab   */
+/* frame as the jrs_clothing shop (#292929, #4a4a4a hover, #c4c0b8 active).*/
+/* ---------------------------------------------------------------------- */
+.clothingModeToggle {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: .24vh !important;
+    min-width: 9.2vh !important;
+    margin: 0 .28vh 0 0 !important;
+    padding: 0 !important;
+    flex: 0 0 auto !important;
+    background: transparent !important;
+    border: 0 !important;
+}
+
+.clothingModeToggle .clothingModeBtn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 2.65vh !important;
+    padding: .3vh .44vh !important;
+    background-color: transparent !important;
+    background-image: var(--jc-tab) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    color: var(--jc-muted) !important;
+    border: 1px solid var(--jc-frame) !important;
+    border-radius: 4px !important;
+    font-family: var(--jc-label, Arial, sans-serif) !important;
+    font-size: clamp(8px, .74vh, 10px) !important;
+    font-weight: 700 !important;
+    letter-spacing: .06em !important;
+    text-shadow: none !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    transition: border-color .12s ease, color .12s ease !important;
+}
+
+.clothingModeToggle .clothingModeBtn:hover {
+    background-image: var(--jc-tab-hover) !important;
+    border-color: var(--jc-frame-hover) !important;
+    color: var(--jc-text) !important;
+}
+
+.clothingModeToggle .clothingModeBtn.active {
+    background-image: var(--jc-tab-active) !important;
+    border-color: var(--jc-frame-active) !important;
+    color: var(--jc-text) !important;
+}
+
+.clothingModeToggle .clothingModeBtn.disabled {
+    opacity: .35 !important;
+    pointer-events: none !important;
+}
+
+body.jrs-rtl .clothingModeToggle .clothingModeBtn {
+    font-family: var(--ar-font, 'Segoe UI', Tahoma, sans-serif) !important;
+    letter-spacing: 0 !important;
+}

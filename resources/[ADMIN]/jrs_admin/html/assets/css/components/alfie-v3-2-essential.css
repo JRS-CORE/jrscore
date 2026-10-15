@@ -1,0 +1,23 @@
+/* ALFIE RANCH 3.2 - essential utilities, treasury lock and MAX guard dog */
+#main_ui .treasury-lock-banner{
+  display:flex;align-items:center;gap:.75rem;margin:0 0 .75rem;padding:.72rem .82rem;
+  border:1px solid rgba(210,210,210,.24);background:rgba(5,5,5,.64);color:#efefef;
+}
+#main_ui .treasury-lock-banner[hidden]{display:none!important}
+#main_ui .treasury-lock-banner>i{display:grid;place-items:center;flex:0 0 2.25rem;height:2.25rem;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05)}
+#main_ui .treasury-lock-banner>div{display:flex;flex-direction:column;gap:.14rem;min-width:0}
+#main_ui .treasury-lock-banner b{font-size:.82rem;letter-spacing:.04em;text-transform:uppercase}
+#main_ui .treasury-lock-banner span{font-size:.72rem;color:#bdbdbd;line-height:1.35}
+#main_ui .manage-row.treasury-locked{opacity:.48;filter:grayscale(1);cursor:not-allowed!important}
+#main_ui .manage-row.treasury-locked .manage-action{pointer-events:none}
+#main_ui .guard-max-badge{
+  display:inline-flex!important;align-items:center;gap:.3rem!important;padding:.22rem .48rem!important;
+  border:1px solid rgba(255,255,255,.28)!important;background:rgba(255,255,255,.08)!important;
+  color:#fff!important;font-size:.72rem!important;letter-spacing:.08em!important;line-height:1!important;
+}
+#main_ui .guard-max-badge i{font-size:.66rem}
+#main_ui #view-guard .guard-dog-owned-card[data-stage] .guard-xp>span{transition:width .3s ease}
+@media(max-width:900px){
+  #main_ui .treasury-lock-banner{padding:.58rem .62rem;gap:.55rem}
+  #main_ui .treasury-lock-banner>i{flex-basis:1.9rem;height:1.9rem}
+}

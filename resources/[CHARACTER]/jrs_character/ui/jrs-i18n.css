@@ -1,0 +1,634 @@
+/* ---------------------------------------------------------------------------
+   JRS shared NUI language styling
+   ---------------------------------------------------------------------------
+   Canonical copy, deployed next to jrs-i18n.js in every translated page.
+
+   jrs-i18n.js puts `jrs-rtl` on <body> while a right-to-left language is
+   active, or the document specifies dir="rtl" / lang="ar".
+   --------------------------------------------------------------------------- */
+
+:root {
+    --jrs-ar-font: 'Cairo', 'Segoe UI', -apple-system, BlinkMacSystemFont, Tahoma, 'Almarai', 'Traditional Arabic', Arial, sans-serif;
+    --jrs-screen-scale: 1;
+    --jrs-s: 1;
+    --panel-width: clamp(430px, 55.56vh, min(92vw, calc(690px * var(--jrs-screen-scale, 1))));
+    --bank-panel-width: clamp(560px, 68vh, min(92vw, calc(900px * var(--jrs-screen-scale, 1))));
+}
+
+/* 2K / 1440p displays (e.g. 2560x1440) */
+@media (min-height: 1200px) {
+    :root {
+        --panel-width: clamp(560px, 55.56vh, 960px);
+        --bank-panel-width: clamp(720px, 68vh, 1260px);
+    }
+}
+
+/* 4K UHD displays (e.g. 3840x2160 - ASUS ROG Swift OLED PG32UCDP) */
+@media (min-height: 1800px) {
+    :root {
+        --panel-width: clamp(820px, 55.56vh, 1450px);
+        --bank-panel-width: clamp(1050px, 68vh, 1850px);
+    }
+}
+
+/* Ultrawide 21:9 and 32:9 safe area protection */
+@media (min-aspect-ratio: 2/1) {
+    .store-shell,
+    .ranch-ui-shell,
+    #standard-inventory-layout,
+    .medical-shell,
+    .shell,
+    .admin-shell,
+    .editor-shell {
+        max-width: min(96vw, calc(100vh * (16 / 9) * 1.15));
+    }
+}
+
+body.jrs-rtl,
+html[dir="rtl"] body,
+html[lang="ar"] body {
+    --jrs-ar-font: 'Cairo', 'Segoe UI', -apple-system, BlinkMacSystemFont, Tahoma, 'Almarai', 'Traditional Arabic', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* Base Arabic typography & strict override to preserve cursive letter joining */
+body.jrs-rtl,
+html[dir="rtl"] body,
+html[lang="ar"] body {
+    font-family: var(--jrs-ar-font) !important;
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+    text-indent: 0 !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+body.jrs-rtl *:not(i):not([class*="fa-"]):not([class^="fa-"]):not(.fa):not(.fas):not(.far):not(.fab):not(.fa-solid):not(.fa-regular):not(.fa-brands),
+html[dir="rtl"] body *:not(i):not([class*="fa-"]):not([class^="fa-"]):not(.fa):not(.fas):not(.far):not(.fab):not(.fa-solid):not(.fa-regular):not(.fa-brands),
+html[lang="ar"] body *:not(i):not([class*="fa-"]):not([class^="fa-"]):not(.fa):not(.fas):not(.far):not(.fab):not(.fa-solid):not(.fa-regular):not(.fa-brands) {
+    font-family: var(--jrs-ar-font) !important;
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+    text-indent: 0 !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* Preserve FontAwesome icons in Arabic / RTL mode */
+body.jrs-rtl i,
+body.jrs-rtl .fa,
+body.jrs-rtl .fas,
+body.jrs-rtl .far,
+body.jrs-rtl .fab,
+body.jrs-rtl .fa-solid,
+body.jrs-rtl .fa-regular,
+body.jrs-rtl .fa-brands,
+body.jrs-rtl [class*="fa-"],
+body.jrs-rtl [class^="fa-"],
+html[dir="rtl"] i,
+html[dir="rtl"] .fa,
+html[dir="rtl"] .fas,
+html[dir="rtl"] .far,
+html[dir="rtl"] .fab,
+html[dir="rtl"] .fa-solid,
+html[dir="rtl"] .fa-regular,
+html[dir="rtl"] .fa-brands,
+html[dir="rtl"] [class*="fa-"],
+html[dir="rtl"] [class^="fa-"],
+html[lang="ar"] i,
+html[lang="ar"] .fa,
+html[lang="ar"] .fas,
+html[lang="ar"] .far,
+html[lang="ar"] .fab,
+html[lang="ar"] .fa-solid,
+html[lang="ar"] .fa-regular,
+html[lang="ar"] .fa-brands,
+html[lang="ar"] [class*="fa-"],
+html[lang="ar"] [class^="fa-"] {
+    font-family: "Font Awesome 6 Free" !important;
+    font-style: normal !important;
+    letter-spacing: normal !important;
+    text-indent: 0 !important;
+}
+
+body.jrs-rtl .fa-brands,
+body.jrs-rtl .fab,
+html[dir="rtl"] .fa-brands,
+html[dir="rtl"] .fab,
+html[lang="ar"] .fa-brands,
+html[lang="ar"] .fab {
+    font-family: "Font Awesome 6 Brands" !important;
+}
+
+body.jrs-rtl .fa-regular,
+body.jrs-rtl .far,
+html[dir="rtl"] .fa-regular,
+html[dir="rtl"] .far,
+html[lang="ar"] .fa-regular,
+html[lang="ar"] .far {
+    font-weight: 400 !important;
+}
+
+body.jrs-rtl .fa-solid,
+body.jrs-rtl .fas,
+html[dir="rtl"] .fa-solid,
+html[dir="rtl"] .fas,
+html[lang="ar"] .fa-solid,
+html[lang="ar"] .fas {
+    font-weight: 900 !important;
+}
+
+/* Responsive, high-clarity headings across all resolutions (4K, 2K, 1080p, 720p) */
+body.jrs-rtl .brand-title,
+html[dir="rtl"] .brand-title,
+html[lang="ar"] .brand-title {
+    font-size: clamp(16px, 1.8vh, 54px) !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
+    letter-spacing: normal !important;
+}
+
+body.jrs-rtl .header-copy h1,
+body.jrs-rtl .section-heading h2,
+body.jrs-rtl .subsection-title h3,
+html[dir="rtl"] .header-copy h1,
+html[dir="rtl"] .section-heading h2,
+html[dir="rtl"] .subsection-title h3,
+html[lang="ar"] .header-copy h1,
+html[lang="ar"] .section-heading h2,
+html[lang="ar"] .subsection-title h3 {
+    font-size: clamp(13.5px, 1.45vh, 40px) !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    text-shadow: 0 2px 3px rgba(0, 0, 0, 0.9);
+    letter-spacing: normal !important;
+}
+
+body.jrs-rtl .header-copy p,
+body.jrs-rtl .header-meta,
+html[dir="rtl"] .header-copy p,
+html[dir="rtl"] .header-meta,
+html[lang="ar"] .header-copy p,
+html[lang="ar"] .header-meta {
+    font-size: clamp(11px, 1.1vh, 28px) !important;
+    color: #e5ded2 !important;
+    letter-spacing: normal !important;
+}
+
+/* Kickers, tags, badges, and small metadata: raised from unreadable 8px to crisp responsive scale */
+body.jrs-rtl .kicker,
+body.jrs-rtl .tag,
+body.jrs-rtl .badge,
+html[dir="rtl"] .kicker,
+html[dir="rtl"] .tag,
+html[dir="rtl"] .badge,
+html[lang="ar"] .kicker,
+html[lang="ar"] .tag,
+html[lang="ar"] .badge {
+    font-size: clamp(11px, 1.15vh, 28px) !important;
+    color: #f2ece0 !important;
+    font-weight: 700 !important;
+    letter-spacing: normal !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+
+/* High-contrast and responsive buttons across all scripts */
+body.jrs-rtl .ranch-button,
+body.jrs-rtl .window-button,
+body.jrs-rtl .duty-button,
+body.jrs-rtl .action-grid button,
+body.jrs-rtl .call-actions button,
+body.jrs-rtl .product-controls button,
+body.jrs-rtl .forge-btn,
+body.jrs-rtl .admin-btn,
+body.jrs-rtl button[type="submit"],
+html[dir="rtl"] .ranch-button,
+html[dir="rtl"] .window-button,
+html[dir="rtl"] .duty-button,
+html[dir="rtl"] .action-grid button,
+html[dir="rtl"] .call-actions button,
+html[dir="rtl"] .product-controls button,
+html[dir="rtl"] .forge-btn,
+html[dir="rtl"] .admin-btn,
+html[dir="rtl"] button[type="submit"],
+html[lang="ar"] .ranch-button,
+html[lang="ar"] .window-button,
+html[lang="ar"] .duty-button,
+html[lang="ar"] .action-grid button,
+html[lang="ar"] .call-actions button,
+html[lang="ar"] .product-controls button,
+html[lang="ar"] .forge-btn,
+html[lang="ar"] .admin-btn,
+html[lang="ar"] button[type="submit"] {
+    font-size: clamp(12.5px, 1.25vh, 32px) !important;
+    font-weight: 700 !important;
+    letter-spacing: normal !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+body.jrs-rtl .ranch-tabs .tab,
+body.jrs-rtl .nav,
+html[dir="rtl"] .ranch-tabs .tab,
+html[dir="rtl"] .nav,
+html[lang="ar"] .ranch-tabs .tab,
+html[lang="ar"] .nav {
+    font-size: clamp(12px, 1.2vh, 30px) !important;
+    letter-spacing: normal !important;
+}
+
+/* Card titles, metrics, and list items */
+body.jrs-rtl .metric strong,
+body.jrs-rtl .product strong,
+body.jrs-rtl .call-card strong,
+body.jrs-rtl .item-title,
+body.jrs-rtl .card-title,
+html[dir="rtl"] .metric strong,
+html[dir="rtl"] .product strong,
+html[dir="rtl"] .call-card strong,
+html[dir="rtl"] .item-title,
+html[dir="rtl"] .card-title,
+html[lang="ar"] .metric strong,
+html[lang="ar"] .product strong,
+html[lang="ar"] .call-card strong,
+html[lang="ar"] .item-title,
+html[lang="ar"] .card-title {
+    font-size: clamp(13px, 1.35vh, 34px) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+body.jrs-rtl .metric span,
+body.jrs-rtl .product span,
+body.jrs-rtl .call-card span,
+html[dir="rtl"] .metric span,
+html[dir="rtl"] .product span,
+html[dir="rtl"] .call-card span,
+html[lang="ar"] .metric span,
+html[lang="ar"] .product span,
+html[lang="ar"] .call-card span {
+    font-size: clamp(11.5px, 1.15vh, 28px) !important;
+    color: #e5dfd2 !important;
+}
+
+/* Profile badges */
+body.jrs-rtl .doctor-profile strong,
+body.jrs-rtl .police-profile strong,
+body.jrs-rtl .camp-profile strong,
+html[dir="rtl"] .doctor-profile strong,
+html[dir="rtl"] .police-profile strong,
+html[dir="rtl"] .camp-profile strong {
+    font-size: clamp(11px, 1.1vh, 28px) !important;
+    color: #ffffff !important;
+}
+body.jrs-rtl .doctor-profile small,
+body.jrs-rtl .police-profile small,
+body.jrs-rtl .camp-profile small,
+html[dir="rtl"] .doctor-profile small,
+html[dir="rtl"] .police-profile small,
+html[dir="rtl"] .camp-profile small {
+    font-size: clamp(10px, 1vh, 24px) !important;
+    color: #ded8cc !important;
+}
+
+/* Form labels and helper text */
+body.jrs-rtl label,
+body.jrs-rtl .form-label,
+body.jrs-rtl .field-label,
+html[dir="rtl"] label,
+html[dir="rtl"] .form-label,
+html[dir="rtl"] .field-label {
+    text-align: right;
+    line-height: 1.35;
+}
+
+body.jrs-rtl label > span,
+body.jrs-rtl .form-label > span,
+body.jrs-rtl .field-label > span,
+html[dir="rtl"] label > span,
+html[dir="rtl"] .form-label > span,
+html[dir="rtl"] .field-label > span,
+html[lang="ar"] label > span,
+html[lang="ar"] .form-label > span,
+html[lang="ar"] .field-label > span {
+    display: inline-block;
+    text-align: right;
+    font-size: clamp(12px, 1.2vh, 30px) !important;
+    color: #f7f3eb !important;
+    font-weight: 700 !important;
+    letter-spacing: normal !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+    line-height: 1.35;
+}
+
+/* Form Inputs, Textareas, and Dropdowns */
+body.jrs-rtl input[type="text"],
+body.jrs-rtl input[type="search"],
+body.jrs-rtl input[type="number"],
+body.jrs-rtl input[type="password"],
+body.jrs-rtl textarea,
+body.jrs-rtl select,
+html[dir="rtl"] input[type="text"],
+html[dir="rtl"] input[type="search"],
+html[dir="rtl"] input[type="number"],
+html[dir="rtl"] input[type="password"],
+html[dir="rtl"] textarea,
+html[dir="rtl"] select,
+html[lang="ar"] input[type="text"],
+html[lang="ar"] input[type="search"],
+html[lang="ar"] input[type="number"],
+html[lang="ar"] input[type="password"],
+html[lang="ar"] textarea,
+html[lang="ar"] select {
+    direction: rtl;
+    text-align: right;
+    font-size: clamp(13px, 1.35vh, 32px) !important;
+    color: #ffffff !important;
+    line-height: 1.45;
+}
+
+body.jrs-rtl input::placeholder,
+body.jrs-rtl textarea::placeholder,
+html[dir="rtl"] input::placeholder,
+html[dir="rtl"] textarea::placeholder,
+html[lang="ar"] input::placeholder,
+html[lang="ar"] textarea::placeholder {
+    color: #aaa392;
+    opacity: 0.9;
+}
+
+/* Bank-specific balance cards & operations */
+body.jrs-rtl .bank-balance-card small,
+html[dir="rtl"] .bank-balance-card small {
+    font-size: clamp(10.5px, 1.05vh, 26px) !important;
+    color: #ded8cc !important;
+    letter-spacing: normal !important;
+}
+
+body.jrs-rtl .bank-balance-card span,
+html[dir="rtl"] .bank-balance-card span {
+    font-size: clamp(10.5px, 1.05vh, 26px) !important;
+    color: #ded8cc !important;
+}
+
+body.jrs-rtl .operation-copy > strong,
+html[dir="rtl"] .operation-copy > strong {
+    font-size: clamp(12.5px, 1.25vh, 32px) !important;
+    color: #ffffff !important;
+}
+
+body.jrs-rtl .operation-copy > small,
+html[dir="rtl"] .operation-copy > small {
+    font-size: clamp(11px, 1.1vh, 26px) !important;
+    color: #ded8cc !important;
+}
+
+body.jrs-rtl .bank-profile strong,
+html[dir="rtl"] .bank-profile strong {
+    font-size: clamp(11.5px, 1.15vh, 28px) !important;
+}
+
+body.jrs-rtl .bank-profile small,
+html[dir="rtl"] .bank-profile small {
+    font-size: clamp(10.5px, 1.05vh, 26px) !important;
+}
+
+/* Store & Inventory cards */
+body.jrs-rtl .status-badge,
+html[dir="rtl"] .status-badge {
+    font-size: clamp(10.5px, 1.05vh, 26px) !important;
+    letter-spacing: normal !important;
+}
+
+body.jrs-rtl .product-card strong,
+body.jrs-rtl .product-name,
+html[dir="rtl"] .product-card strong,
+html[dir="rtl"] .product-name {
+    font-size: clamp(13px, 1.3vh, 32px) !important;
+    color: #ffffff !important;
+}
+
+body.jrs-rtl .product-desc,
+html[dir="rtl"] .product-desc {
+    font-size: clamp(11.5px, 1.15vh, 28px) !important;
+    color: #ded7c7 !important;
+}
+
+body.jrs-rtl .product-price,
+html[dir="rtl"] .product-price {
+    font-size: clamp(13.5px, 1.35vh, 34px) !important;
+    color: #ffffff !important;
+}
+
+/* Police, Bounties & Case Cards */
+body.jrs-rtl .case-card strong,
+body.jrs-rtl .bounty-card strong,
+html[dir="rtl"] .case-card strong,
+html[dir="rtl"] .bounty-card strong {
+    font-size: clamp(13px, 1.35vh, 34px) !important;
+    color: #ffffff !important;
+}
+
+body.jrs-rtl .case-card span,
+body.jrs-rtl .bounty-card span,
+html[dir="rtl"] .case-card span,
+html[dir="rtl"] .bounty-card span {
+    font-size: clamp(11.5px, 1.15vh, 28px) !important;
+    color: #ded8cb !important;
+}
+
+/* Farming, Stable & Housing stats */
+body.jrs-rtl .stat .label,
+body.jrs-rtl .stat-label,
+html[dir="rtl"] .stat .label,
+html[dir="rtl"] .stat-label {
+    font-size: clamp(11.5px, 1.15vh, 28px) !important;
+    color: #f0ebe0 !important;
+}
+
+body.jrs-rtl .land-status span,
+html[dir="rtl"] .land-status span {
+    font-size: clamp(11px, 1.1vh, 26px) !important;
+    letter-spacing: normal !important;
+}
+
+body.jrs-rtl .land-status strong,
+html[dir="rtl"] .land-status strong {
+    font-size: clamp(13px, 1.35vh, 32px) !important;
+    color: #ffffff !important;
+}
+
+/* Employment Applications & Archives (Doctors, Police, Government, etc.) */
+body.jrs-rtl .employment-application-form label > span,
+html[dir="rtl"] .employment-application-form label > span {
+    text-align: right;
+    font-size: clamp(12.5px, 1.25vh, 30px) !important;
+    color: #f7f3eb !important;
+    font-weight: 700 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+}
+
+body.jrs-rtl .employment-application-header,
+body.jrs-rtl .employment-application-header p,
+body.jrs-rtl .employment-application-actions span,
+html[dir="rtl"] .employment-application-header,
+html[dir="rtl"] .employment-application-header p,
+html[dir="rtl"] .employment-application-actions span {
+    text-align: right;
+}
+
+body.jrs-rtl .employment-application-header h2,
+html[dir="rtl"] .employment-application-header h2 {
+    font-size: clamp(1.5rem, 2.2vw, 4.5rem) !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+body.jrs-rtl .employment-application-header p,
+html[dir="rtl"] .employment-application-header p {
+    font-size: clamp(12.5px, 1.25vh, 30px) !important;
+    color: #ded7c7 !important;
+}
+
+body.jrs-rtl .application-hospital-strip span,
+body.jrs-rtl .application-hospital-strip small,
+html[dir="rtl"] .application-hospital-strip span,
+html[dir="rtl"] .application-hospital-strip small {
+    font-size: clamp(11.5px, 1.15vh, 28px) !important;
+    color: #ded8cb !important;
+}
+
+body.jrs-rtl .application-hospital-strip strong,
+html[dir="rtl"] .application-hospital-strip strong {
+    font-size: clamp(13px, 1.35vh, 34px) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+body.jrs-rtl .employment-application-actions span,
+html[dir="rtl"] .employment-application-actions span {
+    font-size: clamp(12px, 1.2vh, 30px) !important;
+    color: #e4ded2 !important;
+}
+
+body.jrs-rtl .archive-overview-grid span,
+body.jrs-rtl .archive-record-meta span,
+body.jrs-rtl .archive-summary-grid span,
+body.jrs-rtl .archive-search-field > span,
+body.jrs-rtl .application-detail-grid span,
+body.jrs-rtl .application-review-notes > span,
+body.jrs-rtl .application-grade-select > span,
+html[dir="rtl"] .archive-overview-grid span,
+html[dir="rtl"] .archive-record-meta span,
+html[dir="rtl"] .archive-summary-grid span,
+html[dir="rtl"] .archive-search-field > span,
+html[dir="rtl"] .application-detail-grid span,
+html[dir="rtl"] .application-review-notes > span,
+html[dir="rtl"] .application-grade-select > span {
+    font-size: clamp(12px, 1.2vh, 30px) !important;
+    color: #f2ece0 !important;
+    font-weight: 700 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+
+/* Death screen & radial menus typography */
+body.jrs-rtl #jrs-death-title,
+html[dir="rtl"] #jrs-death-title {
+    letter-spacing: normal !important;
+    text-indent: 0 !important;
+    font-size: clamp(24px, 2.7vw, 68px) !important;
+}
+
+body.jrs-rtl #jrs-death-message,
+html[dir="rtl"] #jrs-death-message {
+    font-size: clamp(13px, 1.1vw, 28px) !important;
+    line-height: 1.5;
+}
+
+body.jrs-rtl .jrs-death-info span,
+html[dir="rtl"] .jrs-death-info span {
+    font-size: clamp(11.5px, 1vh, 26px) !important;
+    letter-spacing: normal !important;
+}
+
+body.jrs-rtl .radial-menu span,
+body.jrs-rtl .radial-item span,
+html[dir="rtl"] .radial-menu span,
+html[dir="rtl"] .radial-item span {
+    font-size: clamp(12px, 1.2vh, 30px) !important;
+    letter-spacing: normal !important;
+}
+
+/* Opt out on anything that must stay left to right: serials, coordinates,
+   currency read-outs, timers. Add class="jrs-ltr" in the markup. */
+body.jrs-rtl .jrs-ltr,
+html[dir="rtl"] .jrs-ltr,
+html[lang="ar"] .jrs-ltr {
+    direction: ltr;
+    unicode-bidi: isolate;
+}
+
+/* Universal High-Resolution Scaling for 1440p (2K) and 2160p (4K UHD) across all languages */
+@media (min-height: 1200px) {
+    .brand-title { font-size: clamp(22px, 2.3vh, 44px) !important; }
+    .header-copy h1, .section-heading h2 { font-size: clamp(16px, 1.6vh, 32px) !important; }
+    .header-copy p, .header-meta { font-size: clamp(12.5px, 1.25vh, 24px) !important; }
+    .ranch-button, .window-button, .duty-button, .action-grid button { font-size: clamp(14px, 1.35vh, 26px) !important; }
+    .ranch-tabs .tab, .nav { font-size: clamp(13px, 1.3vh, 24px) !important; }
+    .product-card strong, .product-name { font-size: clamp(15px, 1.45vh, 28px) !important; }
+    .product-desc { font-size: clamp(13px, 1.25vh, 24px) !important; }
+    .product-price { font-size: clamp(15px, 1.5vh, 30px) !important; }
+    input, select, textarea { font-size: clamp(13px, 1.2vh, 24px) !important; min-height: clamp(34px, 3.4vh, 60px) !important; }
+    .bank-balance-card strong, .overview-balance strong { font-size: clamp(18px, 1.8vh, 34px) !important; }
+    .bank-balance-card small, .overview-balance small { font-size: clamp(10px, 1.0vh, 20px) !important; }
+    .bank-row-copy strong, .operation-copy > strong { font-size: clamp(14px, 1.35vh, 26px) !important; }
+    .bank-row-copy span, .bank-row-copy small, .operation-copy > small { font-size: clamp(10.5px, 1.05vh, 20px) !important; }
+    .bank-row-value strong { font-size: clamp(15px, 1.45vh, 28px) !important; }
+    .status-badge { font-size: clamp(11px, 1.1vh, 22px) !important; min-height: clamp(26px, 2.5vh, 44px) !important; }
+    .doctor-profile strong, .police-profile strong { font-size: clamp(12px, 1.2vh, 24px) !important; }
+    .doctor-profile small, .police-profile small { font-size: clamp(10px, 1.0vh, 20px) !important; }
+    .stock-quote > strong { font-size: clamp(19px, 1.9vh, 36px) !important; }
+    .gold-market-copy > strong { font-size: clamp(20px, 2.0vh, 38px) !important; }
+    .vault-copy strong { font-size: clamp(15px, 1.45vh, 28px) !important; }
+}
+
+@media (min-height: 1800px) {
+    .brand-title { font-size: clamp(30px, 2.4vh, 60px) !important; }
+    .header-copy h1, .section-heading h2 { font-size: clamp(22px, 1.7vh, 42px) !important; }
+    .header-copy p, .header-meta { font-size: clamp(16px, 1.3vh, 32px) !important; }
+    .ranch-button, .window-button, .duty-button, .action-grid button { font-size: clamp(18px, 1.45vh, 36px) !important; }
+    .ranch-tabs .tab, .nav { font-size: clamp(17px, 1.4vh, 32px) !important; }
+    .product-card strong, .product-name { font-size: clamp(20px, 1.55vh, 38px) !important; }
+    .product-desc { font-size: clamp(17px, 1.35vh, 32px) !important; }
+    .product-price { font-size: clamp(20px, 1.6vh, 40px) !important; }
+    input, select, textarea { font-size: clamp(18px, 1.35vh, 32px) !important; min-height: clamp(48px, 4.0vh, 80px) !important; }
+    .bank-balance-card strong, .overview-balance strong { font-size: clamp(26px, 2.0vh, 50px) !important; }
+    .bank-balance-card small, .overview-balance small { font-size: clamp(14px, 1.2vh, 26px) !important; }
+    .bank-row-copy strong, .operation-copy > strong { font-size: clamp(18px, 1.5vh, 36px) !important; }
+    .bank-row-copy span, .bank-row-copy small, .operation-copy > small { font-size: clamp(14px, 1.2vh, 26px) !important; }
+    .bank-row-value strong { font-size: clamp(20px, 1.6vh, 40px) !important; }
+    .status-badge { font-size: clamp(15px, 1.25vh, 28px) !important; min-height: clamp(36px, 3.0vh, 60px) !important; }
+    .doctor-profile strong, .police-profile strong { font-size: clamp(16px, 1.3vh, 32px) !important; }
+    .doctor-profile small, .police-profile small { font-size: clamp(13.5px, 1.1vh, 24px) !important; }
+    .stock-quote > strong { font-size: clamp(26px, 2.2vh, 52px) !important; }
+    .gold-market-copy > strong { font-size: clamp(28px, 2.3vh, 56px) !important; }
+    .vault-copy strong { font-size: clamp(20px, 1.6vh, 40px) !important; }
+}
+
+/* Also support via html.res-1440p and html.res-4k classes from jrs-i18n.js engine */
+html.res-1440p input, html.res-1440p select, html.res-1440p textarea { font-size: clamp(13px, 1.2vh, 24px) !important; min-height: clamp(34px, 3.4vh, 60px) !important; }
+html.res-1440p .brand-title { font-size: clamp(22px, 2.3vh, 44px) !important; }
+html.res-1440p .header-copy h1, html.res-1440p .section-heading h2 { font-size: clamp(16px, 1.6vh, 32px) !important; }
+html.res-1440p .ranch-button, html.res-1440p .window-button { font-size: clamp(14px, 1.35vh, 26px) !important; }
+html.res-1440p .ranch-tabs .tab, html.res-1440p .nav { font-size: clamp(13px, 1.3vh, 24px) !important; }
+
+html.res-4k input, html.res-4k select, html.res-4k textarea { font-size: clamp(18px, 1.35vh, 32px) !important; min-height: clamp(48px, 4.0vh, 80px) !important; }
+html.res-4k .brand-title { font-size: clamp(30px, 2.4vh, 60px) !important; }
+html.res-4k .header-copy h1, html.res-4k .section-heading h2 { font-size: clamp(22px, 1.7vh, 42px) !important; }
+html.res-4k .ranch-button, html.res-4k .window-button { font-size: clamp(18px, 1.45vh, 36px) !important; }
+html.res-4k .ranch-tabs .tab, html.res-4k .nav { font-size: clamp(17px, 1.4vh, 32px) !important; }

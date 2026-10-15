@@ -1,0 +1,106 @@
+/* JRS Core - jrs_stores skin for script NUIs (railroad, hunting pets ...).
+   Link it AFTER the page's own stylesheet:
+   <link rel="stylesheet" href="nui://jrs_core/html/theme/jrs-stores-skin.css"> */
+:root {
+    --rdr-black: #0b0a09;
+    --rdr-panel: #0b0a09;
+    --rdr-panel-2: #141311;
+    --rdr-gold: #f4f0e7;
+    --rdr-gold-dim: rgba(255, 255, 255, .12);
+    --rdr-parchment: #f4f0e7;
+    --rdr-text: #f4f0e7;
+    --rdr-muted: #c3bdb1;
+    --rdr-red: #3a3835;
+    --rdr-red-bright: #4a4744;
+}
+
+html, body { font-family: Georgia, 'Times New Roman', serif !important; color: #f4f0e7; }
+
+/* panels */
+.panel, .modal-card, .modal {
+    background: url(nui://jrs_core/html/storeui/panel-background.png) center / 100% 100% no-repeat !important;
+    border: 0 !important;
+    outline: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    filter: drop-shadow(0 18px 34px rgba(0, 0, 0, .72));
+}
+.panel-header, .modal-title {
+    background: url(nui://jrs_core/html/storeui/ui-header.png) center / 100% 100% no-repeat !important;
+    border: 0 !important;
+}
+.panel-title, .header-title, .modal-title, .panel-title-small {
+    font-family: Georgia, 'Times New Roman', serif !important;
+    font-weight: 800 !important;
+    letter-spacing: .09em !important;
+    text-transform: uppercase;
+    color: #fff !important;
+    text-shadow: 0 2px 4px #000 !important;
+}
+.panel-subtitle, .header-subtitle, .modal-sub, .col-title, .lead, .hint, .row-desc, .stat-label, .field-label, .info-label, .empty-note {
+    color: #c3bdb1 !important;
+}
+.ink-divider, .divider { color: transparent !important; border-top: 1px solid rgba(255, 255, 255, .09) !important; height: 0 !important; overflow: hidden; margin: 6px 16px !important; }
+
+/* rows / cards */
+.row-card, .row, .paper-card, .detail-block, .upg-row, .hud-mission-box, .wallet {
+    background: url(nui://jrs_core/html/storeui/card.png) center / 100% 100% no-repeat !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    color: #f4f0e7 !important;
+}
+.row-card:hover, .row:hover, .row-card.active, .row.active, .row-card.selected, .row.selected {
+    filter: brightness(1.2);
+    box-shadow: inset 3px 0 0 rgba(255, 255, 255, .85), 0 0 0 1px rgba(255, 255, 255, .45) !important;
+}
+
+/* thin info lines stay plain, with a hairline */
+.stat-line, .stat-row, .info-row, .gauge-row { background: none !important; border: 0 !important; border-bottom: 1px solid rgba(255, 255, 255, .06) !important; }
+
+/* buttons / tabs */
+.wood-btn, .tab-btn, .icon-btn, .pill {
+    background: url(nui://jrs_core/html/storeui/tab.png) center / 100% 100% no-repeat !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    color: #f4f0e7 !important;
+    font-family: Georgia, 'Times New Roman', serif !important;
+    text-shadow: 0 1px 2px #000;
+}
+.wood-btn:hover, .tab-btn:hover, .icon-btn:hover { filter: brightness(1.2); color: #fff !important; }
+.tab-btn.active, .tab-btn.selected, .wood-btn.primary {
+    filter: brightness(1.2);
+    box-shadow: inset 3px 0 0 rgba(255, 255, 255, .85), inset 0 -2px 0 rgba(255, 255, 255, .35) !important;
+}
+.wood-btn:disabled, .tab-btn:disabled { opacity: .45; filter: none; }
+
+/* inputs */
+.field-input, input, select, textarea {
+    background: rgba(0, 0, 0, .44) !important;
+    border: 1px solid rgba(255, 255, 255, .09) !important;
+    border-radius: 0 !important;
+    color: #fff !important;
+}
+.field-input:focus, input:focus { border-color: rgba(255, 255, 255, .35) !important; outline: none !important; }
+
+/* bars */
+.bar, .statbar { background: rgba(0, 0, 0, .5) !important; border: 1px solid rgba(255, 255, 255, .08) !important; border-radius: 0 !important; }
+.bar-fill { border-radius: 0 !important; }
+.key-badge { background: rgba(0, 0, 0, .55) !important; border: 1px solid rgba(255, 255, 255, .3) !important; border-radius: 0 !important; color: #fff !important; }
+
+/* toasts */
+.toast {
+    background: url(nui://jrs_core/html/storeui/tab.png) center / 100% 100% no-repeat !important;
+    border: 1px solid rgba(255, 255, 255, .12) !important;
+    border-radius: 0 !important;
+    color: #f4f0e7 !important;
+}
+
+/* scrollbars */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .18); border-radius: 0; }
+
+/* Arabic */
+html[lang="ar"] body, body.rtl { direction: rtl; }

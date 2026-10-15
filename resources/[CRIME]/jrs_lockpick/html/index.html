@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>jrs_lockpick</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <main id="stage" hidden>
+    <svg id="lock" viewBox="-200 -200 400 400" role="img" aria-label="lock">
+      <defs>
+        <radialGradient id="brass" cx="40%" cy="35%" r="75%">
+          <stop offset="0" stop-color="#d9c58a"/>
+          <stop offset="1" stop-color="#6e5a2b"/>
+        </radialGradient>
+        <radialGradient id="steel" cx="40%" cy="35%" r="80%">
+          <stop offset="0" stop-color="#8d8d8d"/>
+          <stop offset="1" stop-color="#2b2b2b"/>
+        </radialGradient>
+      </defs>
+
+      <circle r="190" fill="url(#brass)" stroke="#2a2210" stroke-width="6"/>
+      <circle r="150" fill="#1b1710" stroke="#00000066" stroke-width="4"/>
+
+      <!-- the plug turns with the lock -->
+      <g id="plug">
+        <circle r="128" fill="url(#steel)" stroke="#111" stroke-width="3"/>
+        <path d="M -9 -52 L 9 -52 L 9 -10 Q 26 -4 26 14 Q 26 36 0 36 Q -26 36 -26 14 Q -26 -4 -9 -10 Z" fill="#050505"/>
+      </g>
+
+      <!-- the pick is aimed with the mouse -->
+      <g id="pick">
+        <g id="pickBody">
+          <rect x="-3" y="-170" width="6" height="170" fill="#c9c9c9" stroke="#444" stroke-width="1"/>
+          <rect x="-7" y="-6" width="14" height="28" rx="4" fill="#6b4a2b" stroke="#2b1c0f" stroke-width="2"/>
+        </g>
+      </g>
+    </svg>
+
+    <section id="panel">
+      <p id="help"></p>
+      <p><b id="picksLabel"></b> <span id="picks">5</span> &nbsp; <i id="escLabel"></i></p>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

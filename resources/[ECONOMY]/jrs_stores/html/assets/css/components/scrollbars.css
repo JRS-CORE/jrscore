@@ -1,0 +1,95 @@
+/* ========================================================================== 
+   ALFIE RANCH 3.2.10 — unified compact scrollbars
+   Removes Chromium's bright native track/arrows and keeps every ranch list
+   consistent in wide, compact-camera, admin and activity interfaces.
+   ========================================================================== */
+:root{
+  --alfie-scrollbar-size:clamp(6px,.42vw,9px);
+  --alfie-scrollbar-track:rgba(255,255,255,.035);
+  --alfie-scrollbar-thumb:rgba(220,220,216,.42);
+  --alfie-scrollbar-thumb-hover:rgba(245,245,240,.68);
+  --alfie-scrollbar-thumb-active:rgba(255,255,250,.82);
+}
+
+/* Firefox fallback. Chromium/RedM uses the WebKit selectors below. */
+#main_ui,
+#main_ui *,
+#admin_ui,
+#admin_ui *,
+.feed-grazing-hud,
+.feed-grazing-hud *,
+.predator-attack-hud,
+.predator-attack-hud *,
+.record-item-viewer,
+.record-item-viewer *{
+  scrollbar-width:thin;
+  scrollbar-color:var(--alfie-scrollbar-thumb) transparent;
+}
+
+:is(#main_ui,#admin_ui,.feed-grazing-hud,.predator-attack-hud,.record-item-viewer) *::-webkit-scrollbar{
+  width:var(--alfie-scrollbar-size) !important;
+  height:var(--alfie-scrollbar-size) !important;
+}
+
+/* Remove the white arrow buttons visible in the native Chromium scrollbar. */
+:is(#main_ui,#admin_ui,.feed-grazing-hud,.predator-attack-hud,.record-item-viewer) *::-webkit-scrollbar-button,
+:is(#main_ui,#admin_ui,.feed-grazing-hud,.predator-attack-hud,.record-item-viewer) *::-webkit-scrollbar-button:single-button,
+:is(#main_ui,#admin_ui,.feed-grazing-hud,.predator-attack-hud,.record-item-viewer) *::-webkit-scrollbar-button:start,
+:is(#main_ui,#admin_ui,.feed-grazing-hud,.predator-attack-hud,.record-item-viewer) *::-webkit-scrollbar-button:end{
+  display:none !important;
+  width:0 !important;
+  height:0 !important;
+  background:transparent !important;
+}
+
+:is(#main_ui,#admin_ui,.feed-grazing-hud,.predator-attack-hud,.record-item-viewer) *::-webkit-scrollbar-track{
+  background:var(--alfie-scrollbar-track) !important;
+  border:1px solid rgba(255,255,255,.025) !important;
+  border-radius:999px !important;
+  box-shadow:none !important;
+}
+
+:is(#main_ui,#admin_ui,.feed-grazing-hud,.predator-attack-hud,.record-item-viewer) *::-webkit-scrollbar-track-piece{
+  background:transparent !important;
+  border-radius:999px !important;
+}
+
+:is(#main_ui,#admin_ui,.feed-grazing-hud,.predator-attack-hud,.record-item-viewer) *::-webkit-scrollbar-thumb{
+  min-height:clamp(34px,5.2vh,72px) !important;
+  background:var(--alfie-scrollbar-thumb) !important;
+  background-clip:padding-box !important;
+  border:2px solid transparent !important;
+  border-radius:999px !important;
+  box-shadow:none !important;
+}
+
+:is(#main_ui,#admin_ui,.feed-grazing-hud,.predator-attack-hud,.record-item-viewer) *::-webkit-scrollbar-thumb:hover{
+  background:var(--alfie-scrollbar-thumb-hover) !important;
+  background-clip:padding-box !important;
+}
+
+:is(#main_ui,#admin_ui,.feed-grazing-hud,.predator-attack-hud,.record-item-viewer) *::-webkit-scrollbar-thumb:active{
+  background:var(--alfie-scrollbar-thumb-active) !important;
+  background-clip:padding-box !important;
+}
+
+:is(#main_ui,#admin_ui,.feed-grazing-hud,.predator-attack-hud,.record-item-viewer) *::-webkit-scrollbar-corner{
+  background:transparent !important;
+}
+
+/* Reserve a clean gutter only for the lists that actually scroll. */
+#main_ui :is(.scroll-area,.market-list,.market-cart-list,.slots,.records-list,.manage-list,.staff-list,.breeding-list,.pregnancy-list,.riv-body),
+#admin_ui :is(.admin-farm-list,.admin-pane,.admin-table-wrap){
+  scrollbar-gutter:stable !important;
+  overscroll-behavior:contain !important;
+}
+
+/* Keep the compact camera list slim without making the thumb hard to grab. */
+#main_ui.camera-compact{
+  --alfie-scrollbar-size:clamp(6px,.36vw,8px);
+}
+
+@media (min-width:2560px){
+  :root{ --alfie-scrollbar-size:9px; }
+  #main_ui.camera-compact{ --alfie-scrollbar-size:8px; }
+}

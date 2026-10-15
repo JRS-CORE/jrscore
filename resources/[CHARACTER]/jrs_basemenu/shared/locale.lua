@@ -1,0 +1,28 @@
+Locales = {
+    en = {
+        subtitle  = '%s  |  ID %s',
+        name      = 'Name',
+        job       = 'Job',
+        grade     = 'Grade %s',
+        money     = 'Cash',
+        gold      = 'Gold',
+        players   = 'Players online',
+        my_jobs   = 'My jobs',
+        my_jobs_d = 'Show and switch your jobs',
+        close     = 'Close',
+        cmd_help  = 'Open the base menu',
+    },
+    ar = {
+        subtitle  = '%s  |  رقمك %s',
+        name      = 'الاسم',
+        job       = 'الوظيفة',
+        grade     = 'الرتبة %s',
+        money     = 'الكاش',
+        gold      = 'الذهب',
+        players   = 'المتصلين',
+        my_jobs   = 'وظائفي',
+        my_jobs_d = 'عرض وظائفك والتنقل بينها',
+        close     = 'إغلاق',
+        cmd_help  = 'فتح القائمة الأساسية',
+    },
+}

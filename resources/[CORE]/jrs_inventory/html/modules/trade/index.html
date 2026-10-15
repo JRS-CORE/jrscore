@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JRS Trading Post</title>
+    <link rel="stylesheet" href="lib/fa/all.min.css" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="../../jrs-i18n.css" />
+</head>
+<body>
+    <div id="app" class="hidden">
+        <div class="shell">
+            <header>
+                <div>
+                    <div class="eyebrow" data-i18n="inventory_jrs_player_exchange">JRS PLAYER EXCHANGE</div>
+                    <h1 data-i18n="inventory_trading_post">TRADING POST</h1>
+                </div>
+                <div class="header-right">
+                    <div id="statusBadge" class="badge" data-i18n="inventory_draft">DRAFT</div>
+                    <button id="closeBtn" class="icon-btn" type="button" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </header>
+
+            <div id="inviteView" class="invite-view hidden">
+                <div class="invite-card">
+                    <div class="seal"><i class="fa-solid fa-handshake"></i></div>
+                    <div class="invite-kicker" data-i18n="inventory_trade_request">TRADE REQUEST</div>
+                    <h2 id="inviteSeller">Player</h2>
+                    <p data-i18n="inventory_wants_to_start_a_secure_trade">wants to start a secure trade with you.</p>
+                    <div class="invite-actions">
+                        <button id="declineInvite" class="btn secondary" type="button" data-i18n="inventory_decline">DECLINE</button>
+                        <button id="acceptInvite" class="btn primary" type="button" data-i18n="inventory_accept_trade">ACCEPT TRADE</button>
+                    </div>
+                    <div id="inviteTimer" class="timer">30s</div>
+                </div>
+            </div>
+
+            <main id="tradeView" class="trade-view hidden">
+                <section id="inventoryPanel" class="panel inventory-panel">
+                    <div class="panel-title-row">
+                        <div>
+                            <div class="section-label" data-i18n="inventory_player_inventory">PLAYER INVENTORY</div>
+                            <h2 data-i18n="inventory_your_satchel">Your Satchel</h2>
+                        </div>
+                        <div class="mini-note" data-i18n="inventory_drag_items_trade_offer">DRAG ITEMS → TRADE OFFER</div>
+                    </div>
+
+                    <div id="inventoryDropZone" class="bag-surface" aria-label="Seller inventory">
+                        <div id="inventoryGrid" class="slot-grid"></div>
+                    </div>
+
+                    <div class="drag-help">
+                        <span data-i18n="inventory_drag_an_item_or_unequipped_weapon">Drag an item or unequipped weapon to the offer.</span>
+                        <span data-i18n="inventory_drag_it_back_here_to_remove">Drag it back here to remove it.</span>
+                    </div>
+                </section>
+
+                <section class="panel offer-panel">
+                    <div class="participants">
+                        <div class="person">
+                            <span data-i18n="inventory_seller">SELLER</span>
+                            <strong id="sellerName">-</strong>
+                            <small id="sellerStatus">ONLINE</small>
+                        </div>
+                        <div class="trade-mark">⇄</div>
+                        <div class="person right">
+                            <span data-i18n="inventory_buyer">BUYER</span>
+                            <strong id="buyerName">-</strong>
+                            <small id="buyerStatus">ONLINE</small>
+                        </div>
+                    </div>
+
+                    <div class="offer-content">
+                        <div class="offer-heading">
+                            <div>
+                                <div class="section-label" data-i18n="inventory_trade_offer">TRADE OFFER</div>
+                                <h2 id="offerTitle" data-i18n="inventory_drop_items_here">Drop items here</h2>
+                            </div>
+                            <div id="offerHint" class="mini-note" data-i18n="inventory_drop_zone">DROP ZONE</div>
+                        </div>
+
+                        <div id="offerDropZone" class="offer-drop-zone" aria-label="Trade offer drop zone">
+                            <div id="offerEmpty" class="empty-state">
+                                <div class="drop-symbol">↓</div>
+                                <strong data-i18n="inventory_place_goods_here">PLACE GOODS HERE</strong>
+                                <span data-i18n="inventory_items_stay_in_your_bag_until">Items stay in your bag until LOCK OFFER.</span>
+                            </div>
+                            <div id="offerGrid" class="offer-grid"></div>
+                        </div>
+                    </div>
+
+                    <div class="checkout">
+                        <div class="price-block">
+                            <label for="priceInput" data-i18n="inventory_agreed_price">AGREED PRICE</label>
+                            <div class="price-input-wrap">
+                                <span>$</span>
+                                <input id="priceInput" type="number" min="0" step="1" value="0" autocomplete="off" />
+                            </div>
+                            <div id="balanceText" class="balance"></div>
+                        </div>
+
+                        <div id="lockNotice" class="lock-notice hidden">
+                            <strong data-i18n="inventory_escrow_locked">ESCROW LOCKED</strong>
+                            <span data-i18n="inventory_the_seller_can_no_longer_edit">The seller can no longer edit or withdraw this offer.</span>
+                        </div>
+
+                        <div class="actions">
+                            <button id="cancelBtn" class="btn secondary" type="button" data-i18n="inventory_cancel_trade">CANCEL TRADE</button>
+                            <button id="lockBtn" class="btn primary" type="button" data-i18n="inventory_lock_offer">LOCK OFFER</button>
+                            <button id="payBtn" class="btn primary hidden" type="button">PAY &amp; RECEIVE</button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <div id="quantityModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="quantityTitle">
+                <div class="quantity-card">
+                    <div class="section-label" data-i18n="inventory_trade_quantity">TRADE QUANTITY</div>
+                    <h3 id="quantityTitle" data-i18n="inventory_item">Item</h3>
+                    <div id="quantityAvailable" class="quantity-available" data-i18n="inventory_available_0">Available: 0</div>
+                    <input id="quantityInput" type="number" min="1" step="1" value="1" autocomplete="off" />
+                    <div id="quantityError" class="quantity-error" aria-live="polite"></div>
+                    <div class="quantity-actions">
+                        <button id="quantityCancel" class="btn secondary" type="button" data-i18n="inventory_cancel">CANCEL</button>
+                        <button id="quantityConfirm" class="btn primary" type="button" data-i18n="inventory_add_to_offer">ADD TO OFFER</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="../../jrs-i18n.js"></script>
+    <script src="locales/en.js"></script>
+    <script src="locales/ar.js"></script>
+    <script src="app.js"></script>
+    <script src="nui://jrs_core/html/jrs-pad.js"></script>
+</body>
+</html>
+

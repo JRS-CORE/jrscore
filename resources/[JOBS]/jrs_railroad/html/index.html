@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>jrs_railroad</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="nui://jrs_core/html/theme/jrs-stores-skin.css">
+</head>
+<body>
+    <!-- STATION MENU -->
+    <div id="stationUI" class="ui-root hidden">
+        <div class="panel station-panel">
+            <div class="panel-header">
+                <button class="icon-btn" id="stationBackBtn" title="Dismiss">&#10094;</button>
+                <div class="panel-heading">
+                    <h1 class="panel-title" id="stationName">Train Station</h1>
+                    <span class="panel-subtitle" id="stationCompany"></span>
+                </div>
+                <button class="icon-btn" id="closeStationBtn" title="Close">&#10005;</button>
+            </div>
+            <div class="ink-divider">?</div>
+            <div id="stationTabs" class="tab-bar"></div>
+            <div class="station-layout">
+                <div class="col list-col">
+                    <h3 class="col-title" id="stationListTitle">Options</h3>
+                    <div id="stationContent" class="row-stack"></div>
+                </div>
+                <div class="col details-col">
+                    <h3 class="col-title" id="stationDetailTitle">Details</h3>
+                    <div id="stationDetails" class="details-stack"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TRAIN HUD (mini panel, top-left) -->
+    <div id="trainHUD" class="ui-root hud-root hidden">
+        <div class="panel hud-panel">
+            <div class="panel-header hud-header">
+                <div class="panel-heading">
+                    <span class="panel-title-small" id="hudTrainLabel">Train</span>
+                    <span class="panel-subtitle" id="hudCompanyLabel"></span>
+                </div>
+            </div>
+            <div class="ink-divider">?</div>
+            <div class="hud-gauges">
+                <div class="gauge-row">
+                    <span class="gauge-label" id="hudSpeedLabel">SPD</span>
+                    <div class="bar"><div id="hudSpeedBar" class="bar-fill stat-good"></div></div>
+                    <span id="hudSpeedVal" class="gauge-val">0</span>
+                </div>
+                <div class="gauge-row">
+                    <span class="gauge-label" id="hudFuelLabel">FUEL</span>
+                    <div class="bar"><div id="hudFuelBar" class="bar-fill stat-warn"></div></div>
+                    <span id="hudFuelVal" class="gauge-val">100%</span>
+                </div>
+                <div class="gauge-row">
+                    <span class="gauge-label" id="hudWaterLabel">H2O</span>
+                    <div class="bar"><div id="hudWaterBar" class="bar-fill stat-good"></div></div>
+                    <span id="hudWaterVal" class="gauge-val">100%</span>
+                </div>
+                <div class="gauge-row">
+                    <span class="gauge-label" id="hudCondLabel">COND</span>
+                    <div class="bar"><div id="hudCondBar" class="bar-fill stat-warn"></div></div>
+                    <span id="hudCondVal" class="gauge-val">100%</span>
+                </div>
+            </div>
+            <div class="hud-info">
+                <div class="info-row"><span class="info-label" id="hudEngineLabel">Engine</span><span id="hudEngine" class="info-value">OFF</span></div>
+                <div class="info-row"><span class="info-label" id="hudCruiseLabel">Cruise</span><span id="hudCruise" class="info-value">--</span></div>
+                <div class="info-row"><span class="info-label" id="hudJunctionLabel">Junction</span><span id="hudJunction" class="info-value">--</span></div>
+                <div class="info-row"><span class="info-label" id="hudStationLabel">Station</span><span id="hudStation" class="info-value">--</span></div>
+            </div>
+            <div class="hud-mission-box">
+                <span class="info-label" id="hudMissionLabel">Mission</span>
+                <span id="hudMission" class="info-value">None</span>
+                <div id="hudMissionDest" class="hud-mission-dest"></div>
+            </div>
+            <div class="hud-keybinds">
+                <div class="keybind-row"><span class="key-badge">SHIFT</span><span id="hudKbAccel">Accel</span></div>
+                <div class="keybind-row"><span class="key-badge">CTRL</span><span id="hudKbBrake">Brake</span></div>
+                <div class="keybind-row"><span class="key-badge">X</span><span id="hudKbStop">Stop</span></div>
+                <div class="keybind-row"><span class="key-badge">R</span><span id="hudKbCruise">Cruise</span></div>
+                <div class="keybind-row"><span class="key-badge">]</span><span id="hudKbSwitch">Switch</span></div>
+                <div class="keybind-row"><span class="key-badge">G</span><span id="hudKbWhistle">Whistle</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

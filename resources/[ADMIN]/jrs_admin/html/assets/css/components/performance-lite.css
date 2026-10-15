@@ -1,0 +1,202 @@
+/* ========================================================================== 
+   ALFIE RANCH 3.2.9 — lightweight motion + grazing-style sliders
+   Loaded last so legacy visual patches cannot restore expensive effects.
+   ========================================================================== */
+:root{
+  --alfie-motion-fast:80ms;
+  --alfie-motion-normal:110ms;
+  --alfie-slider-bg:rgba(255,255,255,.13);
+  --alfie-slider-fill:#f1f1f1;
+  --alfie-slider-height:clamp(3px,.26vh,7px);
+}
+
+/* Keep interaction feedback, but remove bouncing, blur and long transitions. */
+#main_ui .tab,
+#main_ui .mini-tab,
+#main_ui .gender-tab,
+#main_ui button,
+#main_ui .btn,
+#main_ui .slot,
+#main_ui .animal-card,
+#main_ui .market-row,
+#main_ui .building-card,
+#main_ui .guard-dog-card,
+#main_ui .guard-dog-owned-card,
+#main_ui input,
+#main_ui select,
+#main_ui textarea,
+#admin_ui .admin-btn,
+#admin_ui .admin-tool-btn,
+#admin_ui input,
+#admin_ui select,
+#admin_ui textarea{
+  transition-property:opacity,color,background-color,border-color !important;
+  transition-duration:var(--alfie-motion-fast) !important;
+  transition-timing-function:linear !important;
+}
+#main_ui button:hover,
+#main_ui .btn:hover,
+#main_ui .tab:hover,
+#main_ui .mini-tab:hover,
+#main_ui .animal-card:hover,
+#main_ui .slot:hover,
+#main_ui .market-row:hover,
+#main_ui .building-card:hover,
+#admin_ui .admin-btn:hover,
+#admin_ui .admin-tool-btn:hover{
+  transform:none !important;
+}
+
+/* One small fade for page changes; no vertical jump and no repeated motion. */
+#main_ui .tools-center-panes > .view.active,
+#main_ui .breeding-center-panes > .view.active,
+#main_ui .business-center-panes > .view.active,
+#main_ui .care-center-pane.active{
+  animation:alfieLitePaneIn var(--alfie-motion-normal) ease-out both !important;
+}
+@keyframes alfieLitePaneIn{
+  from{opacity:.55}
+  to{opacity:1}
+}
+
+/* Decorative animations do not need to run forever. Functional spinners and
+   minigame needles are intentionally left alone. */
+#main_ui .ranch-task-game.mechanic-tap .ranch-task-decoration span,
+#main_ui .ranch-task-game.mechanic-balance .ranch-task-decoration,
+#main_ui .level-updated,
+#main_ui .camera-tab-button::before,
+#main_ui .camera-tab-button::after{
+  animation:none !important;
+}
+#main_ui .ranch-task-game.round-success .ranch-task-shell,
+#main_ui .ranch-task-game.round-failed .ranch-task-shell{
+  animation-duration:100ms !important;
+}
+
+/* Expensive effects replaced with cheap borders. */
+#main_ui,
+#main_ui .ui,
+#main_ui .section,
+#main_ui .view,
+#main_ui .slot,
+#main_ui .animal-card,
+#main_ui .market-card,
+#main_ui .building-card,
+#main_ui .guard-dog-card,
+#main_ui .guard-dog-owned-card,
+.feed-grazing-hud,
+.predator-attack-hud,
+.notify-toast,
+.ranch-activity-card,
+#admin_ui,
+#admin_ui .admin-shell,
+#admin_ui .admin-pane,
+#admin_ui .admin-card{
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+#main_ui .ui,
+#main_ui .section,
+#main_ui .slot,
+#main_ui .animal-card,
+#main_ui .market-card,
+#main_ui .building-card,
+#main_ui .guard-dog-card,
+#main_ui .guard-dog-owned-card,
+#admin_ui .admin-shell,
+#admin_ui .admin-pane,
+#admin_ui .admin-card,
+#admin_ui .admin-tool-btn{
+  box-shadow:none !important;
+}
+.feed-grazing-hud,
+.predator-attack-hud,
+.notify-toast{
+  filter:none !important;
+  box-shadow:0 .35rem 1rem rgba(0,0,0,.32) !important;
+  transition:opacity var(--alfie-motion-normal) linear,transform var(--alfie-motion-normal) ease-out !important;
+  will-change:auto !important;
+}
+#main_ui .ranch-book-ghost-shell,
+#main_ui .ranch-tab-page-turn{
+  filter:none !important;
+  box-shadow:0 .45rem 1.25rem rgba(0,0,0,.30) !important;
+  will-change:auto !important;
+}
+
+/* Isolate long lists so scrolling/repainting one list does not repaint the
+   entire ranch window. */
+#main_ui .scroll-area,
+#main_ui .slots,
+#main_ui .market-list,
+#main_ui .records-list,
+#main_ui table{
+  contain:layout paint style;
+}
+/* All non-gameplay status sliders use the same slim grazing appearance. */
+#main_ui :is(.xp-track,.pbar,.pg-progress,.care-meter-track,.care-card-meter-track,.guard-xp,.grazing-search-track),
+:is(.feed-grazing-hud,.predator-attack-hud) .fgh-track,
+.predator-world-health-item .pwh-track,
+.ranch-activity-card .ranch-progress-track{
+  height:var(--alfie-slider-height) !important;
+  min-height:var(--alfie-slider-height) !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:999px !important;
+  background:var(--alfie-slider-bg) !important;
+  box-shadow:none !important;
+  overflow:hidden !important;
+}
+#main_ui :is(.xp-track>.xp-fill,.pbar>i,.pg-progress>i,.care-meter-track>i,.care-card-meter-track>i,.guard-xp>span,.grazing-search-track>i),
+:is(.feed-grazing-hud,.predator-attack-hud) .fgh-track>i,
+.ranch-activity-card .ranch-progress-fill{
+  display:block !important;
+  height:100% !important;
+  border:0 !important;
+  border-radius:inherit !important;
+  background:var(--alfie-slider-fill) !important;
+  box-shadow:none !important;
+  transition:width var(--alfie-motion-normal) linear !important;
+}
+
+/* Pregnancy, XP and care labels stay outside the bar like Grazing metadata. */
+#main_ui .xp-text,
+#main_ui .pregnancy-progress-meta,
+#main_ui .care-card-meter-head,
+#main_ui .care-meter>div{
+  margin-bottom:clamp(2px,.18vh,5px) !important;
+}
+
+/* Functional skill slider keeps its usable height but adopts Grazing styling. */
+.ranch-task-game .ranch-skill-track{
+  background:rgba(255,255,255,.13) !important;
+  border:0 !important;
+  border-radius:999px !important;
+  box-shadow:none !important;
+}
+.ranch-task-game .ranch-skill-target{
+  border-radius:999px !important;
+  background:rgba(255,255,255,.30) !important;
+  box-shadow:none !important;
+}
+.ranch-task-game .ranch-skill-needle{
+  box-shadow:none !important;
+}
+
+/* Camera-small uses the same bars at a readable minimum size. */
+#main_ui.camera-compact{
+  --alfie-slider-height:clamp(3px,.30vh,6px);
+}
+
+@media (prefers-reduced-motion:reduce){
+  #main_ui *,
+  .feed-grazing-hud,
+  .predator-attack-hud,
+  .notify-toast,
+  .ranch-activity-card{
+    scroll-behavior:auto !important;
+    transition-duration:1ms !important;
+    animation-duration:1ms !important;
+    animation-iteration-count:1 !important;
+  }
+}
