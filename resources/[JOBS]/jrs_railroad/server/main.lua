@@ -1,548 +1,319 @@
-local ActiveTrains = {} -- [source] = trainDbId
+-- jrs_railroad | server: owned trains (buy, sell, park, state), ticket pay and the maintenance items
+-- Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 
----------------------------------------------------------------
--- HELPERS
----------------------------------------------------------------
+local out = {}                             -- source -> id of the train that player has on the track (0 = company train)
 
--- Looks up the Config.Trains entry that matches a DB train row.
-local function GetTrainConfig(train)
-    for _, tc in ipairs(Config.Trains) do
-        if tc.model == train.train_model and tc.company == train.company_id then
-            return tc
-        end
+local function configOf(train)
+    for _, entry in ipairs(Config.Trains) do
+        if entry.model == train.train_model and entry.company == train.company_id then return entry end
     end
-    return nil
 end
 
--- Clamp a number into [0, max]
-local function Clamp(value, max)
+local function clamp(value, max)
     value = tonumber(value) or 0
-    if value < 0 then return 0 end
-    if value > max then return max end
-    return value
+    return value < 0 and 0 or (value > max and max or value)
 end
 
--- Verifies the calling player owns `trainId` (personal train) and is the
--- one currently driving it (per ActiveTrains). Used to stop other players
--- from spoofing jrs_railroad:update* events with an arbitrary trainId.
-local function IsAuthorizedForTrain(src, citizenid, trainId, train)
-    if ActiveTrains[src] ~= trainId then return false end
-    if not train or train.citizenid ~= citizenid then return false end
-    return true
+-- the train row, but only when `src` owns it and is the one driving it (stops spoofed update events)
+local function drivenTrain(src, trainId)
+    local player = JRS.Player(src)
+    if not player or out[src] ~= trainId then return nil end
+    local train = DB.GetTrainById(trainId)
+    if train and train.citizenid == player.PlayerData.citizenid then return train, player end
 end
 
----------------------------------------------------------------
--- CALLBACKS
----------------------------------------------------------------
-JRS.Callback('jrs_railroad:getOwnedTrains', function(source)
-    local Player = JRS.Player(source)
-    if not Player then return {} end
-    return DB.GetOwnedTrains(Player.PlayerData.citizenid) or {}
+-- tank sizes of a train row, defaulting to 100
+local function limits(train)
+    local entry = configOf(train)
+    return entry and entry.maxFuel or 100, entry and entry.maxWater or 100, entry and entry.maxCondition or 100
+end
+
+local function companyLabel(companyId)
+    return Config.Companies[companyId] and Config.Companies[companyId].label or companyId
+end
+
+-- ------------------------------------------------------------------ lookups
+
+JRS.Callback('jrs_railroad:getOwnedTrains', function(src)
+    local player = JRS.Player(src)
+    return player and DB.GetOwnedTrains(player.PlayerData.citizenid) or {}
 end)
 
-JRS.Callback('jrs_railroad:getTrainById', function(source, trainId)
-    local Player = JRS.Player(source)
-    local train = Player and DB.GetTrainById(trainId)
-    if not train or train.citizenid ~= Player.PlayerData.citizenid then return nil end
-    return train
+JRS.Callback('jrs_railroad:getTrainById', function(src, trainId)
+    local player = JRS.Player(src)
+    local train = player and DB.GetTrainById(trainId)
+    if train and train.citizenid == player.PlayerData.citizenid then return train end
+    return nil
 end)
 
-JRS.Callback('jrs_railroad:canSpawnTrain', function(source)
-    return ActiveTrains[source] == nil
+JRS.Callback('jrs_railroad:canSpawnTrain', function(src) return out[src] == nil end)
+JRS.Callback('jrs_railroad:getAmbientState', function() return DB.GetOwnedCompanyCount() == 0 end)
+
+JRS.Callback('jrs_railroad:getMyCompanyMembership', function(src, companyId)
+    local player = JRS.Player(src)
+    return player and DB.GetCompanyMembership(player.PlayerData.citizenid, companyId) or nil
 end)
 
-JRS.Callback('jrs_railroad:getAmbientState', function()
-    local count = DB.GetOwnedCompanyCount()
-    return count == 0
+JRS.Callback('jrs_railroad:getCompanyData', function(src)
+    local player = JRS.Player(src)
+    return player and DB.GetCompanyData(player.PlayerData.citizenid) or {}
 end)
 
-JRS.Callback('jrs_railroad:getMyCompanyMembership', function(source, companyId)
-    local Player = JRS.Player(source)
-    if not Player then return nil end
-    return DB.GetCompanyMembership(Player.PlayerData.citizenid, companyId)
-end)
+-- ------------------------------------------------------------------ buying and selling
 
-JRS.Callback('jrs_railroad:getCompanyData', function(source)
-    local Player = JRS.Player(source)
-    if not Player then return {} end
-    return DB.GetCompanyData(Player.PlayerData.citizenid) or {}
-end)
-
----------------------------------------------------------------
--- BUY TRAIN
----------------------------------------------------------------
-RegisterNetEvent('jrs_railroad:buyTrain', function(trainIndex, stationId)
+RegisterNetEvent('jrs_railroad:buyTrain', function(index)
     local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
+    local player = JRS.Player(src)
+    local entry = Config.Trains[index]
+    if not player or not entry then return end
 
-    local citizenid = Player.PlayerData.citizenid
-    local trainConfig = Config.Trains[trainIndex]
-    if not trainConfig then return end
-
-    -- Check limit
-    local count = DB.CountTrains(citizenid)
-    if count >= Config.MaxTrainsPerPlayer then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('train_limit_reached', Config.MaxTrainsPerPlayer), type = 'error', duration = 5000 })
-        return
+    local citizenid = player.PlayerData.citizenid
+    if DB.CountTrains(citizenid) >= Config.MaxTrainsPerPlayer then
+        return Say(src, L('train_limit_reached', Config.MaxTrainsPerPlayer), 'error')
     end
 
-    -- Check rank
-    local requiredRankLabel = Config.Ranks[trainConfig.requiredRank] and Config.Ranks[trainConfig.requiredRank].label or 'Unknown'
-    local membership = DB.GetCompanyMembership(citizenid, trainConfig.company)
-    if membership then
-        if membership.rank < trainConfig.requiredRank then
-            TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('rank_too_low', requiredRankLabel), type = 'error', duration = 5000 })
-            return
-        end
-    else
-        -- Not a member yet - auto join at rank 1
-        if trainConfig.requiredRank > 1 then
-            TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('rank_too_low', requiredRankLabel), type = 'error', duration = 5000 })
-            return
-        end
-        DB.JoinCompany(citizenid, trainConfig.company)
-    end
+    -- the rank needed; somebody who is not a member yet joins at rank 1
+    local rankName = Config.Ranks[entry.requiredRank] and Config.Ranks[entry.requiredRank].label or 'Unknown'
+    local membership = DB.GetCompanyMembership(citizenid, entry.company)
+    local rank = membership and membership.rank or 1
+    if rank < entry.requiredRank then return Say(src, L('rank_too_low', rankName), 'error') end
+    if not membership then DB.JoinCompany(citizenid, entry.company) end
 
-    -- Check money
-    local cash = Player.PlayerData.money['cash'] or 0
-    if cash < trainConfig.cost then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('not_enough_money'), type = 'error', duration = 5000 })
-        return
-    end
+    if (player.PlayerData.money['cash'] or 0) < entry.cost then return Say(src, L('not_enough_money'), 'error') end
+    if not player.Functions.RemoveMoney('cash', entry.cost) then return end
 
-    if not Player.Functions.RemoveMoney('cash', trainConfig.cost) then return end
-    -- New trains start at 50% fuel, water, and condition
-    local startFuel = math.floor(trainConfig.maxFuel * 0.5)
-    local startWater = math.floor(trainConfig.maxWater * 0.5)
-    local startCondition = math.floor(trainConfig.maxCondition * 0.5)
-    DB.InsertTrain(citizenid, trainConfig.company, trainConfig.model, trainConfig.label, startFuel, startWater, startCondition)
-    TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('train_bought_half', L('train_bought')), type = 'success', duration = 7000 })
+    -- a new train starts half full and half repaired
+    DB.InsertTrain(citizenid, entry.company, entry.model, entry.label,
+        math.floor(entry.maxFuel * 0.5), math.floor(entry.maxWater * 0.5), math.floor(entry.maxCondition * 0.5))
+    Say(src, L('train_bought_half', L('train_bought')), 'success', 7000)
 
     Webhook.SendFields('economy', 'Train Purchased', {
-        { 'Player', GetPlayerFullName(Player) .. ' (' .. citizenid .. ')' },
-        { 'Company', Config.Companies[trainConfig.company] and Config.Companies[trainConfig.company].label or trainConfig.company },
-        { 'Train', trainConfig.label },
-        { 'Cost', '$' .. trainConfig.cost },
+        { 'Player', GetPlayerFullName(player) .. ' (' .. citizenid .. ')' },
+        { 'Company', companyLabel(entry.company) },
+        { 'Train', entry.label },
+        { 'Cost', '$' .. entry.cost },
     }, 'success')
 end)
 
----------------------------------------------------------------
--- SELL TRAIN
----------------------------------------------------------------
 RegisterNetEvent('jrs_railroad:sellTrain', function(trainId)
     local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
+    local player = JRS.Player(src)
+    if not player then return end
 
-    local citizenid = Player.PlayerData.citizenid
+    local citizenid = player.PlayerData.citizenid
     local train = DB.GetTrainById(trainId)
     if not train or train.citizenid ~= citizenid then return end
+    if out[src] == trainId then return Say(src, L('park_before_selling'), 'error') end
 
-    -- Don't allow selling a train that's currently out and being driven
-    -- (by this player or, in theory, spoofed from elsewhere).
-    if ActiveTrains[src] == trainId then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('park_before_selling'), type = 'error', duration = 5000 })
-        return
-    end
-
-    -- Find config for sell price
-    local sellPrice = 0
-    local tc = GetTrainConfig(train)
-    if tc then sellPrice = tc.sellPrice end
+    local entry = configOf(train)
+    local price = entry and entry.sellPrice or 0
 
     if not DB.DeleteTrain(trainId, citizenid) then return end
-    Player.Functions.AddMoney('cash', math.floor(sellPrice))
-    TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('train_sold', sellPrice), type = 'success', duration = 5000 })
+    player.Functions.AddMoney('cash', math.floor(price))
+    Say(src, L('train_sold', price), 'success')
 
     Webhook.SendFields('economy', 'Train Sold', {
-        { 'Player', GetPlayerFullName(Player) .. ' (' .. citizenid .. ')' },
+        { 'Player', GetPlayerFullName(player) .. ' (' .. citizenid .. ')' },
         { 'Train', train.train_model },
-        { 'Sell Price', '$' .. sellPrice },
+        { 'Sell Price', '$' .. price },
     }, 'info')
 end)
 
----------------------------------------------------------------
--- TICKET REVENUE (continuous passenger system)
--- Called when the driver reaches a station with passengers on board.
----------------------------------------------------------------
-local lastTicketRevenue = {} -- [source] = os.time() of last payout, anti-spam
+-- ------------------------------------------------------------------ ticket pay at a station
 
-RegisterNetEvent('jrs_railroad:ticketRevenue', function(companyId, passengerCount)
-    local src    = source
-    local Player = JRS.Player(src)
-    if not Player or not companyId or not Config.Companies[companyId] then return end
+local lastPay = {}                         -- source -> { t = os.time(), station = id }
 
-    -- Only the company owner or an approved driver can be driving one of
-    -- this company's trains, so only they can legitimately earn ticket
-    -- revenue for it. Without this, any player could fire this event for
-    -- an arbitrary companyId (they have no relation to) to farm free
-    -- cash/XP for themselves every few seconds.
-    local citizenid = Player.PlayerData.citizenid
-    local ownership = DB.GetCompanyOwnership(companyId)
-    local isOwner = ownership and ownership.owner_citizenid == citizenid
-    if not isOwner then
-        local employee = DB.GetEmployeeByIds(companyId, citizenid)
-        if not employee or employee.status ~= 'approved' then return end
+-- the station of this company the player is standing at, if any
+local function stationOf(src, companyId)
+    local at = GetEntityCoords(GetPlayerPed(src))
+    local radius = Config.PassengerSystem.StationStopRadius or 135.0
+    for _, station in ipairs(Config.Stations) do
+        if station.company == companyId and #(at - station.coords) <= radius then return station end
     end
+end
 
-    passengerCount = math.floor(tonumber(passengerCount) or 0)
-    if passengerCount <= 0 then return end
+RegisterNetEvent('jrs_railroad:ticketRevenue', function(companyId, riders)
+    local src = source
+    local player = JRS.Player(src)
+    if not player or not companyId or not Config.Companies[companyId] then return end
 
-    -- Hard cap: nobody can plausibly have more than MaxBoardPerStop
-    -- passengers waiting to be paid out for in one go. Also rate-limit so
-    -- the event can't be spammed for free XP/cash.
+    -- only people who work for the company can be driving its trains
+    local citizenid = player.PlayerData.citizenid
+    local role, ownership = CompanyRole(companyId, citizenid)
+    if not role then return end
+
+    riders = math.floor(tonumber(riders) or 0)
+    if riders <= 0 or out[src] == nil then return end
+
     local cfg = Config.PassengerSystem
-    passengerCount = math.min(passengerCount, cfg.MaxBoardPerStop or 10)
+    riders = math.min(riders, cfg.MaxBoardPerStop or 10)
 
-    -- Must actually have a train out and be stopped at one of this
-    -- company's stations; each station pays once per visit.
-    if ActiveTrains[src] == nil then return end
-    local pos = GetEntityCoords(GetPlayerPed(src))
-    local radius = cfg.StationStopRadius or 135.0
-    local station
-    for _, s in ipairs(Config.Stations) do
-        if s.company == companyId and #(pos - s.coords) <= radius then station = s break end
-    end
+    local station = stationOf(src, companyId)
     if not station then return end
 
-    local now = os.time()
-    local last = lastTicketRevenue[src]
-    if last and ((now - last.t) < 30 or (last.station == station.id and (now - last.t) < 300)) then return end
-    lastTicketRevenue[src] = { t = now, station = station.id }
+    -- 30 s between payouts, 5 min before the same station pays again
+    local now, last = os.time(), lastPay[src]
+    if last and (now - last.t < 30 or (last.station == station.id and now - last.t < 300)) then return end
+    lastPay[src] = { t = now, station = station.id }
 
-    local total       = passengerCount * cfg.TicketPrice
-    local driverShare = math.floor(total * (1 - cfg.CompanyShare))
-    local compShare   = math.floor(total * cfg.CompanyShare)
+    local total = riders * cfg.TicketPrice
+    local driver, company = math.floor(total * (1 - cfg.CompanyShare)), math.floor(total * cfg.CompanyShare)
 
-    -- Pay driver
-    Player.Functions.AddMoney('cash', driverShare)
+    player.Functions.AddMoney('cash', driver)
+    if ownership then DB.AddToCashRegister(companyId, company) end
 
-    -- Pay into company register
-    if ownership then
-        DB.AddToCashRegister(companyId, compShare)
-    end
-
-    -- Award XP
-    local xpGain = passengerCount * cfg.TicketXP
-    DB.AddCompanyXP(citizenid, companyId, xpGain)
-
-    TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, {
-        title       = L('notify_title'),
-        description = L('ticket_revenue_summary', driverShare, compShare, xpGain),
-        type        = 'success',
-        duration    = 7000,
-    })
+    local xp = riders * cfg.TicketXP
+    DB.AddCompanyXP(citizenid, companyId, xp)
+    Say(src, L('ticket_revenue_summary', driver, company, xp), 'success', 7000)
 end)
 
----------------------------------------------------------------
--- SPAWN / DESPAWN TRACKING
----------------------------------------------------------------
+-- ------------------------------------------------------------------ which train a player has out
+
 RegisterNetEvent('jrs_railroad:setTrainSpawned', function(spawned, trainId)
     local src = source
-    if spawned then
-        local Player = JRS.Player(src)
-        if not Player then return end
+    if not spawned then out[src] = nil return end
 
-        -- trainId is 0 for V2 company/config trains (no DB row -- see
-        -- SpawnConfigTrain in client/train_spawn.lua). Only legacy
-        -- personally-owned trains (trainId > 0) need DB ownership
-        -- verification here.
-        trainId = tonumber(trainId) or 0
-        if trainId > 0 then
-            local train = DB.GetTrainById(trainId)
-            if not train or train.citizenid ~= Player.PlayerData.citizenid then return end
-        end
+    local player = JRS.Player(src)
+    if not player or out[src] then return end
 
-        -- Previously this bailed out above for trainId == 0 (no matching
-        -- DB row), so ActiveTrains[src] was never set for company trains
-        -- and canSpawnTrain() always reported false positives, letting a
-        -- player spawn more than one company train at once server-side.
-        if ActiveTrains[src] then return end -- already has a train out
-
-        ActiveTrains[src] = trainId
-        if trainId > 0 then
-            DB.UnparkTrain(trainId)
-        end
-    else
-        ActiveTrains[src] = nil
+    -- company trains have no row (id 0); a personally owned one has to belong to the player
+    trainId = tonumber(trainId) or 0
+    if trainId > 0 then
+        local train = DB.GetTrainById(trainId)
+        if not train or train.citizenid ~= player.PlayerData.citizenid then return end
+        DB.UnparkTrain(trainId)
     end
+    out[src] = trainId
 end)
 
----------------------------------------------------------------
--- PARK TRAIN
----------------------------------------------------------------
 RegisterNetEvent('jrs_railroad:parkTrain', function(trainId, stationId, fuel, water, condition)
     local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
+    local train = drivenTrain(src, trainId)
+    if not train then return end
 
-    local train = DB.GetTrainById(trainId)
-    if not IsAuthorizedForTrain(src, Player.PlayerData.citizenid, trainId, train) then return end
-
-    local tc = GetTrainConfig(train)
-    local maxFuel = tc and tc.maxFuel or 100
-    local maxWater = tc and tc.maxWater or 100
-    local maxCond = tc and tc.maxCondition or 100
-
-    DB.ParkTrain(trainId, stationId, Clamp(fuel, maxFuel), Clamp(water, maxWater), Clamp(condition, maxCond))
-    ActiveTrains[src] = nil
+    local maxFuel, maxWater, maxCondition = limits(train)
+    DB.ParkTrain(trainId, stationId, clamp(fuel, maxFuel), clamp(water, maxWater), clamp(condition, maxCondition))
+    out[src] = nil
 end)
 
----------------------------------------------------------------
--- UPDATE TRAIN STATE
----------------------------------------------------------------
+-- ------------------------------------------------------------------ state saved while driving
+
 RegisterNetEvent('jrs_railroad:updateTrainState', function(trainId, fuel, water, condition)
-    local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
-
-    local train = DB.GetTrainById(trainId)
-    if not IsAuthorizedForTrain(src, Player.PlayerData.citizenid, trainId, train) then return end
-
-    local tc = GetTrainConfig(train)
-    local maxFuel = tc and tc.maxFuel or 100
-    local maxWater = tc and tc.maxWater or 100
-    local maxCond = tc and tc.maxCondition or 100
-
-    DB.UpdateTrainState(trainId, Clamp(fuel, maxFuel), Clamp(water, maxWater), Clamp(condition, maxCond))
+    local train = drivenTrain(source, trainId)
+    if not train then return end
+    local maxFuel, maxWater, maxCondition = limits(train)
+    DB.UpdateTrainState(trainId, clamp(fuel, maxFuel), clamp(water, maxWater), clamp(condition, maxCondition))
 end)
 
 RegisterNetEvent('jrs_railroad:updateFuel', function(trainId, fuel)
-    local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
-
-    local train = DB.GetTrainById(trainId)
-    if not IsAuthorizedForTrain(src, Player.PlayerData.citizenid, trainId, train) then return end
-
-    local tc = GetTrainConfig(train)
-    DB.UpdateTrainFuel(trainId, Clamp(fuel, tc and tc.maxFuel or 100))
+    local train = drivenTrain(source, trainId)
+    if train then DB.UpdateTrainFuel(trainId, clamp(fuel, (limits(train)))) end
 end)
 
 RegisterNetEvent('jrs_railroad:updateWater', function(trainId, water)
-    local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
-
-    local train = DB.GetTrainById(trainId)
-    if not IsAuthorizedForTrain(src, Player.PlayerData.citizenid, trainId, train) then return end
-
-    local tc = GetTrainConfig(train)
-    DB.UpdateTrainWater(trainId, Clamp(water, tc and tc.maxWater or 100))
+    local train = drivenTrain(source, trainId)
+    if train then DB.UpdateTrainWater(trainId, clamp(water, select(2, limits(train)))) end
 end)
 
 RegisterNetEvent('jrs_railroad:updateCondition', function(trainId, condition)
-    local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
-
-    local train = DB.GetTrainById(trainId)
-    if not IsAuthorizedForTrain(src, Player.PlayerData.citizenid, trainId, train) then return end
-
-    local tc = GetTrainConfig(train)
-    DB.UpdateTrainCondition(trainId, Clamp(condition, tc and tc.maxCondition or 100))
+    local train = drivenTrain(source, trainId)
+    if train then DB.UpdateTrainCondition(trainId, clamp(condition, select(3, limits(train)))) end
 end)
 
--- Sanity cap on how many miles can be credited in a single call, so a
--- spoofed event can't inflate total_miles (used for reward thresholds).
-local MAX_MILES_PER_CALL = 25
+-- one call may credit this many miles, so a forged event cannot inflate the reward counters
+local MAX_MILES <const> = 25
 
 RegisterNetEvent('jrs_railroad:addMiles', function(trainId, miles)
-    local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
-
-    local train = DB.GetTrainById(trainId)
-    if not IsAuthorizedForTrain(src, Player.PlayerData.citizenid, trainId, train) then return end
-
+    if not drivenTrain(source, trainId) then return end
     miles = tonumber(miles) or 0
-    if miles <= 0 then return end
-    miles = math.min(miles, MAX_MILES_PER_CALL)
-
-    DB.AddMiles(trainId, miles)
+    if miles > 0 then DB.AddMiles(trainId, math.min(miles, MAX_MILES)) end
 end)
 
----------------------------------------------------------------
--- REFUEL / REFILL / REPAIR
--- 1 item = +10% of max capacity, capped at 100%
----------------------------------------------------------------
-local FILL_PERCENT = 10 -- each item adds 10% of max
+-- ------------------------------------------------------------------ fuel, water and repair items
+-- one item restores a tenth of the tank; `size` is the position of that tank in limits()
 
-RegisterNetEvent('jrs_railroad:refuelTrain', function(trainId)
+local TENTH <const> = 0.10
+
+-- everything that differs between the three kinds of maintenance
+local KINDS <const> = {
+    fuel = {
+        cfg = 'Fuel', column = 'fuel', size = 1, save = 'UpdateTrainFuel', sync = 'jrs_railroad:syncFuel',
+        full = 'fuel_tank_full', missing = 'no_fuel_item', added = 'fuel_added_pct',
+    },
+    water = {
+        cfg = 'Water', column = 'water', size = 2, save = 'UpdateTrainWater', sync = 'jrs_railroad:syncWater',
+        full = 'water_tank_full', missing = 'no_water_item', added = 'water_added_pct',
+    },
+    condition = {
+        cfg = 'Condition', column = 'condition', size = 3, save = 'UpdateTrainCondition', sync = 'jrs_railroad:syncCondition',
+        full = 'condition_full', missing = 'no_repair_item', added = 'condition_repaired_pct',
+    },
+}
+
+local function topUp(spec)
+    return function(trainId)
+        local src = source
+        local player = JRS.Player(src)
+        if not player then return end
+
+        local train = DB.GetTrainById(trainId)
+        if not train or train.citizenid ~= player.PlayerData.citizenid then return end
+
+        local settings = Config[spec.cfg]
+        local max = select(spec.size, limits(train))
+        local have = train[spec.column]
+        if have >= max then return Say(src, L(spec.full), 'error') end
+
+        local item = player.Functions.GetItemByName(settings.item)
+        if not item or item.amount < 1 then return Say(src, L(spec.missing, 1, settings.itemLabel), 'error') end
+
+        if not player.Functions.RemoveItem(settings.item, 1) then return end
+        TriggerClientEvent('inventory:client:ItemBox', src, JRS.ItemDef(settings.item), 'remove')
+
+        local now = math.min(have + math.floor(max * TENTH), max)
+        DB[spec.save](trainId, now)
+        TriggerClientEvent(spec.sync, src, now)
+        Say(src, L(spec.added, math.floor(now / max * 100)), 'success')
+    end
+end
+
+RegisterNetEvent('jrs_railroad:refuelTrain', topUp(KINDS.fuel))
+RegisterNetEvent('jrs_railroad:refillWater', topUp(KINDS.water))
+RegisterNetEvent('jrs_railroad:repairTrain', topUp(KINDS.condition))
+
+-- works for company trains too: the item is taken here and the client applies the effect
+RegisterNetEvent('jrs_railroad:useMaintenanceItem', function(itemName, quantity, kind, trainId)
     local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
+    local player = JRS.Player(src)
+    local spec = KINDS[kind]
+    if not player or not spec or itemName ~= Config[spec.cfg].item then return end
 
-    local train = DB.GetTrainById(trainId)
-    if not train or train.citizenid ~= Player.PlayerData.citizenid then return end
+    local function result(ok) TriggerClientEvent('jrs_railroad:maintenanceResult', src, kind, ok) end
 
-    local tc = GetTrainConfig(train)
-    local maxFuel = tc and tc.maxFuel or 100
+    quantity = math.max(1, math.min(math.floor(tonumber(quantity) or 1), 10))
 
-    -- Check if already full
-    if train.fuel >= maxFuel then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('fuel_tank_full'), type = 'error', duration = 5000 })
-        return
+    local have = player.Functions.GetItemByName(itemName)
+    if not have or have.amount < quantity then
+        Say(src, L('missing_required_item'), 'error')
+        return result(false)
     end
 
-    -- Check for 1 item
-    local item = Player.Functions.GetItemByName(Config.Fuel.item)
-    if not item or item.amount < 1 then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('no_fuel_item', 1, Config.Fuel.itemLabel), type = 'error', duration = 5000 })
-        return
-    end
-
-    -- Remove 1 item, add 10%
-    if not Player.Functions.RemoveItem(Config.Fuel.item, 1) then return end
-    TriggerClientEvent('inventory:client:ItemBox', src, JRS.ItemDef(Config.Fuel.item), 'remove')
-
-    local addAmount = math.floor(maxFuel * FILL_PERCENT / 100)
-    local newFuel = math.min(train.fuel + addAmount, maxFuel)
-    DB.UpdateTrainFuel(trainId, newFuel)
-    TriggerClientEvent('jrs_railroad:syncFuel', src, newFuel)
-
-    local pct = math.floor((newFuel / maxFuel) * 100)
-    TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('fuel_added_pct', pct), type = 'success', duration = 5000 })
-end)
-
-RegisterNetEvent('jrs_railroad:refillWater', function(trainId)
-    local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
-
-    local train = DB.GetTrainById(trainId)
-    if not train or train.citizenid ~= Player.PlayerData.citizenid then return end
-
-    local tc = GetTrainConfig(train)
-    local maxWater = tc and tc.maxWater or 100
-
-    if train.water >= maxWater then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('water_tank_full'), type = 'error', duration = 5000 })
-        return
-    end
-
-    local item = Player.Functions.GetItemByName(Config.Water.item)
-    if not item or item.amount < 1 then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('no_water_item', 1, Config.Water.itemLabel), type = 'error', duration = 5000 })
-        return
-    end
-
-    if not Player.Functions.RemoveItem(Config.Water.item, 1) then return end
-    TriggerClientEvent('inventory:client:ItemBox', src, JRS.ItemDef(Config.Water.item), 'remove')
-
-    local addAmount = math.floor(maxWater * FILL_PERCENT / 100)
-    local newWater = math.min(train.water + addAmount, maxWater)
-    DB.UpdateTrainWater(trainId, newWater)
-    TriggerClientEvent('jrs_railroad:syncWater', src, newWater)
-
-    local pct = math.floor((newWater / maxWater) * 100)
-    TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('water_added_pct', pct), type = 'success', duration = 5000 })
-end)
-
-RegisterNetEvent('jrs_railroad:repairTrain', function(trainId)
-    local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
-
-    local train = DB.GetTrainById(trainId)
-    if not train or train.citizenid ~= Player.PlayerData.citizenid then return end
-
-    local tc = GetTrainConfig(train)
-    local maxCond = tc and tc.maxCondition or 100
-
-    if train.condition >= maxCond then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('condition_full'), type = 'error', duration = 5000 })
-        return
-    end
-
-    local item = Player.Functions.GetItemByName(Config.Condition.item)
-    if not item or item.amount < 1 then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('no_repair_item', 1, Config.Condition.itemLabel), type = 'error', duration = 5000 })
-        return
-    end
-
-    if not Player.Functions.RemoveItem(Config.Condition.item, 1) then return end
-    TriggerClientEvent('inventory:client:ItemBox', src, JRS.ItemDef(Config.Condition.item), 'remove')
-
-    local addAmount = math.floor(maxCond * FILL_PERCENT / 100)
-    local newCond = math.min(train.condition + addAmount, maxCond)
-    DB.UpdateTrainCondition(trainId, newCond)
-    TriggerClientEvent('jrs_railroad:syncCondition', src, newCond)
-
-    local pct = math.floor((newCond / maxCond) * 100)
-    TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('condition_repaired_pct', pct), type = 'success', duration = 5000 })
-end)
-
----------------------------------------------------------------
--- UNIVERSAL MAINTENANCE (works for config + DB trains)
--- Removes 1 item from player, tells client to apply the effect
----------------------------------------------------------------
-RegisterNetEvent('jrs_railroad:useMaintenanceItem', function(itemName, quantity, mType, trainId)
-    local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
-
-    quantity = math.floor(tonumber(quantity) or 1)
-    quantity = math.max(1, math.min(quantity, 10)) -- sane cap; nobody uses 10+ at once
-
-    -- only the configured maintenance item for that type
-    local wanted = (mType == 'fuel' and Config.Fuel.item) or (mType == 'water' and Config.Water.item)
-        or (mType == 'condition' and Config.Condition.item) or nil
-    if not wanted or itemName ~= wanted then return end
-
-    -- Check player has the item
-    local item = Player.Functions.GetItemByName(itemName)
-    if not item or item.amount < quantity then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('missing_required_item'), type = 'error', duration = 5000 })
-        TriggerClientEvent('jrs_railroad:maintenanceResult', src, mType, false)
-        return
-    end
-
-    -- If DB train (id > 0), verify ownership before touching it
-    local train = nil
+    local train
     if trainId and trainId > 0 then
         train = DB.GetTrainById(trainId)
-        if not train or train.citizenid ~= Player.PlayerData.citizenid then
-            TriggerClientEvent('jrs_railroad:maintenanceResult', src, mType, false)
-            return
-        end
+        if not train or train.citizenid ~= player.PlayerData.citizenid then return result(false) end
     end
 
-    -- Remove item
-    if not Player.Functions.RemoveItem(itemName, quantity) then
-        TriggerClientEvent('jrs_railroad:maintenanceResult', src, mType, false)
-        return
-    end
+    if not player.Functions.RemoveItem(itemName, quantity) then return result(false) end
     TriggerClientEvent('inventory:client:ItemBox', src, JRS.ItemDef(itemName), 'remove')
 
     if train then
-        local tc = GetTrainConfig(train)
-        local maxVal = 100
-        if tc then
-            if mType == 'fuel' then maxVal = tc.maxFuel
-            elseif mType == 'water' then maxVal = tc.maxWater
-            elseif mType == 'condition' then maxVal = tc.maxCondition end
-        end
-        local addAmount = math.floor(maxVal * 0.10)
-        if mType == 'fuel' then
-            DB.UpdateTrainFuel(trainId, math.min(train.fuel + addAmount, maxVal))
-        elseif mType == 'water' then
-            DB.UpdateTrainWater(trainId, math.min(train.water + addAmount, maxVal))
-        elseif mType == 'condition' then
-            DB.UpdateTrainCondition(trainId, math.min(train.condition + addAmount, maxVal))
-        end
+        local max = select(spec.size, limits(train))
+        DB[spec.save](trainId, math.min(train[spec.column] + math.floor(max * TENTH), max))
     end
-
-    -- Tell client to apply the effect locally
-    TriggerClientEvent('jrs_railroad:maintenanceResult', src, mType, true)
+    result(true)
 end)
 
----------------------------------------------------------------
--- CLEANUP ON DISCONNECT
----------------------------------------------------------------
 AddEventHandler('playerDropped', function()
-    local src = source
-    ActiveTrains[src] = nil
-    lastTicketRevenue[src] = nil
+    out[source], lastPay[source] = nil, nil
 end)

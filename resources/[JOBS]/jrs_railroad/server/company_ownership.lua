@@ -1,300 +1,201 @@
----------------------------------------------------------------
--- CALLBACKS: Company ownership + role detection
----------------------------------------------------------------
+-- jrs_railroad | server: owning a company (buy, sell, rename, cash register) and its statistics
+-- Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 
--- Get ownership data for a specific company
-JRS.Callback('jrs_railroad:getCompanyOwnership', function(source, companyId)
-    return DB.GetCompanyOwnership(companyId)
-end)
+local function labelOf(companyId)
+    return Config.Companies[companyId] and Config.Companies[companyId].label or companyId
+end
 
--- Get ALL owned companies
-JRS.Callback('jrs_railroad:getAllOwnedCompanies', function(source)
-    return DB.GetAllOwnedCompanies()
-end)
+-- the owner row when `src` owns the company, else nil
+local function ownedBy(player, companyId)
+    local ownership = DB.GetCompanyOwnership(companyId)
+    if ownership and ownership.owner_citizenid == player.PlayerData.citizenid then return ownership end
+end
 
--- Determine player's role at a station's company
--- Returns: 'owner', 'driver', 'pending', 'visitor', 'unowned'
-JRS.Callback('jrs_railroad:getPlayerRole', function(source, companyId)
-    local Player = JRS.Player(source)
-    if not Player then return 'visitor' end
-    local citizenid = Player.PlayerData.citizenid
+-- everybody learns whether the ambient train may run (it only runs while no company is owned)
+local function broadcastAmbient()
+    TriggerClientEvent('jrs_railroad:setAmbientState', -1, DB.GetOwnedCompanyCount() == 0)
+end
 
-    -- Check if company is owned at all
+-- ------------------------------------------------------------------ lookups
+
+JRS.Callback('jrs_railroad:getCompanyOwnership', function(_, companyId) return DB.GetCompanyOwnership(companyId) end)
+JRS.Callback('jrs_railroad:getAllOwnedCompanies', function() return DB.GetAllOwnedCompanies() end)
+JRS.Callback('jrs_railroad:getCompanyTrains', function(_, companyId) return DB.GetCompanyTrains(companyId) end)
+
+-- 'owner', 'driver', 'pending', 'visitor' or 'unowned'
+JRS.Callback('jrs_railroad:getPlayerRole', function(src, companyId)
+    local player = JRS.Player(src)
+    if not player then return 'visitor' end
+
     local ownership = DB.GetCompanyOwnership(companyId)
     if not ownership then return 'unowned' end
 
-    -- Check if this player is the owner
+    local citizenid = player.PlayerData.citizenid
     if ownership.owner_citizenid == citizenid then return 'owner' end
 
-    -- Check if this player is an employee
     local employee = DB.GetEmployeeByIds(companyId, citizenid)
-    if employee then
-        if employee.status == 'approved' then return 'driver' end
-        if employee.status == 'pending' then return 'pending' end
-    end
-
+    if employee and employee.status == 'approved' then return 'driver' end
+    if employee and employee.status == 'pending' then return 'pending' end
     return 'visitor'
 end)
 
--- Get player's employee record for a company
-JRS.Callback('jrs_railroad:getMyEmployeeData', function(source, companyId)
-    local Player = JRS.Player(source)
-    if not Player then return nil end
-    return DB.GetEmployeeByIds(companyId, Player.PlayerData.citizenid)
+JRS.Callback('jrs_railroad:getMyEmployeeData', function(src, companyId)
+    local player = JRS.Player(src)
+    return player and DB.GetEmployeeByIds(companyId, player.PlayerData.citizenid) or nil
 end)
 
----------------------------------------------------------------
--- BUY COMPANY
----------------------------------------------------------------
+-- ------------------------------------------------------------------ buying and selling
+
 RegisterNetEvent('jrs_railroad:buyCompany', function(companyId)
     local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
+    local player = JRS.Player(src)
+    if not player or not Config.Companies[companyId] then return end
 
-    local citizenid = Player.PlayerData.citizenid
-    if not Config.Companies[companyId] then return end
+    local citizenid = player.PlayerData.citizenid
+    if DB.GetCompanyOwnership(companyId) then return Say(src, L('company_already_owned'), 'error') end
+    if #DB.GetOwnedCompaniesByCitizen(citizenid) > 0 then return Say(src, L('already_own_company'), 'error') end
 
-    -- Check if already owned
-    local existing = DB.GetCompanyOwnership(companyId)
-    if existing then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('company_already_owned'), type = 'error', duration = 5000 })
-        return
-    end
-
-    -- Check if player already owns a company
-    local ownedByPlayer = DB.GetOwnedCompaniesByCitizen(citizenid)
-    if #ownedByPlayer > 0 then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('already_own_company'), type = 'error', duration = 5000 })
-        return
-    end
-
-    -- Check money
     local price = Config.CompanyPurchasePrice
-    local cash = Player.PlayerData.money['cash'] or 0
-    if cash < price then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('not_enough_money'), type = 'error', duration = 5000 })
-        return
-    end
+    if (player.PlayerData.money['cash'] or 0) < price then return Say(src, L('not_enough_money'), 'error') end
 
-    local charinfo = Player.PlayerData.charinfo
-    local ownerName = (charinfo.firstname or '') .. ' ' .. (charinfo.lastname or '')
+    local owner = GetPlayerFullName(player)
+    if not player.Functions.RemoveMoney('cash', price) then return end
 
-    if not Player.Functions.RemoveMoney('cash', price) then return end
-    local inserted = DB.PurchaseCompany(companyId, citizenid, ownerName)
+    local inserted = DB.PurchaseCompany(companyId, citizenid, owner)
     if not inserted or inserted == 0 then
-        -- someone else bought it in the same moment
-        Player.Functions.AddMoney('cash', price)
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('company_already_owned'), type = 'error', duration = 5000 })
-        return
+        player.Functions.AddMoney('cash', price)             -- somebody bought it a moment earlier
+        return Say(src, L('company_already_owned'), 'error')
     end
 
-    local companyLabel = Config.Companies[companyId] and Config.Companies[companyId].label or companyId
-    TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('company_purchased', companyLabel), type = 'success', duration = 7000 })
-
+    Say(src, L('company_purchased', labelOf(companyId)), 'success', 7000)
     Webhook.SendFields('economy', 'Company Purchased', {
-        { 'Player', ownerName .. ' (' .. citizenid .. ')' },
-        { 'Company', companyLabel },
+        { 'Player', owner .. ' (' .. citizenid .. ')' },
+        { 'Company', labelOf(companyId) },
         { 'Price', '$' .. price },
     }, 'success')
-
-    local ownedCount = DB.GetOwnedCompanyCount()
-    TriggerClientEvent('jrs_railroad:setAmbientState', -1, ownedCount == 0)
+    broadcastAmbient()
 end)
 
----------------------------------------------------------------
--- SELL COMPANY
----------------------------------------------------------------
 RegisterNetEvent('jrs_railroad:sellCompany', function(companyId)
     local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
+    local player = JRS.Player(src)
+    if not player then return end
 
-    local citizenid = Player.PlayerData.citizenid
-    local ownership = DB.GetCompanyOwnership(companyId)
-    if not ownership or ownership.owner_citizenid ~= citizenid then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('not_owner_of_company'), type = 'error', duration = 5000 })
-        return
-    end
+    local ownership = ownedBy(player, companyId)
+    if not ownership then return Say(src, L('not_owner_of_company'), 'error') end
 
-    -- Refund
-    local refund = math.floor(Config.CompanyPurchasePrice * Config.CompanySellPercent)
-    -- Add cash register balance to refund
-    refund = refund + math.floor(ownership.cash_register or 0)
+    -- part of the price back plus whatever is in the register
+    local refund = math.floor(Config.CompanyPurchasePrice * Config.CompanySellPercent) + math.floor(ownership.cash_register or 0)
 
-    -- Delete the company row first; only the request that removed it pays.
-    if not DB.SellCompany(companyId, citizenid) then return end
+    -- the row goes first: only the request that really removed it gets paid
+    if not DB.SellCompany(companyId, player.PlayerData.citizenid) then return end
     DB.DeleteEmployeesByCompany(companyId)
     DB.DeleteSuppliesByCompany(companyId)
 
-    Player.Functions.AddMoney('cash', refund)
-    TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('company_sold', refund), type = 'success', duration = 7000 })
-
+    player.Functions.AddMoney('cash', refund)
+    Say(src, L('company_sold', refund), 'success', 7000)
     Webhook.SendFields('economy', 'Company Sold', {
-        { 'Player', GetPlayerFullName(Player) .. ' (' .. citizenid .. ')' },
-        { 'Company', Config.Companies[companyId] and Config.Companies[companyId].label or companyId },
+        { 'Player', GetPlayerFullName(player) .. ' (' .. player.PlayerData.citizenid .. ')' },
+        { 'Company', labelOf(companyId) },
         { 'Refund', '$' .. refund },
     }, 'info')
-
-    local ownedCount = DB.GetOwnedCompanyCount()
-    TriggerClientEvent('jrs_railroad:setAmbientState', -1, ownedCount == 0)
+    broadcastAmbient()
 end)
 
----------------------------------------------------------------
--- RENAME COMPANY
----------------------------------------------------------------
-RegisterNetEvent('jrs_railroad:renameCompany', function(companyId, newName)
+RegisterNetEvent('jrs_railroad:renameCompany', function(companyId, name)
     local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
+    local player = JRS.Player(src)
+    if not player or not ownedBy(player, companyId) then return end
 
-    local citizenid = Player.PlayerData.citizenid
-    local ownership = DB.GetCompanyOwnership(companyId)
-    if not ownership or ownership.owner_citizenid ~= citizenid then return end
+    if type(name) ~= 'string' or #name < 3 or #name > 50 then return Say(src, L('company_name_length'), 'error') end
 
-    if not newName or #newName < 3 or #newName > 50 then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('company_name_length'), type = 'error', duration = 5000 })
-        return
-    end
-
-    DB.SetCompanyName(companyId, newName)
-    TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('company_renamed', newName), type = 'success', duration = 5000 })
-
+    DB.SetCompanyName(companyId, name)
+    Say(src, L('company_renamed', name), 'success')
     Webhook.SendFields('economy', 'Company Renamed', {
-        { 'Player', GetPlayerFullName(Player) .. ' (' .. citizenid .. ')' },
+        { 'Player', GetPlayerFullName(player) .. ' (' .. player.PlayerData.citizenid .. ')' },
         { 'Company ID', companyId },
-        { 'New Name', newName },
+        { 'New Name', name },
     }, 'info')
 end)
 
----------------------------------------------------------------
--- WITHDRAW FROM CASH REGISTER
----------------------------------------------------------------
 RegisterNetEvent('jrs_railroad:withdrawFunds', function(companyId, amount)
     local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
-
-    local citizenid = Player.PlayerData.citizenid
-    local ownership = DB.GetCompanyOwnership(companyId)
-    if not ownership or ownership.owner_citizenid ~= citizenid then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('not_owner_of_company'), type = 'error', duration = 5000 })
-        return
-    end
+    local player = JRS.Player(src)
+    if not player then return end
+    if not ownedBy(player, companyId) then return Say(src, L('not_owner_of_company'), 'error') end
 
     amount = math.floor(tonumber(amount) or 0)
     if amount <= 0 then return end
 
     local balance = DB.GetCashRegister(companyId)
     if amount > balance or not DB.WithdrawFromCashRegister(companyId, amount) then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('insufficient_register_funds', math.floor(balance)), type = 'error', duration = 5000 })
-        return
+        return Say(src, L('insufficient_register_funds', math.floor(balance)), 'error')
     end
 
-    Player.Functions.AddMoney('cash', amount)
-    TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('funds_withdrawn', math.floor(amount)), type = 'success', duration = 5000 })
-
+    player.Functions.AddMoney('cash', amount)
+    Say(src, L('funds_withdrawn', amount), 'success')
     Webhook.SendFields('economy', 'Funds Withdrawn', {
-        { 'Player', GetPlayerFullName(Player) .. ' (' .. citizenid .. ')' },
-        { 'Company', Config.Companies[companyId] and Config.Companies[companyId].label or companyId },
-        { 'Amount', '$' .. math.floor(amount) },
+        { 'Player', GetPlayerFullName(player) .. ' (' .. player.PlayerData.citizenid .. ')' },
+        { 'Company', labelOf(companyId) },
+        { 'Amount', '$' .. amount },
     }, 'warn')
 end)
 
----------------------------------------------------------------
--- COMPANY STATS (for Records tab)
----------------------------------------------------------------
-JRS.Callback('jrs_railroad:getCompanyStats', function(source, companyId)
-    local employees = DB.GetEmployeesByCompany(companyId) or {}
-    local ownership = DB.GetCompanyOwnership(companyId)
+-- ------------------------------------------------------------------ statistics
 
-    local totalDrivers = 0
-    local totalMissions = 0
-    local totalEarnings = 0
-    local topEarner = 'None'
-    local topEarnings = 0
-    local mostMissionsName = 'None'
-    local mostMissionsCount = 0
-    local highestRank = 0
-    local highestRankName = 'None'
+local function fullName(employee) return (employee.firstname or '') .. ' ' .. (employee.lastname or '') end
 
-    for _, emp in ipairs(employees) do
-        if emp.status == 'approved' then
-            totalDrivers = totalDrivers + 1
-            totalMissions = totalMissions + (emp.missions_completed or 0)
-            totalEarnings = totalEarnings + (emp.total_earnings or 0)
-            if (emp.total_earnings or 0) > topEarnings then
-                topEarnings = emp.total_earnings or 0
-                topEarner = (emp.firstname or '') .. ' ' .. (emp.lastname or '')
-            end
-            if (emp.missions_completed or 0) > mostMissionsCount then
-                mostMissionsCount = emp.missions_completed or 0
-                mostMissionsName = (emp.firstname or '') .. ' ' .. (emp.lastname or '')
-            end
-            if (emp.rank or 1) > highestRank then
-                highestRank = emp.rank or 1
-                highestRankName = (emp.firstname or '') .. ' ' .. (emp.lastname or '')
-            end
+-- totals over the approved drivers of a company
+local function tally(companyId)
+    local sum = { drivers = 0, missions = 0, earnings = 0 }
+    local top = { earner = 'None', earnings = 0, missions = 'None', missionCount = 0, rank = 0, rankName = 'None' }
+
+    for _, employee in ipairs(DB.GetEmployeesByCompany(companyId)) do
+        if employee.status == 'approved' then
+            local missions, earnings, rank = employee.missions_completed or 0, employee.total_earnings or 0, employee.rank or 1
+            sum.drivers, sum.missions, sum.earnings = sum.drivers + 1, sum.missions + missions, sum.earnings + earnings
+
+            if earnings > top.earnings then top.earnings, top.earner = earnings, fullName(employee) end
+            if missions > top.missionCount then top.missionCount, top.missions = missions, fullName(employee) end
+            if rank > top.rank then top.rank, top.rankName = rank, fullName(employee) end
         end
     end
+    return sum, top
+end
 
-    local highestRankLabel = Config.Ranks[highestRank] and Config.Ranks[highestRank].label or '-'
+JRS.Callback('jrs_railroad:getCompanyStats', function(_, companyId)
+    local sum, top = tally(companyId)
+    local ownership = DB.GetCompanyOwnership(companyId)
 
     return {
-        total_drivers = totalDrivers,
-        total_missions = totalMissions,
-        total_earnings = totalEarnings,
+        total_drivers = sum.drivers,
+        total_missions = sum.missions,
+        total_earnings = sum.earnings,
         cash_register = ownership and ownership.cash_register or 0,
-        top_earner = topEarner,
-        top_earnings = topEarnings,
-        most_missions_name = mostMissionsName,
-        most_missions_count = mostMissionsCount,
-        highest_rank_name = highestRankName,
-        highest_rank_label = highestRankLabel,
+        top_earner = top.earner,
+        top_earnings = top.earnings,
+        most_missions_name = top.missions,
+        most_missions_count = top.missionCount,
+        highest_rank_name = top.rankName,
+        highest_rank_label = Config.Ranks[top.rank] and Config.Ranks[top.rank].label or '-',
     }
 end)
 
----------------------------------------------------------------
--- ALL COMPANY STATS (for leaderboard comparison)
----------------------------------------------------------------
-JRS.Callback('jrs_railroad:getAllCompanyStats', function(source)
-    local allOwned = DB.GetAllOwnedCompanies() or {}
-    local results = {}
-
-    for _, owned in ipairs(allOwned) do
-        local compId = owned.company_id
-        local employees = DB.GetEmployeesByCompany(compId) or {}
-        local compConf = Config.Companies[compId]
-
-        local totalDrivers = 0
-        local totalMissions = 0
-        local totalEarnings = 0
-
-        for _, emp in ipairs(employees) do
-            if emp.status == 'approved' then
-                totalDrivers = totalDrivers + 1
-                totalMissions = totalMissions + (emp.missions_completed or 0)
-                totalEarnings = totalEarnings + (emp.total_earnings or 0)
-            end
-        end
-
-        table.insert(results, {
-            company_id = compId,
-            company_label = compConf and compConf.label or compId,
+-- one line per owned company, for the comparison board
+JRS.Callback('jrs_railroad:getAllCompanyStats', function()
+    local board = {}
+    for _, owned in ipairs(DB.GetAllOwnedCompanies()) do
+        local sum = tally(owned.company_id)
+        board[#board + 1] = {
+            company_id = owned.company_id,
+            company_label = labelOf(owned.company_id),
             company_name = owned.company_name,
             owner_name = owned.owner_name,
-            total_drivers = totalDrivers,
-            total_missions = totalMissions,
-            total_earnings = totalEarnings,
+            total_drivers = sum.drivers,
+            total_missions = sum.missions,
+            total_earnings = sum.earnings,
             cash_register = owned.cash_register or 0,
-        })
+        }
     end
-
-    return results
-end)
-
----------------------------------------------------------------
--- GET COMPANY TRAINS (for station UI)
----------------------------------------------------------------
-JRS.Callback('jrs_railroad:getCompanyTrains', function(source, companyId)
-    return DB.GetCompanyTrains(companyId)
+    return board
 end)

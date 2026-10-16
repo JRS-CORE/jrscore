@@ -1,92 +1,64 @@
----------------------------------------------------------------
--- CALLBACKS
----------------------------------------------------------------
-JRS.Callback('jrs_railroad:getCompanySupplies', function(source, companyId)
-    return DB.GetCompanySupplies(companyId)
-end)
+-- jrs_railroad | server: the company's stock of supplies
+-- Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 
----------------------------------------------------------------
--- OWNER: ADD SUPPLIES FROM INVENTORY
----------------------------------------------------------------
-RegisterNetEvent('jrs_railroad:addSupply', function(companyId, itemName, quantity)
+JRS.Callback('jrs_railroad:getCompanySupplies', function(_, companyId) return DB.GetCompanySupplies(companyId) end)
+
+local function isSupplyItem(name)
+    for _, entry in ipairs(Config.SupplyItems) do
+        if entry.item == name then return true end
+    end
+    return false
+end
+
+local function labelOf(item)
+    local def = JRS.ItemDef(item)
+    return def and def.label or item
+end
+
+-- the owner puts items from their bag into the stock
+RegisterNetEvent('jrs_railroad:addSupply', function(companyId, item, quantity)
     local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
+    local player = JRS.Player(src)
+    if not player then return end
 
-    -- Verify owner
     local ownership = DB.GetCompanyOwnership(companyId)
-    if not ownership or ownership.owner_citizenid ~= Player.PlayerData.citizenid then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('not_owner_of_company'), type = 'error', duration = 5000 })
-        return
+    if not ownership or ownership.owner_citizenid ~= player.PlayerData.citizenid then
+        return Say(src, L('not_owner_of_company'), 'error')
     end
 
     quantity = math.floor(tonumber(quantity) or 0)
-    if quantity <= 0 or quantity > 1000 then return end
+    if quantity <= 0 or quantity > 1000 or not isSupplyItem(item) then return end
 
-    -- Validate item is a supply item
-    local validItem = false
-    for _, si in ipairs(Config.SupplyItems) do
-        if si.item == itemName then validItem = true break end
-    end
-    if not validItem then return end
+    local have = player.Functions.GetItemByName(item)
+    if not have or have.amount < quantity then return Say(src, L('missing_item_quantity'), 'error') end
 
-    -- Check player has the item
-    local item = Player.Functions.GetItemByName(itemName)
-    if not item or item.amount < quantity then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('missing_item_quantity'), type = 'error', duration = 5000 })
-        return
-    end
-
-    -- Remove from player, add to company stock
-    if not Player.Functions.RemoveItem(itemName, quantity) then return end
-    TriggerClientEvent('inventory:client:ItemBox', src, JRS.ItemDef(itemName), 'remove')
-    DB.AddSupplyItem(companyId, itemName, quantity)
-
-    local itemLabel = JRS.ItemDef(itemName) and JRS.ItemDef(itemName).label or itemName
-    TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('supply_added_notify', quantity, itemLabel), type = 'success', duration = 5000 })
+    if not player.Functions.RemoveItem(item, quantity) then return end
+    TriggerClientEvent('inventory:client:ItemBox', src, JRS.ItemDef(item), 'remove')
+    DB.AddSupplyItem(companyId, item, quantity)
+    Say(src, L('supply_added_notify', quantity, labelOf(item)), 'success')
 end)
 
----------------------------------------------------------------
--- DRIVER: TAKE SUPPLY (free from company stock)
----------------------------------------------------------------
-RegisterNetEvent('jrs_railroad:takeSupply', function(companyId, itemName, quantity)
+-- the owner and the drivers take items out for free
+RegisterNetEvent('jrs_railroad:takeSupply', function(companyId, item, quantity)
     local src = source
-    local Player = JRS.Player(src)
-    if not Player then return end
+    local player = JRS.Player(src)
+    if not player then return end
 
-    local citizenid = Player.PlayerData.citizenid
     quantity = math.floor(tonumber(quantity) or 1)
-    if quantity <= 0 or quantity > 100 or type(itemName) ~= 'string' then return end
+    if quantity <= 0 or quantity > 100 or type(item) ~= 'string' then return end
 
-    -- Verify player is approved employee OR owner
-    local ownership = DB.GetCompanyOwnership(companyId)
-    local isOwner = ownership and ownership.owner_citizenid == citizenid
-    local isDriver = false
-    if not isOwner then
-        local employee = DB.GetEmployeeByIds(companyId, citizenid)
-        isDriver = employee and employee.status == 'approved'
-    end
+    if not CompanyRole(companyId, player.PlayerData.citizenid) then return Say(src, L('not_authorized'), 'error') end
 
-    if not isOwner and not isDriver then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('not_authorized'), type = 'error', duration = 5000 })
+    local stock = DB.GetSupplyItem(companyId, item)
+    if not stock or stock.quantity < quantity then return Say(src, L('not_enough_stock'), 'error') end
+
+    -- the stock is reduced first (atomically); if the bag cannot take it, it goes back
+    if not DB.TakeSupplyItem(companyId, item, quantity) then return end
+    if not player.Functions.AddItem(item, quantity) then
+        DB.AddSupplyItem(companyId, item, quantity)
         return
     end
 
-    -- Check stock
-    local supply = DB.GetSupplyItem(companyId, itemName)
-    if not supply or supply.quantity < quantity then
-        TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('not_enough_stock'), type = 'error', duration = 5000 })
-        return
-    end
-
-    -- Take from stock (atomic), give to player; put it back if they can't carry it
-    if not DB.TakeSupplyItem(companyId, itemName, quantity) then return end
-    if not Player.Functions.AddItem(itemName, quantity) then
-        DB.AddSupplyItem(companyId, itemName, quantity)
-        return
-    end
-    TriggerClientEvent('inventory:client:ItemBox', src, JRS.ItemDef(itemName), 'add')
-
-    local itemLabel = JRS.ItemDef(itemName) and JRS.ItemDef(itemName).label or itemName
-    TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, { title = L('notify_title'), description = L('supply_taken_notify', quantity, itemLabel), type = 'success', duration = 5000 })
+    TriggerClientEvent('inventory:client:ItemBox', src, JRS.ItemDef(item), 'add')
+    Say(src, L('supply_taken_notify', quantity, labelOf(item)), 'success')
 end)

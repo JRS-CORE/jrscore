@@ -1,696 +1,660 @@
-let stationData = {};
-let activeTab = '';
-let lang = {};
+// jrs_railroad | page: station menu and driver HUD
+// Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 
-// Looks up a locale string sent from Lua (locales/<lang>.json); falls
-// back to the given English default if the key is missing so the UI
-// never breaks even if a translation is incomplete.
-function t(key, fallback) {
-    return (lang && lang[key]) || fallback;
-}
-let isClosing = false;
-let closedByLua = false;
+const state = { data: {}, tab: '', words: {}, closing: false, closedFromGame: false, localised: false };
 
-function nuiFetch(endpoint, data) {
+// a word from locales/<lang>.json; the English text is the fallback so a half translated file still works
+const T = (key, fallback) => (state.words && state.words[key]) || fallback;
+
+const $ = (id) => document.getElementById(id);
+const money = (n) => '$' + Math.floor(n || 0).toLocaleString();
+const ownCompany = () => state.data.station.company;
+
+function post(endpoint, body) {
     return fetch(`https://${GetParentResourceName()}/${endpoint}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data || {})
-    }).then(r => r.json()).catch(e => console.error(e));
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}),
+    }).then((r) => r.json()).catch((e) => console.error(e));
 }
 
-// ========== DOM HELPERS ==========
-// Safe by default: `text` is always rendered as plain text (never parsed as
-// markup), so server/player-controlled strings (company names, driver
-// names, etc.) can never inject HTML/script into the NUI. Use elHTML()
-// instead, and only for developer-authored locale strings that
-// intentionally carry literal markup (e.g. "<b>...</b>").
-function el(tag, cls, text) {
-    const e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (text !== undefined) e.textContent = text;
-    return e;
+// ---------------------------------------------------------------- building blocks
+// Text goes in as text, never as markup, so names typed by players cannot inject anything.
+
+function node(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
 }
 
-function elHTML(tag, cls, html) {
-    const e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (html !== undefined) e.innerHTML = html;
-    return e;
+// only for the few locale strings that carry their own <b> markup
+function markup(tag, html) {
+    const n = document.createElement(tag);
+    n.innerHTML = html;
+    return n;
 }
 
-function rowCard(o) {
-    const card = el('div', 'row-card' + (o.locked ? ' disabled' : ''));
-    if (o.badge) card.appendChild(el('div', 'badge-icon', o.badge));
-    const body = el('div', 'row-body');
-    body.appendChild(el('h3', undefined, o.title));
-    if (o.desc) body.appendChild(el('div', 'row-desc', o.desc));
-    card.appendChild(body);
-    if (o.pill) card.appendChild(el('span', 'pill' + (o.pillClass ? ' ' + o.pillClass : ''), o.pill));
-    if (o.onClick) card.onclick = o.onClick;
-    return card;
-}
-
-function paperCard(o) {
-    const card = el('div', 'paper-card');
-    if (o.title) card.appendChild(el('h3', undefined, o.title));
-    (o.paras || []).forEach(t => card.appendChild(el('p', undefined, t)));
-    if (o.price) {
-        const row = el('div', 'stat-line');
-        row.appendChild(el('span', 'stat-label', o.priceLabel || t('nui_price', 'Price')));
-        row.appendChild(el('span', 'stat-value gold', o.price));
-        card.appendChild(row);
-    }
-    return card;
-}
-
-function statLine(label, value, cls) {
-    const row = el('div', 'stat-line');
-    row.appendChild(el('span', 'stat-label', label));
-    row.appendChild(el('span', 'stat-value' + (cls ? ' ' + cls : ''), value));
+function line(label, value, tone) {
+    const row = node('div', 'stat-line');
+    row.append(node('span', 'stat-label', label), node('span', 'stat-value' + (tone ? ' ' + tone : ''), value));
     return row;
 }
 
-function woodBtn(label, onClick, variant) {
-    const b = el('button', 'wood-btn' + (variant ? ' ' + variant : ''), label);
+function button(label, onClick, tone) {
+    const b = node('button', 'wood-btn' + (tone ? ' ' + tone : ''), label);
     if (onClick) b.onclick = onClick;
     return b;
 }
 
-function field(label, input) {
-    const f = el('div', 'field');
-    f.appendChild(el('label', 'field-label', label));
-    f.appendChild(input);
-    return f;
+function labelled(label, input) {
+    const box = node('div', 'field');
+    box.append(node('label', 'field-label', label), input);
+    return box;
 }
 
-// ========== STATION MENU ==========
+function numberInput(value, min, max) {
+    const i = node('input', 'field-input');
+    i.type = 'number';
+    i.min = min;
+    if (max !== undefined) i.max = max;
+    i.value = value;
+    return i;
+}
+
+function row(o) {
+    const card = node('div', 'row-card' + (o.locked ? ' disabled' : ''));
+    if (o.badge) card.append(node('div', 'badge-icon', o.badge));
+
+    const body = node('div', 'row-body');
+    body.append(node('h3', undefined, o.title));
+    if (o.desc) body.append(node('div', 'row-desc', o.desc));
+    card.append(body);
+
+    if (o.pill) card.append(node('span', 'pill' + (o.tone ? ' ' + o.tone : ''), o.pill));
+    if (o.click) card.onclick = o.click;
+    return card;
+}
+
+function paper(o) {
+    const card = node('div', 'paper-card');
+    if (o.title) card.append(node('h3', undefined, o.title));
+    (o.paras || []).forEach((p) => card.append(node('p', undefined, p)));
+    if (o.price) card.append(line(o.priceLabel || T('nui_price', 'Price'), o.price, 'gold'));
+    return card;
+}
+
+function rankName(rank) {
+    const r = (state.data.ranks || {})[rank];
+    return r ? r.label : T('nui_rank_prefix', 'Rank ') + rank;
+}
+
+// "xp / needed for next rank", or MAX
+function xpText(membership) {
+    const next = (state.data.ranks || {})[(membership.rank || 1) + 1];
+    return String(membership.xp || 0) + (next ? ' / ' + next.xpRequired : T('nui_max_suffix', ' (MAX)'));
+}
+
+// a click on a row fills the right column; this empties it and gives back the column
+function freshDetails() {
+    const d = $('stationDetails');
+    d.innerHTML = '';
+    return d;
+}
+
+// ---------------------------------------------------------------- opening and closing
+
 function openStation(data) {
-    stationData = data;
-    lang = data.lang || lang || {};
-    applyStaticLocale();
-    document.getElementById('stationName').textContent = data.station.label;
-    document.getElementById('stationCompany').textContent = data.station.companyLabel;
-    activeTab = '';
-    renderTabs();
-    document.getElementById('stationUI').classList.remove('hidden');
-    isClosing = false;
+    state.data = data;
+    state.words = data.lang || state.words || {};
+    translatePage();
+
+    $('stationName').textContent = data.station.label;
+    $('stationCompany').textContent = data.station.companyLabel;
+    state.tab = '';
+    drawTabs();
+    $('stationUI').classList.remove('hidden');
+    state.closing = false;
 }
 
 function closeStation() {
-    if (isClosing) return;
-    isClosing = true;
-    document.getElementById('stationUI').classList.add('hidden');
-    if (!closedByLua) {
-        nuiFetch('closeStation').catch(() => {});
-    }
-    closedByLua = false;
-    setTimeout(() => { isClosing = false; }, 500);
+    if (state.closing) return;
+    state.closing = true;
+    $('stationUI').classList.add('hidden');
+    if (!state.closedFromGame) post('closeStation');
+    state.closedFromGame = false;
+    setTimeout(() => { state.closing = false; }, 500);
 }
 
-// Safety: force-close if UI gets stuck
-function safeClose() {
-    isClosing = false;
-    closedByLua = false;
-    document.getElementById('stationUI').classList.add('hidden');
-    nuiFetch('closeStation').catch(() => {});
+// buttons that act and then leave the menu
+function actAndClose(endpoint, body) {
+    post(endpoint, body);
+    closeStation();
 }
 
-// ========== ROLE-BASED TABS ==========
-function renderTabs() {
-    const tabsEl = document.getElementById('stationTabs');
-    tabsEl.innerHTML = '';
-    const role = stationData.playerRole;
-    let tabs = [];
+// ---------------------------------------------------------------- tabs (which ones depend on the role)
 
-    if (role === 'unowned') {
-        tabs = [{ id: 'buycompany', label: t('nui_tab_buy_company', 'Buy Company') }, { id: 'companyinfo', label: t('nui_tab_company_info', 'Company Info') }];
-    } else if (role === 'owner') {
-        tabs = [
-            { id: 'dashboard', label: t('nui_tab_my_company', 'My Company') },
-            { id: 'drivers', label: t('nui_tab_manage_drivers', 'Manage Drivers') },
-            { id: 'trains', label: t('nui_tab_company_trains', 'Company Trains') },
-            { id: 'upgrades', label: t('nui_tab_upgrades', 'Upgrades') },
-            { id: 'supplies', label: t('nui_tab_supplies', 'Supplies') },
-            { id: 'missions', label: t('nui_tab_missions', 'Missions') },
-            { id: 'records', label: t('nui_tab_records', 'Records') },
-        ];
-    } else if (role === 'driver') {
-        tabs = [
-            { id: 'trains', label: t('nui_tab_company_trains', 'Company Trains') },
-            { id: 'upgrades', label: t('nui_tab_upgrades', 'Upgrades') },
-            { id: 'supplies', label: t('nui_tab_supplies', 'Supplies') },
-            { id: 'missions', label: t('nui_tab_missions', 'Missions') },
-            { id: 'mystats', label: t('nui_tab_my_stats', 'My Stats') },
-            { id: 'records', label: t('nui_tab_records', 'Records') },
-        ];
-    } else if (role === 'pending') {
-        tabs = [{ id: 'pending', label: t('nui_tab_application_pending', 'Application Pending') }, { id: 'companyinfo', label: t('nui_tab_company_info', 'Company Info') }];
-    } else {
-        tabs = [{ id: 'apply', label: t('nui_tab_apply_as_driver', 'Apply as Driver') }, { id: 'companyinfo', label: t('nui_tab_company_info', 'Company Info') }];
-    }
+const OWNER_TABS = ['dashboard', 'drivers', 'trains', 'upgrades', 'supplies', 'missions', 'records'];
+const DRIVER_TABS = ['trains', 'upgrades', 'supplies', 'missions', 'mystats', 'records'];
 
-    if (!activeTab || !tabs.find(t => t.id === activeTab)) activeTab = tabs[0].id;
-    const current = tabs.find(t => t.id === activeTab);
-    document.getElementById('stationListTitle').textContent = current ? current.label : t('nui_options', 'Options');
-    document.getElementById('stationDetailTitle').textContent = t('nui_details', 'Details');
+function tabNames() {
+    return {
+        buycompany: T('nui_tab_buy_company', 'Buy Company'),
+        companyinfo: T('nui_tab_company_info', 'Company Info'),
+        dashboard: T('nui_tab_my_company', 'My Company'),
+        drivers: T('nui_tab_manage_drivers', 'Manage Drivers'),
+        trains: T('nui_tab_company_trains', 'Company Trains'),
+        upgrades: T('nui_tab_upgrades', 'Upgrades'),
+        supplies: T('nui_tab_supplies', 'Supplies'),
+        missions: T('nui_tab_missions', 'Missions'),
+        records: T('nui_tab_records', 'Records'),
+        mystats: T('nui_tab_my_stats', 'My Stats'),
+        pending: T('nui_tab_application_pending', 'Application Pending'),
+        apply: T('nui_tab_apply_as_driver', 'Apply as Driver'),
+    };
+}
 
-    tabs.forEach(tab => {
-        const btn = document.createElement('button');
-        btn.className = 'tab-btn' + (activeTab === tab.id ? ' active' : '');
-        btn.textContent = tab.label;
-        btn.onclick = () => { activeTab = tab.id; renderTabs(); };
-        tabsEl.appendChild(btn);
+function tabsFor(role) {
+    if (role === 'unowned') return ['buycompany', 'companyinfo'];
+    if (role === 'owner') return OWNER_TABS;
+    if (role === 'driver') return DRIVER_TABS;
+    if (role === 'pending') return ['pending', 'companyinfo'];
+    return ['apply', 'companyinfo'];
+}
+
+function drawTabs() {
+    const names = tabNames();
+    const ids = tabsFor(state.data.playerRole);
+    if (!ids.includes(state.tab)) state.tab = ids[0];
+
+    $('stationListTitle').textContent = names[state.tab];
+    $('stationDetailTitle').textContent = T('nui_details', 'Details');
+
+    const bar = $('stationTabs');
+    bar.innerHTML = '';
+    ids.forEach((id) => {
+        const b = node('button', 'tab-btn' + (id === state.tab ? ' active' : ''), names[id]);
+        b.onclick = () => { state.tab = id; drawTabs(); };
+        bar.append(b);
     });
-    renderContent();
+    drawContent();
 }
 
-function renderContent() {
-    const content = document.getElementById('stationContent');
-    const details = document.getElementById('stationDetails');
-    content.innerHTML = '';
+function drawContent() {
+    const list = $('stationContent');
+    const details = $('stationDetails');
+    list.innerHTML = '';
     details.innerHTML = '';
 
-    const fn = {
-        buycompany: renderBuyCompany, dashboard: renderDashboard, drivers: renderDrivers,
-        trains: renderTrains, supplies: renderSupplies, missions: renderMissions,
-        mystats: renderMyStats, apply: renderApply, pending: renderPending, companyinfo: renderCompanyInfo,
-        records: renderRecords, upgrades: renderUpgrades,
+    const pages = {
+        buycompany: pageBuy, dashboard: pageDashboard, drivers: pageDrivers, trains: pageTrains,
+        supplies: pageSupplies, missions: pageMissions, mystats: pageMyStats, apply: pageApply,
+        pending: pagePending, companyinfo: pageInfo, records: pageRecords, upgrades: pageUpgrades,
     };
-    if (fn[activeTab]) fn[activeTab](content, details);
+    if (pages[state.tab]) pages[state.tab](list, details);
 }
 
-// ========== BUY COMPANY (unowned) ==========
-function renderBuyCompany(content, details) {
-    const comp = stationData.companies[stationData.station.company];
-    content.appendChild(paperCard({
-        title: comp.label,
-        paras: [comp.description],
-        price: '$' + stationData.companyPurchasePrice.toLocaleString(),
-        priceLabel: t('nui_price', 'Price'),
+// ---------------------------------------------------------------- pages: strangers
+
+function pageBuy(list, details) {
+    const company = state.data.companies[ownCompany()];
+    list.append(paper({
+        title: company.label, paras: [company.description],
+        price: '$' + state.data.companyPurchasePrice.toLocaleString(), priceLabel: T('nui_price', 'Price'),
     }));
-    content.appendChild(el('p', 'hint', t('nui_buycompany_hint', 'Purchase this company to hire drivers, manage trains, and earn from missions.')));
-    details.appendChild(woodBtn(t('nui_purchase_company', 'Purchase Company'), () => { nuiFetch('buyCompany', { companyId: stationData.station.company }).catch(() => {}); closeStation(); }));
+    list.append(node('p', 'hint', T('nui_buycompany_hint', 'Purchase this company to hire drivers, manage trains, and earn from missions.')));
+    details.append(button(T('nui_purchase_company', 'Purchase Company'), () => actAndClose('buyCompany', { companyId: ownCompany() })));
 }
 
-// ========== OWNER DASHBOARD ==========
-function renderDashboard(content, details) {
-    const o = stationData.ownership || {};
-    const bal = Math.floor(stationData.cashRegister || 0);
-    const empCount = (stationData.employees || []).filter(e => e.status === 'approved').length;
-    const pendCount = (stationData.pendingApps || []).length;
-    const trainCount = (stationData.companyTrains || []).length;
-    const membership = stationData.myMembership || {};
-    const ranks = stationData.ranks || {};
-    const rankLabel = ranks[membership.rank] ? ranks[membership.rank].label : t('nui_rank_prefix', 'Rank ') + (membership.rank || 1);
-    const nextRank = ranks[(membership.rank || 1) + 1];
-
-    content.appendChild(statLine(t('nui_company', 'Company'), o.company_name || stationData.station.companyLabel));
-    content.appendChild(statLine(t('nui_owner', 'Owner'), o.owner_name || t('nui_you', 'You')));
-    content.appendChild(statLine(t('nui_cash_register', 'Cash Register'), '$' + bal.toLocaleString(), 'gold'));
-    content.appendChild(statLine(t('nui_drivers', 'Drivers'), empCount + ' ' + t('nui_word_approved', 'approved') + ', ' + pendCount + ' ' + t('nui_word_pending', 'pending')));
-    content.appendChild(statLine(t('nui_trains', 'Trains'), trainCount));
-
-    content.appendChild(el('p', 'lead', t('nui_your_progress', 'Your Progress')));
-    content.appendChild(statLine(t('nui_rank', 'Rank'), rankLabel));
-    content.appendChild(statLine(t('nui_xp', 'XP'), String(membership.xp || 0) + (nextRank ? ' / ' + nextRank.xpRequired : t('nui_max_suffix', ' (MAX)'))));
-    content.appendChild(statLine(t('nui_tab_missions', 'Missions'), membership.missions_completed || 0));
-
-    // Withdraw
-    const wInput = el('input', 'field-input');
-    wInput.type = 'number'; wInput.min = 1; wInput.max = bal; wInput.value = bal;
-    details.appendChild(field(t('nui_withdraw_amount', 'Withdraw Amount'), wInput));
-    details.appendChild(woodBtn(t('nui_withdraw', 'Withdraw'), () => {
-        const amt = parseInt(wInput.value) || 0;
-        if (amt > 0) {
-            nuiFetch('withdrawFunds', { companyId: stationData.station.company, amount: amt }).then(r => {
-                if (r && r.cashRegister !== undefined) stationData.cashRegister = r.cashRegister;
-                renderContent();
-            }).catch(() => {});
-        }
-    }));
-
-    // Rename
-    const rInput = el('input', 'field-input');
-    rInput.type = 'text'; rInput.maxLength = 50; rInput.value = o.company_name || '';
-    details.appendChild(field(t('nui_rename_company', 'Rename Company'), rInput));
-    details.appendChild(woodBtn(t('nui_rename', 'Rename'), () => {
-        const name = rInput.value.trim();
-        if (name.length >= 3) { nuiFetch('renameCompany', { companyId: stationData.station.company, newName: name }).catch(() => {}); closeStation(); }
-    }));
-
-    // Sell
-    details.appendChild(woodBtn(t('nui_sell_company', 'Sell Company'), () => { nuiFetch('sellCompany', { companyId: stationData.station.company }).catch(() => {}); closeStation(); }, 'danger'));
+function pageApply(list, details) {
+    const company = state.data.companies[ownCompany()];
+    list.append(paper({ title: company.label, paras: [company.description, T('nui_hiring_text', 'This company is hiring! Apply to become a train driver.')] }));
+    details.append(button(T('nui_tab_apply_as_driver', 'Apply as Driver'), () => actAndClose('applyAsDriver', { companyId: ownCompany() })));
 }
 
-// ========== MANAGE DRIVERS (owner) ==========
-function renderDrivers(content, details) {
-    const pending = stationData.pendingApps || [];
-    const employees = (stationData.employees || []).filter(e => e.status === 'approved');
-    const ranks = stationData.ranks || {};
+function pagePending(list) {
+    const box = node('div', 'paper-card');
+    box.append(node('h3', undefined, T('nui_tab_application_pending', 'Application Pending')),
+        node('p', 'hint', T('nui_waiting_approval', 'Waiting for owner approval. Check back later!')));
+    list.append(box);
+}
 
-    if (pending.length > 0) {
-        content.appendChild(el('p', 'lead', t('nui_pending_applications', 'Pending Applications') + ' (' + pending.length + ')'));
-        pending.forEach(app => {
-            const card = rowCard({
-                title: app.firstname + ' ' + app.lastname,
-                badge: '●',
-                pill: t('nui_pending_pill', 'Pending'),
-                pillClass: 'warn',
-                onClick: () => {
-                    details.innerHTML = '';
-                    details.appendChild(el('h3', undefined, app.firstname + ' ' + app.lastname));
-                    details.appendChild(el('p', 'hint', t('nui_applied_to_be_driver', 'Applied to be a driver.')));
-                    details.appendChild(woodBtn(t('nui_approve', 'Approve'), () => nuiFetch('approveDriver', { companyId: stationData.station.company, employeeId: app.id }).then(r => { if (r) { stationData.employees = r.employees; stationData.pendingApps = r.pendingApps; renderContent(); } })));
-                    details.appendChild(woodBtn(t('nui_reject', 'Reject'), () => nuiFetch('rejectDriver', { companyId: stationData.station.company, employeeId: app.id }).then(r => { if (r) { stationData.pendingApps = r.pendingApps; renderContent(); } }), 'danger'));
-                },
-            });
-            content.appendChild(card);
+function pageInfo(list) {
+    const company = state.data.companies[ownCompany()];
+    const owned = state.data.ownership;
+    list.append(paper({
+        title: owned && owned.company_name ? owned.company_name : company.label,
+        paras: [company.description, owned ? T('nui_owner_colon', 'Owner: ') + owned.owner_name : T('nui_not_owned', 'Not owned.')],
+    }));
+}
+
+// ---------------------------------------------------------------- pages: the owner
+
+function pageDashboard(list, details) {
+    const d = state.data;
+    const owned = d.ownership || {};
+    const balance = Math.floor(d.cashRegister || 0);
+    const approved = (d.employees || []).filter((e) => e.status === 'approved').length;
+    const membership = d.myMembership || {};
+
+    list.append(
+        line(T('nui_company', 'Company'), owned.company_name || d.station.companyLabel),
+        line(T('nui_owner', 'Owner'), owned.owner_name || T('nui_you', 'You')),
+        line(T('nui_cash_register', 'Cash Register'), money(balance), 'gold'),
+        line(T('nui_drivers', 'Drivers'), approved + ' ' + T('nui_word_approved', 'approved') + ', ' + (d.pendingApps || []).length + ' ' + T('nui_word_pending', 'pending')),
+        line(T('nui_trains', 'Trains'), (d.companyTrains || []).length),
+        node('p', 'lead', T('nui_your_progress', 'Your Progress')),
+        line(T('nui_rank', 'Rank'), rankName(membership.rank || 1)),
+        line(T('nui_xp', 'XP'), xpText(membership)),
+        line(T('nui_tab_missions', 'Missions'), membership.missions_completed || 0));
+
+    const amount = numberInput(balance, 1, balance);
+    details.append(labelled(T('nui_withdraw_amount', 'Withdraw Amount'), amount));
+    details.append(button(T('nui_withdraw', 'Withdraw'), () => {
+        const sum = parseInt(amount.value, 10) || 0;
+        if (sum <= 0) return;
+        post('withdrawFunds', { companyId: ownCompany(), amount: sum }).then((r) => {
+            if (r && r.cashRegister !== undefined) d.cashRegister = r.cashRegister;
+            drawContent();
         });
-    }
+    }));
 
-    content.appendChild(el('p', 'lead', t('nui_active_drivers', 'Active Drivers') + ' (' + employees.length + ')'));
-    if (employees.length === 0) {
-        content.appendChild(el('p', 'hint', t('nui_no_active_drivers', 'No active drivers.')));
-    } else {
-        employees.forEach(emp => {
-            const rankLabel = ranks[emp.rank] ? ranks[emp.rank].label : t('nui_rank_prefix', 'Rank ') + emp.rank;
-            const card = rowCard({
-                title: emp.firstname + ' ' + emp.lastname,
-                badge: '●',
-                pill: rankLabel,
-                onClick: () => {
-                    details.innerHTML = '';
-                    details.appendChild(el('h3', undefined, emp.firstname + ' ' + emp.lastname));
-                    const cRankLabel = ranks[emp.company_rank] ? ranks[emp.company_rank].label : t('nui_rank_prefix', 'Rank ') + emp.company_rank;
-                    details.appendChild(statLine(t('nui_employee_rank', 'Employee Rank'), rankLabel));
-                    details.appendChild(statLine(t('nui_company_rank_stat', 'Company Rank'), cRankLabel));
-                    details.appendChild(statLine(t('nui_company_xp', 'Company XP'), emp.company_xp));
-                    details.appendChild(statLine(t('nui_company_missions', 'Company Missions'), emp.company_missions));
-                    details.appendChild(statLine(t('nui_earnings', 'Earnings'), '$' + Math.floor(emp.total_earnings), 'gold'));
-                    details.appendChild(woodBtn(t('nui_fire_driver', 'Fire Driver'), () => { nuiFetch('fireDriver', { companyId: stationData.station.company, employeeId: emp.id }).then(r => { if (r) { stationData.employees = r.employees; renderContent(); } }).catch(() => {}); }, 'danger'));
-                },
-            });
-            content.appendChild(card);
-        });
-    }
+    const name = node('input', 'field-input');
+    name.type = 'text';
+    name.maxLength = 50;
+    name.value = owned.company_name || '';
+    details.append(labelled(T('nui_rename_company', 'Rename Company'), name));
+    details.append(button(T('nui_rename', 'Rename'), () => {
+        const text = name.value.trim();
+        if (text.length >= 3) actAndClose('renameCompany', { companyId: ownCompany(), newName: text });
+    }));
+
+    details.append(button(T('nui_sell_company', 'Sell Company'), () => actAndClose('sellCompany', { companyId: ownCompany() }), 'danger'));
 }
 
-// ========== COMPANY TRAINS (owner + driver) ==========
-function renderTrains(content, details) {
-    const configs = stationData.companyTrainConfigs || [];
-    const ranks = stationData.ranks || {};
-    const role = stationData.playerRole;
+function personName(p) { return p.firstname + ' ' + p.lastname; }
 
-    // Get driver rank (owner = max rank 5, driver = their rank)
-    let playerRank = 5;
-    if (role === 'driver' && stationData.myEmployeeData) {
-        playerRank = stationData.myEmployeeData.rank || 1;
+function pageDrivers(list) {
+    const d = state.data;
+    const pending = d.pendingApps || [];
+    const active = (d.employees || []).filter((e) => e.status === 'approved');
+
+    if (pending.length) {
+        list.append(node('p', 'lead', T('nui_pending_applications', 'Pending Applications') + ' (' + pending.length + ')'));
+        pending.forEach((app) => list.append(row({
+            title: personName(app), badge: '●', pill: T('nui_pending_pill', 'Pending'), tone: 'warn',
+            click: () => {
+                const panel = freshDetails();
+                panel.append(node('h3', undefined, personName(app)), node('p', 'hint', T('nui_applied_to_be_driver', 'Applied to be a driver.')));
+                panel.append(button(T('nui_approve', 'Approve'), () => post('approveDriver', { companyId: ownCompany(), employeeId: app.id }).then((r) => {
+                    if (r) { d.employees = r.employees; d.pendingApps = r.pendingApps; drawContent(); }
+                })));
+                panel.append(button(T('nui_reject', 'Reject'), () => post('rejectDriver', { companyId: ownCompany(), employeeId: app.id }).then((r) => {
+                    if (r) { d.pendingApps = r.pendingApps; drawContent(); }
+                }), 'danger'));
+            },
+        })));
     }
 
-    if (configs.length === 0) {
-        content.appendChild(el('p', 'hint', t('nui_no_trains_available', 'No trains available for this company.')));
-        return;
-    }
+    list.append(node('p', 'lead', T('nui_active_drivers', 'Active Drivers') + ' (' + active.length + ')'));
+    if (!active.length) return list.append(node('p', 'hint', T('nui_no_active_drivers', 'No active drivers.')));
 
-    configs.forEach(tc => {
-        const canUse = playerRank >= tc.requiredRank;
-        const rankLabel = ranks[tc.requiredRank] ? ranks[tc.requiredRank].label : t('nui_rank_prefix', 'Rank ') + tc.requiredRank;
-        const card = rowCard({
-            title: tc.label,
-            desc: tc.hasPassengerCars ? t('nui_passenger_train', 'Passenger Train') : t('nui_goods_general', 'Goods & General'),
-            badge: '◼',
-            pill: t('nui_spd_short_prefix', 'Spd ') + tc.maxSpeed,
-            pillClass: canUse ? '' : 'warn',
-            locked: !canUse,
-            onClick: () => {
-                details.innerHTML = '';
-                details.appendChild(el('h3', undefined, tc.label));
-                details.appendChild(statLine(t('nui_max_speed', 'Max Speed'), tc.maxSpeed));
-                details.appendChild(statLine(t('nui_max_fuel', 'Max Fuel'), tc.maxFuel));
-                details.appendChild(statLine(t('nui_max_water', 'Max Water'), tc.maxWater));
-                details.appendChild(statLine(t('hud_condition', 'Condition'), tc.maxCondition));
-                details.appendChild(statLine(t('nui_required_rank', 'Required Rank'), rankLabel));
-                details.appendChild(statLine(t('nui_upgradeable', 'Upgradeable'), tc.upgradeable ? t('yes', 'Yes') : t('no', 'No')));
+    active.forEach((emp) => list.append(row({
+        title: personName(emp), badge: '●', pill: rankName(emp.rank),
+        click: () => {
+            const panel = freshDetails();
+            panel.append(node('h3', undefined, personName(emp)),
+                line(T('nui_employee_rank', 'Employee Rank'), rankName(emp.rank)),
+                line(T('nui_company_rank_stat', 'Company Rank'), rankName(emp.company_rank)),
+                line(T('nui_company_xp', 'Company XP'), emp.company_xp),
+                line(T('nui_company_missions', 'Company Missions'), emp.company_missions),
+                line(T('nui_earnings', 'Earnings'), money(emp.total_earnings), 'gold'));
+            panel.append(button(T('nui_fire_driver', 'Fire Driver'), () => post('fireDriver', { companyId: ownCompany(), employeeId: emp.id }).then((r) => {
+                if (r) { d.employees = r.employees; drawContent(); }
+            }), 'danger'));
+        },
+    })));
+}
 
-                if (!canUse) {
-                    details.appendChild(el('p', 'hint warn', t('nui_need_rank_prefix', 'You need ') + rankLabel + t('nui_need_rank_suffix', ' rank to use this train.')));
-                } else if (stationData.canSpawn) {
-                    details.appendChild(el('p', 'lead', t('nui_deploy_at_station', 'Deploy at This Station')));
-                    const actions = el('div', 'detail-actions');
-                    const dirLabels = [t('direction_forward', 'Forward'), t('direction_reverse', 'Reverse')];
-                    dirLabels.forEach((dir, i) => {
-                        actions.appendChild(woodBtn((i === 0 ? '\u25B6' : '\u25C0') + t('nui_deploy_word', ' Deploy ') + dir, () => nuiFetch('spawnTrain', { trainIndex: tc.index, direction: i === 1 })));
-                    });
-                    details.appendChild(actions);
-                    details.appendChild(el('p', 'hint', t('nui_spawn_hint', 'Train spawns at 50% fuel, water & condition.')));
+// ---------------------------------------------------------------- pages: trains
+
+// the owner may use every train; a driver only those up to their own rank
+function myTopRank() {
+    const d = state.data;
+    return d.playerRole === 'driver' && d.myEmployeeData ? (d.myEmployeeData.rank || 1) : 5;
+}
+
+function deployButtons(panel, train) {
+    panel.append(node('p', 'lead', T('nui_deploy_at_station', 'Deploy at This Station')));
+
+    const actions = node('div', 'detail-actions');
+    [[T('direction_forward', 'Forward'), '▶', false], [T('direction_reverse', 'Reverse'), '◀', true]].forEach(([name, arrow, reverse]) => {
+        actions.append(button(arrow + T('nui_deploy_word', ' Deploy ') + name, () => post('spawnTrain', { trainIndex: train.index, direction: reverse })));
+    });
+    panel.append(actions, node('p', 'hint', T('nui_spawn_hint', 'Train spawns at 50% fuel, water & condition.')));
+}
+
+function pageTrains(list) {
+    const trains = state.data.companyTrainConfigs || [];
+    if (!trains.length) return list.append(node('p', 'hint', T('nui_no_trains_available', 'No trains available for this company.')));
+
+    const mine = myTopRank();
+    trains.forEach((train) => {
+        const allowed = mine >= train.requiredRank;
+        list.append(row({
+            title: train.label,
+            desc: train.hasPassengerCars ? T('nui_passenger_train', 'Passenger Train') : T('nui_goods_general', 'Goods & General'),
+            badge: '◼', pill: T('nui_spd_short_prefix', 'Spd ') + train.maxSpeed, tone: allowed ? '' : 'warn', locked: !allowed,
+            click: () => {
+                const panel = freshDetails();
+                panel.append(node('h3', undefined, train.label),
+                    line(T('nui_max_speed', 'Max Speed'), train.maxSpeed),
+                    line(T('nui_max_fuel', 'Max Fuel'), train.maxFuel),
+                    line(T('nui_max_water', 'Max Water'), train.maxWater),
+                    line(T('hud_condition', 'Condition'), train.maxCondition),
+                    line(T('nui_required_rank', 'Required Rank'), rankName(train.requiredRank)),
+                    line(T('nui_upgradeable', 'Upgradeable'), train.upgradeable ? T('yes', 'Yes') : T('no', 'No')));
+
+                if (!allowed) {
+                    panel.append(node('p', 'hint warn', T('nui_need_rank_prefix', 'You need ') + rankName(train.requiredRank) + T('nui_need_rank_suffix', ' rank to use this train.')));
+                } else if (state.data.canSpawn) {
+                    deployButtons(panel, train);
                 } else {
-                    details.appendChild(el('p', 'hint', t('train_already_spawned', 'You already have a train deployed.')));
+                    panel.append(node('p', 'hint', T('train_already_spawned', 'You already have a train deployed.')));
                 }
             },
-        });
-        content.appendChild(card);
+        }));
     });
 }
 
-// ========== SUPPLIES (owner: add, driver/owner: take) ==========
-function renderSupplies(content, details) {
-    const supplies = stationData.supplies || [];
-    const items = stationData.supplyItems || [];
-    const role = stationData.playerRole;
-    const companyId = stationData.station.company;
+// ---------------------------------------------------------------- pages: supplies
 
-    if (items.length === 0) {
-        content.appendChild(el('p', 'hint', t('nui_no_supplies_configured', 'No supplies configured.')));
-        return;
-    }
+function refreshSupplies(r) {
+    if (r && r.supplies) { state.data.supplies = r.supplies; drawContent(); }
+}
 
-    items.forEach(si => {
-        const stock = supplies.find(s => s.item_name === si.item);
-        const qty = stock ? stock.quantity : 0;
-        const card = rowCard({
-            title: si.label,
-            badge: '□',
-            pill: t('nui_stock_prefix', 'Stock ') + qty,
-            pillClass: qty > 0 ? 'good' : 'bad',
-            onClick: () => {
-                details.innerHTML = '';
-                details.appendChild(el('h3', undefined, si.label));
-                details.appendChild(statLine(t('nui_in_stock', 'In Stock'), qty, qty > 0 ? 'ok' : 'bad'));
-                if (role === 'owner') {
-                    const addInput = el('input', 'field-input');
-                    addInput.type = 'number'; addInput.min = 1; addInput.value = 5;
-                    details.appendChild(field(t('nui_add_quantity', 'Add Quantity'), addInput));
-                    details.appendChild(woodBtn(t('nui_add_from_inventory', 'Add from Inventory'), () => {
-                        const amt = parseInt(addInput.value) || 0;
-                        if (amt > 0) nuiFetch('addSupply', { companyId, itemName: si.item, quantity: amt }).then(r => { if (r && r.supplies) { stationData.supplies = r.supplies; renderContent(); } }).catch(() => {});
+function pageSupplies(list) {
+    const d = state.data;
+    const items = d.supplyItems || [];
+    if (!items.length) return list.append(node('p', 'hint', T('nui_no_supplies_configured', 'No supplies configured.')));
+
+    items.forEach((entry) => {
+        const stocked = (d.supplies || []).find((s) => s.item_name === entry.item);
+        const qty = stocked ? stocked.quantity : 0;
+
+        list.append(row({
+            title: entry.label, badge: '□', pill: T('nui_stock_prefix', 'Stock ') + qty, tone: qty > 0 ? 'good' : 'bad',
+            click: () => {
+                const panel = freshDetails();
+                panel.append(node('h3', undefined, entry.label), line(T('nui_in_stock', 'In Stock'), qty, qty > 0 ? 'ok' : 'bad'));
+
+                if (d.playerRole === 'owner') {
+                    const amount = numberInput(5, 1);
+                    panel.append(labelled(T('nui_add_quantity', 'Add Quantity'), amount));
+                    panel.append(button(T('nui_add_from_inventory', 'Add from Inventory'), () => {
+                        const n = parseInt(amount.value, 10) || 0;
+                        if (n > 0) post('addSupply', { companyId: ownCompany(), itemName: entry.item, quantity: n }).then(refreshSupplies);
                     }));
                 }
-                details.appendChild(woodBtn(t('nui_take_one', 'Take 1'), () => nuiFetch('takeSupply', { companyId, itemName: si.item, quantity: 1 }).then(r => { if (r && r.supplies) { stationData.supplies = r.supplies; renderContent(); } }), 'muted'));
+                panel.append(button(T('nui_take_one', 'Take 1'), () => post('takeSupply', { companyId: ownCompany(), itemName: entry.item, quantity: 1 }).then(refreshSupplies), 'muted'));
             },
-        });
-        content.appendChild(card);
+        }));
     });
 }
 
-// ========== MISSIONS (one-click jobs: script auto-picks closest stop) ==========
-function renderMissions(content, details) {
-    const mCfg = stationData.missions || {};
-    const deliveryCfg = mCfg.delivery || {};
-    const maintenanceCfg = mCfg.maintenance || {};
-    const deliveryLegs = deliveryCfg.jobLegs || 1;
-    const maintenanceLegs = maintenanceCfg.jobLegs || 1;
+// ---------------------------------------------------------------- pages: missions
 
-    // -- DELIVERY JOB --
-    content.appendChild(el('p', 'lead', t('nui_delivery_missions_heading', 'Delivery Missions · Rank 1+')));
-    content.appendChild(rowCard({
-        title: t('nui_start_delivery_job', 'Start a Delivery Job'),
-        desc: t('nui_autorouted_prefix', 'Auto-routed ') + deliveryLegs + t('nui_autorouted_suffix', '-stop job chain, closest stop first.'),
-        badge: '✦',
-        pill: '$' + (deliveryCfg.basePay || 15) + t('nui_plus_per_stop', '+/stop'),
-        pillClass: 'gold',
-        onClick: () => {
-            details.innerHTML = '';
-            details.appendChild(el('h3', undefined, t('nui_cargo_delivery_job', 'Cargo Delivery Job')));
-            details.appendChild(elHTML('p', undefined, t('nui_dispatch_prefix', 'The train dispatcher will send you to the <b>') + deliveryLegs + t('nui_dispatch_suffix', '</b> closest delivery stops, one after another.')));
-            details.appendChild(elHTML('p', undefined, t('nui_basepay_prefix', 'Base pay: <span class="stat-value gold">$') + (deliveryCfg.basePay || 15) + t('nui_basepay_suffix', '</span> + destination bonus, per stop.')));
-            details.appendChild(el('p', 'hint', t('nui_pay_split', 'Pay split: 50% to you, 50% to company.')));
-            details.appendChild(woodBtn(t('nui_start_delivery_job', 'Start a Delivery Job'), () => nuiFetch('startMission', { missionType: 'delivery' })));
-        },
-    }));
-
-    // -- RAIL MAINTENANCE JOB --
-    content.appendChild(el('p', 'lead', t('nui_rail_maintenance_heading', 'Rail Maintenance · Rank 3+')));
-    content.appendChild(rowCard({
-        title: t('nui_start_maintenance_job', 'Start a Maintenance Job'),
-        desc: t('nui_traveltoprefix', 'Travel to ') + maintenanceLegs + t('nui_traveltosuffix', ' damaged sections, one after another.'),
-        badge: '✦',
-        pill: '$' + (maintenanceCfg.basePay || 25) + t('nui_per_stop', '/stop'),
-        pillClass: 'gold',
-        onClick: () => {
-            details.innerHTML = '';
-            details.appendChild(el('h3', undefined, t('nui_rail_maintenance_job', 'Rail Maintenance Job')));
-            details.appendChild(elHTML('p', undefined, t('nui_traveltotheprefix', 'Travel to the <b>') + maintenanceLegs + t('nui_traveltothesuffix', '</b> closest damaged track sections, one after another, and repair each one.')));
-            details.appendChild(el('p', 'hint', t('nui_pay_split', 'Pay split: 50% to you, 50% to company.')));
-            details.appendChild(woodBtn(t('nui_start_maintenance_job', 'Start a Maintenance Job'), () => nuiFetch('startMission', { missionType: 'maintenance' })));
+function jobCard(list, spec) {
+    list.append(node('p', 'lead', spec.heading));
+    list.append(row({
+        title: spec.title, desc: spec.desc, badge: '✦', pill: spec.pill, tone: 'gold',
+        click: () => {
+            const panel = freshDetails();
+            panel.append(node('h3', undefined, spec.detailTitle), ...spec.body);
+            panel.append(node('p', 'hint', T('nui_pay_split', 'Pay split: 50% to you, 50% to company.')));
+            panel.append(button(spec.title, () => post('startMission', { missionType: spec.kind })));
         },
     }));
 }
 
-// ========== MY STATS (driver) ==========
-function renderMyStats(content) {
-    const emp = stationData.myEmployeeData;
-    const membership = stationData.myMembership || {};
-    const ranks = stationData.ranks || {};
+function pageMissions(list) {
+    const missions = state.data.missions || {};
+    const delivery = missions.delivery || {};
+    const upkeep = missions.maintenance || {};
+    const deliveryLegs = delivery.jobLegs || 1;
+    const upkeepLegs = upkeep.jobLegs || 1;
+    const deliveryPay = delivery.basePay || 15;
 
-    const rankLabel = ranks[membership.rank] ? ranks[membership.rank].label : t('nui_rank_prefix', 'Rank ') + (membership.rank || 1);
-    const nextRank = ranks[(membership.rank || 1) + 1];
+    jobCard(list, {
+        kind: 'delivery',
+        heading: T('nui_delivery_missions_heading', 'Delivery Missions · Rank 1+'),
+        title: T('nui_start_delivery_job', 'Start a Delivery Job'),
+        desc: T('nui_autorouted_prefix', 'Auto-routed ') + deliveryLegs + T('nui_autorouted_suffix', '-stop job chain, closest stop first.'),
+        pill: '$' + deliveryPay + T('nui_plus_per_stop', '+/stop'),
+        detailTitle: T('nui_cargo_delivery_job', 'Cargo Delivery Job'),
+        body: [
+            markup('p', T('nui_dispatch_prefix', 'The train dispatcher will send you to the <b>') + deliveryLegs + T('nui_dispatch_suffix', '</b> closest delivery stops, one after another.')),
+            markup('p', T('nui_basepay_prefix', 'Base pay: <span class="stat-value gold">$') + deliveryPay + T('nui_basepay_suffix', '</span> + destination bonus, per stop.')),
+        ],
+    });
 
-    content.appendChild(statLine(t('nui_company_rank_stat', 'Company Rank'), rankLabel));
-    content.appendChild(statLine(t('nui_company_xp', 'Company XP'), String(membership.xp || 0) + (nextRank ? ' / ' + nextRank.xpRequired : t('nui_max_suffix', ' (MAX)'))));
-    content.appendChild(statLine(t('nui_tab_missions', 'Missions'), membership.missions_completed || 0));
-    if (emp) content.appendChild(statLine(t('nui_earnings', 'Earnings'), '$' + Math.floor(emp.total_earnings), 'gold'));
-    content.appendChild(statLine(t('nui_company', 'Company'), stationData.station.companyLabel));
+    jobCard(list, {
+        kind: 'maintenance',
+        heading: T('nui_rail_maintenance_heading', 'Rail Maintenance · Rank 3+'),
+        title: T('nui_start_maintenance_job', 'Start a Maintenance Job'),
+        desc: T('nui_traveltoprefix', 'Travel to ') + upkeepLegs + T('nui_traveltosuffix', ' damaged sections, one after another.'),
+        pill: '$' + (upkeep.basePay || 25) + T('nui_per_stop', '/stop'),
+        detailTitle: T('nui_rail_maintenance_job', 'Rail Maintenance Job'),
+        body: [markup('p', T('nui_traveltotheprefix', 'Travel to the <b>') + upkeepLegs + T('nui_traveltothesuffix', '</b> closest damaged track sections, one after another, and repair each one.'))],
+    });
 }
 
-// ========== COMPANY RECORDS ==========
-function renderRecords(content, details) {
-    const stats = stationData.companyStats || {};
-    const o = stationData.ownership || {};
-    const allStats = stationData.allCompanyStats || [];
+// ---------------------------------------------------------------- pages: numbers
 
-    // This company's records
-    content.appendChild(el('h3', undefined, t('nui_company_records', 'Company Records')));
-    content.appendChild(statLine(t('nui_company', 'Company'), o.company_name || stationData.station.companyLabel));
-    content.appendChild(statLine(t('nui_drivers', 'Drivers'), stats.total_drivers || 0));
-    content.appendChild(statLine(t('nui_tab_missions', 'Missions'), stats.total_missions || 0));
-    content.appendChild(statLine(t('nui_earnings', 'Earnings'), '$' + Math.floor(stats.total_earnings || 0).toLocaleString(), 'gold'));
-    content.appendChild(statLine(t('nui_cash_register', 'Cash Register'), '$' + Math.floor(stats.cash_register || 0).toLocaleString()));
-    content.appendChild(statLine(t('nui_top_earner', 'Top Earner'), (stats.top_earner || t('nui_none', 'None')) + ' ($' + Math.floor(stats.top_earnings || 0).toLocaleString() + ')'));
-    content.appendChild(statLine(t('nui_most_missions', 'Most Missions'), (stats.most_missions_name || t('nui_none', 'None')) + ' (' + (stats.most_missions_count || 0) + ')'));
-    content.appendChild(statLine(t('nui_highest_rank', 'Highest Rank'), (stats.highest_rank_name || t('nui_none', 'None')) + ' (' + (stats.highest_rank_label || '-') + ')'));
+function pageMyStats(list) {
+    const d = state.data;
+    const membership = d.myMembership || {};
+    list.append(
+        line(T('nui_company_rank_stat', 'Company Rank'), rankName(membership.rank || 1)),
+        line(T('nui_company_xp', 'Company XP'), xpText(membership)),
+        line(T('nui_tab_missions', 'Missions'), membership.missions_completed || 0));
+    if (d.myEmployeeData) list.append(line(T('nui_earnings', 'Earnings'), money(d.myEmployeeData.total_earnings), 'gold'));
+    list.append(line(T('nui_company', 'Company'), d.station.companyLabel));
+}
 
-    // Leaderboard: all companies compared
-    if (allStats.length > 0) {
-        const sorted = [...allStats].sort((a, b) => (b.total_earnings || 0) - (a.total_earnings || 0));
-        details.appendChild(el('h3', undefined, t('nui_company_leaderboard', 'Company Leaderboard')));
-        sorted.forEach((cs, idx) => {
-            const place = idx === 0 ? t('nui_place_1st', '1st') : idx === 1 ? t('nui_place_2nd', '2nd') : idx === 2 ? t('nui_place_3rd', '3rd') : (idx + 1) + t('nui_place_nth_suffix', 'th');
-            const isCurrent = cs.company_id === stationData.station.company;
-            const item = el('div', 'stat-line');
-            item.appendChild(el('span', 'stat-label', place + ' · ' + (cs.company_name || cs.company_label)));
-            item.appendChild(el('span', 'stat-value' + (isCurrent ? ' gold' : ''), '$' + Math.floor(cs.total_earnings || 0).toLocaleString()));
-            details.appendChild(item);
-            details.appendChild(el('p', 'hint', t('nui_missions_colon', 'Missions: ') + (cs.total_missions || 0) + t('nui_drivers_colon', ' · Drivers: ') + (cs.total_drivers || 0)));
+const PLACES = [['nui_place_1st', '1st'], ['nui_place_2nd', '2nd'], ['nui_place_3rd', '3rd']];
+
+function placeName(index) {
+    return PLACES[index] ? T(PLACES[index][0], PLACES[index][1]) : (index + 1) + T('nui_place_nth_suffix', 'th');
+}
+
+function pageRecords(list, details) {
+    const d = state.data;
+    const stats = d.companyStats || {};
+    const owned = d.ownership || {};
+    const none = T('nui_none', 'None');
+
+    list.append(node('h3', undefined, T('nui_company_records', 'Company Records')),
+        line(T('nui_company', 'Company'), owned.company_name || d.station.companyLabel),
+        line(T('nui_drivers', 'Drivers'), stats.total_drivers || 0),
+        line(T('nui_tab_missions', 'Missions'), stats.total_missions || 0),
+        line(T('nui_earnings', 'Earnings'), money(stats.total_earnings), 'gold'),
+        line(T('nui_cash_register', 'Cash Register'), money(stats.cash_register)),
+        line(T('nui_top_earner', 'Top Earner'), (stats.top_earner || none) + ' (' + money(stats.top_earnings) + ')'),
+        line(T('nui_most_missions', 'Most Missions'), (stats.most_missions_name || none) + ' (' + (stats.most_missions_count || 0) + ')'),
+        line(T('nui_highest_rank', 'Highest Rank'), (stats.highest_rank_name || none) + ' (' + (stats.highest_rank_label || '-') + ')'));
+
+    const board = [...(d.allCompanyStats || [])].sort((a, b) => (b.total_earnings || 0) - (a.total_earnings || 0));
+    if (!board.length) return details.append(node('p', 'hint', T('nui_no_companies_compare', 'No companies to compare yet.')));
+
+    details.append(node('h3', undefined, T('nui_company_leaderboard', 'Company Leaderboard')));
+    board.forEach((c, i) => {
+        const entry = node('div', 'stat-line');
+        entry.append(node('span', 'stat-label', placeName(i) + ' · ' + (c.company_name || c.company_label)),
+            node('span', 'stat-value' + (c.company_id === ownCompany() ? ' gold' : ''), money(c.total_earnings)));
+        details.append(entry, node('p', 'hint', T('nui_missions_colon', 'Missions: ') + (c.total_missions || 0) + T('nui_drivers_colon', ' · Drivers: ') + (c.total_drivers || 0)));
+    });
+}
+
+// ---------------------------------------------------------------- pages: upgrades
+
+const UPGRADES = [
+    { key: 'speed', name: ['nui_upg_speed', 'Speed'], column: 'upgrade_speed' },
+    { key: 'fuel_cap', name: ['nui_upg_fuel_cap', 'Fuel Capacity'], column: 'upgrade_fuel_cap' },
+    { key: 'water_cap', name: ['nui_upg_water_cap', 'Water Capacity'], column: 'upgrade_water_cap' },
+    { key: 'durability', name: ['nui_upg_durability', 'Durability'], column: 'upgrade_durability' },
+];
+
+// the owner, or a driver of engineer rank or above
+function mayUpgrade() {
+    const d = state.data;
+    if (d.playerRole === 'owner') return true;
+    return d.playerRole === 'driver' && ((d.myEmployeeData && d.myEmployeeData.rank) || 1) >= 3;
+}
+
+function upgradeRow(train, kind, level, allowed) {
+    const tiers = (state.data.upgrades || {})[kind.key] || [];
+    const top = tiers.length || 3;
+    const next = level + 1 <= top ? tiers[level] : null;
+    const bonus = level > 0 && tiers[level - 1] ? tiers[level - 1].bonus : 0;
+    const name = T(kind.name[0], kind.name[1]);
+
+    const box = node('div', 'upg-row');
+    box.append(node('p', 'upg-head', name + ' — ' + T('nui_lvl_label', 'Lvl ') + level + '/' + top + (bonus > 0 ? ' (+' + bonus + ' ' + T('nui_bonus_suffix', 'bonus)') : '')));
+
+    if (level >= top) {
+        box.append(node('p', 'hint ok', '✓ ' + T('nui_max_level', 'MAX LEVEL')));
+    } else if (next && allowed) {
+        const extra = next.itemCost ? ' + ' + next.itemCost.amount + 'x ' + next.itemCost.item : '';
+        const caption = T('nui_buy_upgrade_prefix', 'Buy ') + name + ' ' + T('nui_upgrade_lvl_suffix', 'Upgrade (Lvl ') + (level + 1) + ')';
+        box.append(node('p', 'hint', '$' + next.cost + extra + '  ·  +' + next.bonus + ' bonus'));
+
+        const buy = button(caption, () => {
+            buy.disabled = true;
+            buy.textContent = T('nui_purchasing', 'Purchasing...');
+            post('purchaseUpgrade', { companyId: ownCompany(), trainModel: train.model, upgradeType: kind.key }).then((r) => {
+                if (r && r.companyUpgrades) state.data.companyUpgrades = r.companyUpgrades;
+                drawContent();
+            }).catch(() => { buy.disabled = false; buy.textContent = caption; });
         });
-    } else {
-        details.appendChild(el('p', 'hint', t('nui_no_companies_compare', 'No companies to compare yet.')));
+        box.append(buy);
+    } else if (next) {
+        box.append(node('p', 'hint', T('nui_next_bonus_prefix', 'Next: +') + next.bonus + T('nui_next_bonus_suffix', ' bonus  ·  Engineer rank required')));
     }
+    return box;
 }
 
-// ========== APPLY (visitor) ==========
-function renderApply(content, details) {
-    const comp = stationData.companies[stationData.station.company];
-    content.appendChild(paperCard({
-        title: comp.label,
-        paras: [comp.description, t('nui_hiring_text', 'This company is hiring! Apply to become a train driver.')],
-    }));
-    details.appendChild(woodBtn(t('nui_tab_apply_as_driver', 'Apply as Driver'), () => { nuiFetch('applyAsDriver', { companyId: stationData.station.company }).catch(() => {}); closeStation(); }));
+function pageUpgrades(list) {
+    const d = state.data;
+    const trains = (d.companyTrainConfigs || []).filter((t) => t.upgradeable);
+    if (!trains.length) return list.append(node('p', 'hint', T('nui_no_upgradeable_trains', 'No upgradeable trains for this company.')));
+
+    const allowed = mayUpgrade();
+    if (!allowed) list.append(node('p', 'hint', T('nui_upgrade_engineer_required', 'Engineer rank or above required to purchase upgrades. Upgrades apply to everyone who deploys this train.')));
+
+    trains.forEach((train) => {
+        const owned = (d.companyUpgrades || []).find((u) => u.train_model === train.model) || null;
+        const levelOf = (kind) => (owned ? owned[kind.column] || 0 : 0);
+        const total = UPGRADES.reduce((sum, kind) => sum + levelOf(kind), 0);
+
+        list.append(row({
+            title: train.label, badge: '▲', pill: total + '/' + UPGRADES.length * 3 + T('nui_upg_suffix', ' upg'),
+            click: () => {
+                const panel = freshDetails();
+                panel.append(node('h3', undefined, train.label));
+                UPGRADES.forEach((kind) => panel.append(upgradeRow(train, kind, levelOf(kind), allowed)));
+            },
+        }));
+    });
 }
 
-// ========== PENDING ==========
-function renderPending(content) {
-    const box = el('div', 'paper-card');
-    box.appendChild(el('h3', undefined, t('nui_tab_application_pending', 'Application Pending')));
-    box.appendChild(el('p', 'hint', t('nui_waiting_approval', 'Waiting for owner approval. Check back later!')));
-    content.appendChild(box);
-}
+// ---------------------------------------------------------------- driver HUD
 
-// ========== COMPANY INFO ==========
-function renderCompanyInfo(content) {
-    const comp = stationData.companies[stationData.station.company];
-    const o = stationData.ownership;
-    content.appendChild(paperCard({
-        title: (o && o.company_name) ? o.company_name : comp.label,
-        paras: [comp.description, o ? t('nui_owner_colon', 'Owner: ') + o.owner_name : t('nui_not_owned', 'Not owned.')],
-    }));
-}
-
-// ========== TRAIN HUD ==========
 function openTrainHUD(data) {
-    lang = data.lang || lang || {};
-    applyStaticLocale();
-    document.getElementById('hudTrainLabel').textContent = data.train.label;
-    document.getElementById('hudCompanyLabel').textContent = data.train.companyLabel;
-    document.getElementById('trainHUD').classList.remove('hidden');
+    state.words = data.lang || state.words || {};
+    translatePage();
+    $('hudTrainLabel').textContent = data.train.label;
+    $('hudCompanyLabel').textContent = data.train.companyLabel;
+    $('trainHUD').classList.remove('hidden');
 }
-function closeTrainHUD() { document.getElementById('trainHUD').classList.add('hidden'); }
 
-let staticLocaleApplied = false;
-function applyStaticLocale() {
-    if (staticLocaleApplied) return;
-    staticLocaleApplied = true;
-    const setText = (id, key, fallback) => {
-        const e = document.getElementById(id);
-        if (e) e.textContent = t(key, fallback);
+function closeTrainHUD() { $('trainHUD').classList.add('hidden'); }
+
+// the fixed words of the page, translated once
+function translatePage() {
+    if (state.localised) return;
+    state.localised = true;
+
+    const texts = {
+        stationListTitle: ['nui_options', 'Options'], stationDetailTitle: ['nui_details', 'Details'],
+        hudSpeedLabel: ['nui_hud_speed_short', 'SPD'], hudFuelLabel: ['nui_hud_fuel_short', 'FUEL'],
+        hudWaterLabel: ['nui_hud_water_short', 'H2O'], hudCondLabel: ['nui_hud_cond_short', 'COND'],
+        hudEngineLabel: ['nui_hud_engine_label', 'Engine'], hudCruiseLabel: ['nui_hud_cruise_label', 'Cruise'],
+        hudJunctionLabel: ['nui_hud_junction_label', 'Junction'], hudStationLabel: ['nui_hud_station_label', 'Station'],
+        hudMissionLabel: ['nui_hud_mission_label', 'Mission'], hudKbAccel: ['nui_kb_accel', 'Accel'],
+        hudKbBrake: ['nui_kb_brake', 'Brake'], hudKbStop: ['nui_kb_stop', 'Stop'], hudKbCruise: ['nui_kb_cruise', 'Cruise'],
+        hudKbSwitch: ['nui_kb_switch', 'Switch'], hudKbWhistle: ['nui_kb_whistle', 'Whistle'],
     };
-    const setTitle = (id, key, fallback) => {
-        const e = document.getElementById(id);
-        if (e) e.title = t(key, fallback);
+    Object.entries(texts).forEach(([id, [key, fallback]]) => { if ($(id)) $(id).textContent = T(key, fallback); });
+
+    $('stationBackBtn').title = T('nui_dismiss_title', 'Dismiss');
+    $('closeStationBtn').title = T('nui_close_title', 'Close');
+}
+
+const percent = (value, max) => (max > 0 ? Math.min(100, Math.round(value / max * 100)) : 0);
+
+function gauge(name, value, max) {
+    const p = percent(value, max);
+    $('hud' + name + 'Bar').style.width = p + '%';
+    $('hud' + name + 'Val').textContent = p + '%';
+}
+
+function missionText(info) {
+    const kinds = {
+        delivery: T('nui_type_delivery', 'Delivery'), npc_transport: T('nui_type_passengers', 'Passengers'),
+        maintenance: T('nui_type_maintenance', 'Maintenance'),
     };
-    setTitle('stationBackBtn', 'nui_dismiss_title', 'Dismiss');
-    setTitle('closeStationBtn', 'nui_close_title', 'Close');
-    setText('stationListTitle', 'nui_options', 'Options');
-    setText('stationDetailTitle', 'nui_details', 'Details');
-    setText('hudSpeedLabel', 'nui_hud_speed_short', 'SPD');
-    setText('hudFuelLabel', 'nui_hud_fuel_short', 'FUEL');
-    setText('hudWaterLabel', 'nui_hud_water_short', 'H2O');
-    setText('hudCondLabel', 'nui_hud_cond_short', 'COND');
-    setText('hudEngineLabel', 'nui_hud_engine_label', 'Engine');
-    setText('hudCruiseLabel', 'nui_hud_cruise_label', 'Cruise');
-    setText('hudJunctionLabel', 'nui_hud_junction_label', 'Junction');
-    setText('hudStationLabel', 'nui_hud_station_label', 'Station');
-    setText('hudMissionLabel', 'nui_hud_mission_label', 'Mission');
-    setText('hudKbAccel', 'nui_kb_accel', 'Accel');
-    setText('hudKbBrake', 'nui_kb_brake', 'Brake');
-    setText('hudKbStop', 'nui_kb_stop', 'Stop');
-    setText('hudKbCruise', 'nui_kb_cruise', 'Cruise');
-    setText('hudKbSwitch', 'nui_kb_switch', 'Switch');
-    setText('hudKbWhistle', 'nui_kb_whistle', 'Whistle');
+    const base = kinds[info.type] || T('nui_active_fallback', 'Active');
+    return info.totalLegs > 1 ? base + ' (' + info.leg + '/' + info.totalLegs + ')' : base;
 }
 
 function updateHUD(data) {
-    const pct = (val, max) => max > 0 ? Math.min(100, Math.round((val / max) * 100)) : 0;
-    document.getElementById('hudSpeedBar').style.width = pct(data.speed, data.maxSpeed) + '%';
-    document.getElementById('hudSpeedVal').textContent = data.speed;
-    document.getElementById('hudFuelBar').style.width = pct(data.fuel, data.maxFuel) + '%';
-    document.getElementById('hudFuelVal').textContent = pct(data.fuel, data.maxFuel) + '%';
-    document.getElementById('hudWaterBar').style.width = pct(data.water, data.maxWater) + '%';
-    document.getElementById('hudWaterVal').textContent = pct(data.water, data.maxWater) + '%';
-    document.getElementById('hudCondBar').style.width = pct(data.condition, data.maxCondition) + '%';
-    document.getElementById('hudCondVal').textContent = pct(data.condition, data.maxCondition) + '%';
+    $('hudSpeedBar').style.width = percent(data.speed, data.maxSpeed) + '%';
+    $('hudSpeedVal').textContent = data.speed;
+    gauge('Fuel', data.fuel, data.maxFuel);
+    gauge('Water', data.water, data.maxWater);
+    gauge('Cond', data.condition, data.maxCondition);
 
-    const engineEl = document.getElementById('hudEngine');
-    engineEl.textContent = data.engine ? t('hud_on', 'ON') : t('hud_off', 'OFF');
-    engineEl.className = 'info-value ' + (data.engine ? 'ok' : 'bad');
+    const engine = $('hudEngine');
+    engine.textContent = data.engine ? T('hud_on', 'ON') : T('hud_off', 'OFF');
+    engine.className = 'info-value ' + (data.engine ? 'ok' : 'bad');
 
-    let ct = '--';
-    if (data.cruiseForward) ct = t('nui_fwd_short', 'FWD'); else if (data.cruiseBackward) ct = t('nui_rev_short', 'REV');
-    document.getElementById('hudCruise').textContent = ct;
-    document.getElementById('hudJunction').textContent = data.junctionText || '--';
-    document.getElementById('hudStation').textContent = data.nearestStation || '--';
+    $('hudCruise').textContent = data.cruiseForward ? T('nui_fwd_short', 'FWD') : data.cruiseBackward ? T('nui_rev_short', 'REV') : '--';
+    $('hudJunction').textContent = data.junctionText || '--';
+    $('hudStation').textContent = data.nearestStation || '--';
 
-    // Mission + destination
-    const missionEl = document.getElementById('hudMission');
-    const destEl = document.getElementById('hudMissionDest');
+    const dest = $('hudMissionDest');
     if (data.missionActive && data.missionInfo) {
-        const typeLabels = { delivery: t('nui_type_delivery', 'Delivery'), npc_transport: t('nui_type_passengers', 'Passengers'), maintenance: t('nui_type_maintenance', 'Maintenance') };
-        let label = typeLabels[data.missionInfo.type] || t('nui_active_fallback', 'Active');
-        if (data.missionInfo.totalLegs && data.missionInfo.totalLegs > 1) {
-            label += ' (' + data.missionInfo.leg + '/' + data.missionInfo.totalLegs + ')';
-        }
-        missionEl.textContent = label;
-        const dest = data.missionInfo.destination || data.missionInfo.location;
-        destEl.textContent = dest && dest.label ? '\u2192 ' + dest.label : '';
+        $('hudMission').textContent = missionText(data.missionInfo);
+        const place = data.missionInfo.destination || data.missionInfo.location;
+        dest.textContent = place && place.label ? '→ ' + place.label : '';
     } else {
-        missionEl.textContent = t('nui_none', 'None');
-        destEl.textContent = '';
+        $('hudMission').textContent = T('nui_none', 'None');
+        dest.textContent = '';
     }
 }
 
-// ========== UPGRADES ==========
-function getUpgradeBonusLevel(upgradeType, level) {
-    if (!level || level <= 0) return 0;
-    const tiers = (stationData.upgrades || {})[upgradeType];
-    if (!tiers || !tiers[level - 1]) return 0;
-    return tiers[level - 1].bonus || 0;
-}
+// ---------------------------------------------------------------- messages from the game
 
-function getCompanyTrainUpgrade(trainModel) {
-    return (stationData.companyUpgrades || []).find(u => u.train_model === trainModel) || null;
-}
-
-function renderUpgrades(content, details) {
-    const configs = (stationData.companyTrainConfigs || []).filter(tc => tc.upgradeable);
-    const upgCfg = stationData.upgrades || {};
-    const isOwner = stationData.playerRole === 'owner';
-    const empRank = stationData.myEmployeeData ? (stationData.myEmployeeData.rank || 1) : 1;
-    const canUpgrade = isOwner || (stationData.playerRole === 'driver' && empRank >= 3);
-    const companyId = stationData.station.company;
-
-    const upgTypes = [
-        { key: 'speed',      label: t('nui_upg_speed', 'Speed'),          field: 'upgrade_speed' },
-        { key: 'fuel_cap',   label: t('nui_upg_fuel_cap', 'Fuel Capacity'),  field: 'upgrade_fuel_cap' },
-        { key: 'water_cap',  label: t('nui_upg_water_cap', 'Water Capacity'), field: 'upgrade_water_cap' },
-        { key: 'durability', label: t('nui_upg_durability', 'Durability'),     field: 'upgrade_durability' },
-    ];
-
-    if (configs.length === 0) {
-        content.appendChild(el('p', 'hint', t('nui_no_upgradeable_trains', 'No upgradeable trains for this company.')));
-        return;
-    }
-
-    if (!canUpgrade) {
-        content.appendChild(el('p', 'hint', t('nui_upgrade_engineer_required', 'Engineer rank or above required to purchase upgrades. Upgrades apply to everyone who deploys this train.')));
-    }
-
-    configs.forEach(tc => {
-        const upg = getCompanyTrainUpgrade(tc.model);
-        const totalUpg = upgTypes.reduce((s, u) => s + (upg ? (upg[u.field] || 0) : 0), 0);
-        const maxUpg = upgTypes.length * 3;
-        const card = rowCard({
-            title: tc.label,
-            badge: '▲',
-            pill: totalUpg + '/' + maxUpg + t('nui_upg_suffix', ' upg'),
-            onClick: () => {
-                details.innerHTML = '';
-                details.appendChild(el('h3', undefined, tc.label));
-                upgTypes.forEach(upgType => {
-                    const curLvl = upg ? (upg[upgType.field] || 0) : 0;
-                    const tiers = upgCfg[upgType.key] || [];
-                    const maxLvl = tiers.length || 3;
-                    const nextLvl = curLvl + 1;
-                    const nextData = nextLvl <= maxLvl ? tiers[nextLvl - 1] : null;
-                    const curBonus = curLvl > 0 && tiers[curLvl - 1] ? tiers[curLvl - 1].bonus : 0;
-
-                    const row = el('div', 'upg-row');
-                    row.appendChild(el('p', 'upg-head', upgType.label + ' \u2014 ' + t('nui_lvl_label', 'Lvl ') + curLvl + '/' + maxLvl + (curBonus > 0 ? ' (+' + curBonus + ' ' + t('nui_bonus_suffix', 'bonus)') : '')));
-
-                    if (curLvl >= maxLvl) {
-                        row.appendChild(el('p', 'hint ok', '\u2713 ' + t('nui_max_level', 'MAX LEVEL')));
-                    } else if (canUpgrade && nextData) {
-                        const itemTxt = nextData.itemCost ? ' + ' + nextData.itemCost.amount + 'x ' + nextData.itemCost.item : '';
-                        row.appendChild(el('p', 'hint', '$' + nextData.cost + itemTxt + '  \u00B7  +' + nextData.bonus + ' bonus'));
-                        const btn = woodBtn(t('nui_buy_upgrade_prefix', 'Buy ') + upgType.label + ' ' + t('nui_upgrade_lvl_suffix', 'Upgrade (Lvl ') + nextLvl + ')', () => {
-                            btn.disabled = true; btn.textContent = t('nui_purchasing', 'Purchasing...');
-                            nuiFetch('purchaseUpgrade', { companyId, trainModel: tc.model, upgradeType: upgType.key }).then(r => {
-                                if (r && r.companyUpgrades) stationData.companyUpgrades = r.companyUpgrades;
-                                renderContent();
-                            }).catch(() => { btn.disabled = false; btn.textContent = t('nui_buy_upgrade_prefix', 'Buy ') + upgType.label + ' ' + t('nui_upgrade_lvl_suffix', 'Upgrade (Lvl ') + nextLvl + ')'; });
-                        });
-                        row.appendChild(btn);
-                    } else if (!canUpgrade && nextData) {
-                        row.appendChild(el('p', 'hint', t('nui_next_bonus_prefix', 'Next: +') + nextData.bonus + t('nui_next_bonus_suffix', ' bonus  \u00B7  Engineer rank required')));
-                    }
-                    details.appendChild(row);
-                });
-            },
-        });
-        content.appendChild(card);
-    });
-}
-
-// ========== EVENTS ==========
 window.addEventListener('message', (event) => {
-    const { action } = event.data;
-    if      (action === 'openStation')    openStation(event.data);
-    else if (action === 'closeStation')   { closedByLua = true; closeStation(); }
-    else if (action === 'openTrainHUD')   openTrainHUD(event.data);
-    else if (action === 'closeTrainHUD')  closeTrainHUD();
-    else if (action === 'updateHUD')      updateHUD(event.data);
+    const data = event.data;
+    if (data.action === 'openStation') openStation(data);
+    else if (data.action === 'closeStation') { state.closedFromGame = true; closeStation(); }
+    else if (data.action === 'openTrainHUD') openTrainHUD(data);
+    else if (data.action === 'closeTrainHUD') closeTrainHUD();
+    else if (data.action === 'updateHUD') updateHUD(data);
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('closeStationBtn').addEventListener('click', closeStation);
-    document.getElementById('stationBackBtn').addEventListener('click', closeStation);
+    $('closeStationBtn').addEventListener('click', closeStation);
+    $('stationBackBtn').addEventListener('click', closeStation);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeStation(); });
 });

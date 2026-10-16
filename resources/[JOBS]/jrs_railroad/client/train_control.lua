@@ -1,314 +1,188 @@
-local cruiseForward = false
-local cruiseBackward = false
-local cruiseSpeed = 0
-local HUDOpen = false
-local HUDHidden = false  -- player toggled HUD off with T
-local InDriverSeat = false
+-- jrs_railroad | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_railroad | client: driving the train
+--   engine and speed limit, cruise control forward and backward, the emergency brake and the driver HUD.
+--   X = emergency brake, R = cruise forward, B = cruise backward, [ = show or hide the HUD.
+--   Starting and stopping the engine is done from the look-at menu on the train.
 
--- Key hashes from jrs_core/shared/keybinds.lua
-local Keys = {
-    ['E'] = 0xCEFD9220,
-    ['R'] = 0xE30CD707,
-    ['X'] = 0x8CC9CD42,
-    ['Q'] = 0xDE794E3E,
-    ['B'] = 0x4CC0E2FE,
-}
+local cruise = { forward = false, backward = false, speed = 0 }
+local hud = { open = false, hidden = false }          -- hidden: the player switched it off with [
+local inSeat = false
 
----------------------------------------------------------------
--- DRIVER SEAT / PROXIMITY DETECTION + HUD TOGGLE
--- Regular trains: player must be in driver seat (-1)
--- Trams: player just needs to be near the tram (NPC conductor drives)
----------------------------------------------------------------
+local KEY = { brake = 0x8CC9CD42, forward = 0xE30CD707, backward = 0x4CC0E2FE, hud = 0x430593AA }
+local SET_CRUISE = 0x9F29999DFDF2AEB8
+
+local function trainAlive() return ActiveTrain and DoesEntityExist(ActiveTrain) end
+local function setCruiseLimit(speed) Citizen.InvokeNative(SET_CRUISE, ActiveTrain, speed) end
+local function dropCruise() cruise.forward, cruise.backward, cruise.speed = false, false, 0 end
+
+-- ------------------------------------------------------------------ the driver seat and the HUD
+
+local function seatLeft()
+    if not inSeat then return end
+    inSeat, hud.open, hud.hidden = false, false, false
+    CloseTrainHUD()
+end
+
 CreateThread(function()
     while true do
         Wait(500)
-        if ActiveTrain and DoesEntityExist(ActiveTrain) then
-            local ped = PlayerPedId()
-            local active = (not IsVehicleSeatFree(ActiveTrain, -1) and GetPedInVehicleSeat(ActiveTrain, -1) == ped)
-
-            if active then
-                InDriverSeat = true
-                if not HUDOpen and not HUDHidden then
-                    HUDOpen = true
+        if not trainAlive() then
+            seatLeft()                                              -- the train is gone
+        elseif GetPedInVehicleSeat(ActiveTrain, -1) == PlayerPedId() then
+            inSeat = true
+            if not hud.hidden then
+                if not hud.open then
+                    hud.open = true
                     OpenTrainHUD()
                 end
-                if HUDOpen and not HUDHidden then
-                    UpdateTrainHUDData()
-                end
-            else
-                if InDriverSeat then   -- just left the seat
-                    InDriverSeat = false
-                    HUDOpen = false
-                    HUDHidden = false
-                    CloseTrainHUD()
-                end
+                UpdateTrainHUDData()
             end
         else
-            if InDriverSeat then   -- train gone
-                InDriverSeat = false
-                HUDOpen = false
-                HUDHidden = false
-                CloseTrainHUD()
-            end
+            seatLeft()
         end
     end
 end)
 
----------------------------------------------------------------
--- ENGINE STATE + MAX SPEED ENFORCEMENT
--- Runs regardless of whether player is in seat
--- Train keeps moving on cruise even when driver leaves seat
--- Trams: skip this loop entirely (tram movement loop handles it)
----------------------------------------------------------------
+-- ------------------------------------------------------------------ engine and speed limit
+
+-- keeps the speed limit of the train in step with the engine; the train rolls on even when the driver is away
 CreateThread(function()
     while true do
         Wait(100)
-        if ActiveTrain and DoesEntityExist(ActiveTrain) then
+        if trainAlive() then
             if EngineRunning then
-                local maxSpd = GetMaxTrainSpeed()
                 if TrainFuel <= 0 then
                     EngineRunning = false
-                    cruiseForward = false
-                    cruiseBackward = false
-                    cruiseSpeed = 0
+                    dropCruise()
                 else
-                    Citizen.InvokeNative(0x9F29999DFDF2AEB8, ActiveTrain, maxSpd + 0.1)
+                    setCruiseLimit(GetMaxTrainSpeed() + 0.1)
                 end
-            else
-                if not cruiseForward and not cruiseBackward then
-                    Citizen.InvokeNative(0x9F29999DFDF2AEB8, ActiveTrain, 0.0)
-                end
+            elseif not cruise.forward and not cruise.backward then
+                setCruiseLimit(0.0)
             end
         end
     end
 end)
 
----------------------------------------------------------------
--- KEYBOARD CONTROLS (custom keys, non-conflicting with native)
--- Native:  L SHIFT = Accelerate, L CTRL = Brake/Reverse
---          Left Mouse = Bell, G = Whistle
--- Custom:  E = Toggle engine, X = Emergency stop
---          R = Cruise forward, B = Cruise backward
---          Q = Toggle track switches
----------------------------------------------------------------
+-- cruise control: holds the speed with both the cruise speed and the speed itself, so the game does not slow the train
+CreateThread(function()
+    while true do
+        Wait(50)
+        if trainAlive() and EngineRunning and cruise.speed > 0 and TrainFuel > 0 then
+            local direction = cruise.forward and 1 or cruise.backward and -1 or 0
+            if direction ~= 0 then
+                SetTrainCruiseSpeed(ActiveTrain, cruise.speed * direction)
+                if GetEntitySpeed(ActiveTrain) < cruise.speed - 0.5 then SetTrainSpeed(ActiveTrain, cruise.speed * direction) end
+            end
+        end
+    end
+end)
+
 CreateThread(function()
     while true do
         Wait(0)
-        if InDriverSeat and ActiveTrain and DoesEntityExist(ActiveTrain) then
-
-            -- E key removed: conflicts with enter/exit vehicle
-            -- Use the JRS interaction prompt 'Start / Stop Engine' instead
-
-            -- [ = Toggle HUD
-            if IsControlJustPressed(0, 0x430593AA) then -- LEFTBRACKET key
-                HUDHidden = not HUDHidden
-                if HUDHidden then
-                    HUDOpen = false
-                    CloseTrainHUD()
-                else
-                    HUDOpen = true
-                    OpenTrainHUD()
-                end
+        if inSeat and trainAlive() then
+            if IsControlJustPressed(0, KEY.hud) then
+                hud.hidden = not hud.hidden
+                hud.open = not hud.hidden
+                if hud.hidden then CloseTrainHUD() else OpenTrainHUD() end
             end
-
-            -- X = Emergency Brake (full stop + kill cruise)
-            if IsControlJustPressed(0, Keys['X']) then
-                EmergencyBrake()
-            end
-
-            -- R = Cruise Forward toggle
-            if IsControlJustPressed(0, Keys['R']) then
-                ToggleCruiseForward()
-            end
-
-            -- B = Cruise Backward toggle
-            if IsControlJustPressed(0, Keys['B']) then
-                ToggleCruiseBackward()
-            end
-
+            if IsControlJustPressed(0, KEY.brake) then EmergencyBrake() end
+            if IsControlJustPressed(0, KEY.forward) then ToggleCruiseForward() end
+            if IsControlJustPressed(0, KEY.backward) then ToggleCruiseBackward() end
         else
             Wait(200)
         end
     end
 end)
 
----------------------------------------------------------------
--- CRUISE CONTROL LOOP
--- Forces speed maintenance using both CruiseSpeed AND Speed
----------------------------------------------------------------
-CreateThread(function()
-    while true do
-        Wait(50)
-        if ActiveTrain and DoesEntityExist(ActiveTrain) and EngineRunning then
-            if cruiseForward and cruiseSpeed > 0 and TrainFuel > 0 then
-                SetTrainCruiseSpeed(ActiveTrain, cruiseSpeed)
-                -- Force maintain speed - prevents native deceleration
-                local vel = GetEntitySpeed(ActiveTrain)
-                if vel < cruiseSpeed - 0.5 then
-                    SetTrainSpeed(ActiveTrain, cruiseSpeed)
-                end
-            elseif cruiseBackward and cruiseSpeed > 0 and TrainFuel > 0 then
-                SetTrainCruiseSpeed(ActiveTrain, -cruiseSpeed)
-                local vel = GetEntitySpeed(ActiveTrain)
-                if vel < cruiseSpeed - 0.5 then
-                    SetTrainSpeed(ActiveTrain, -cruiseSpeed)
-                end
-            end
-        end
-    end
-end)
+-- ------------------------------------------------------------------ actions
 
----------------------------------------------------------------
--- CONTROL FUNCTIONS
----------------------------------------------------------------
 function ToggleEngine()
-    if not ActiveTrain or not DoesEntityExist(ActiveTrain) then return end
+    if not trainAlive() then return end
+
     if EngineRunning then
         EngineRunning = false
-        cruiseForward = false
-        cruiseBackward = false
-        cruiseSpeed = 0
+        dropCruise()
         SetTrainCruiseSpeed(ActiveTrain, 0.0)
         SetTrainSpeed(ActiveTrain, 0.0)
-        Citizen.InvokeNative(0x9F29999DFDF2AEB8, ActiveTrain, 0.0)
-        Notify(L('engine_stopped'), 'inform')
-    else
-        if TrainFuel <= 0 then
-            Notify(L('fuel_empty'), 'error')
-            return
-        end
-        EngineRunning = true
-        local maxSpd = GetMaxTrainSpeed()
-        Citizen.InvokeNative(0x9F29999DFDF2AEB8, ActiveTrain, maxSpd + 0.1)
-
-        Notify(L('engine_started'), 'success')
+        setCruiseLimit(0.0)
+        return Notify(L('engine_stopped'), 'inform')
     end
+
+    if TrainFuel <= 0 then return Notify(L('fuel_empty'), 'error') end
+    EngineRunning = true
+    setCruiseLimit(GetMaxTrainSpeed() + 0.1)
+    Notify(L('engine_started'), 'success')
 end
 
+-- stops the cruise and slows the train smoothly over about three seconds
 function EmergencyBrake()
-    if not ActiveTrain or not DoesEntityExist(ActiveTrain) then return end
-    cruiseForward = false
-    cruiseBackward = false
-    cruiseSpeed = 0
+    if not trainAlive() then return end
+    dropCruise()
     SetTrainCruiseSpeed(ActiveTrain, 0.0)
-
     Notify(L('brake_applied'), 'warning')
-    -- Gradual deceleration over ~3 seconds
+
     CreateThread(function()
-        for i = 1, 30 do
-            if not ActiveTrain or not DoesEntityExist(ActiveTrain) then break end
-            local currentVel = GetEntitySpeed(ActiveTrain)
-            if currentVel < 0.5 then
-                SetTrainSpeed(ActiveTrain, 0.0)
-                break
-            end
-            local newVel = currentVel * 0.85 -- reduce by 15% each tick
-            SetTrainSpeed(ActiveTrain, newVel)
-            Citizen.InvokeNative(0x9F29999DFDF2AEB8, ActiveTrain, newVel + 0.1)
+        for _ = 1, 30 do
+            if not trainAlive() then return end
+            local speed = GetEntitySpeed(ActiveTrain)
+            if speed < 0.5 then break end
+            local slower = speed * 0.85
+            SetTrainSpeed(ActiveTrain, slower)
+            setCruiseLimit(slower + 0.1)
             Wait(100)
         end
-        if ActiveTrain and DoesEntityExist(ActiveTrain) then
+        if trainAlive() then
             SetTrainSpeed(ActiveTrain, 0.0)
-            if EngineRunning then
-                Citizen.InvokeNative(0x9F29999DFDF2AEB8, ActiveTrain, GetMaxTrainSpeed() + 0.1)
-            else
-                Citizen.InvokeNative(0x9F29999DFDF2AEB8, ActiveTrain, 0.0)
-            end
+            setCruiseLimit(EngineRunning and GetMaxTrainSpeed() + 0.1 or 0.0)
         end
     end)
 end
 
-function ToggleCruiseForward()
-    if not EngineRunning then
-        Notify(L('engine_stopped'), 'error')
-        return
-    end
-    if cruiseBackward then
-        Notify(L('cruise_conflict'), 'error')
-        return
-    end
-    if TrainFuel <= 0 then
-        Notify(L('cruise_no_fuel'), 'error')
-        return
-    end
-    cruiseForward = not cruiseForward
-    if cruiseForward then
-        -- Lock in the current speed as cruise speed
-        local vel = GetEntitySpeed(ActiveTrain)
-        cruiseSpeed = vel > 1 and vel or (GetMaxTrainSpeed() * 0.5)
-        Notify(L('cruise_enabled', L('hud_forward')), 'success')
+-- `direction` is 'forward' or 'backward'; the other one must be off
+local function toggleCruise(direction, label)
+    local other = direction == 'forward' and 'backward' or 'forward'
+    if not EngineRunning then return Notify(L('engine_stopped'), 'error') end
+    if cruise[other] then return Notify(L('cruise_conflict'), 'error') end
+    if TrainFuel <= 0 then return Notify(L('cruise_no_fuel'), 'error') end
+
+    cruise[direction] = not cruise[direction]
+    if cruise[direction] then
+        -- hold the speed the train has now (or half of the top speed from a standstill)
+        local speed = GetEntitySpeed(ActiveTrain)
+        cruise.speed = speed > 1 and speed or GetMaxTrainSpeed() * 0.5
+        Notify(L('cruise_enabled', L(label)), 'success')
     else
-        cruiseSpeed = 0
+        cruise.speed = 0
         SetTrainCruiseSpeed(ActiveTrain, 0.0)
         Notify(L('cruise_disabled'), 'inform')
     end
 end
 
-function ToggleCruiseBackward()
-    if not EngineRunning then
-        Notify(L('engine_stopped'), 'error')
-        return
-    end
-    if cruiseForward then
-        Notify(L('cruise_conflict'), 'error')
-        return
-    end
-    if TrainFuel <= 0 then
-        Notify(L('cruise_no_fuel'), 'error')
-        return
-    end
-    cruiseBackward = not cruiseBackward
-    if cruiseBackward then
-        local vel = GetEntitySpeed(ActiveTrain)
-        cruiseSpeed = vel > 1 and vel or (GetMaxTrainSpeed() * 0.5)
-        Notify(L('cruise_enabled', L('hud_reverse')), 'success')
-    else
-        cruiseSpeed = 0
-        SetTrainCruiseSpeed(ActiveTrain, 0.0)
-        Notify(L('cruise_disabled'), 'inform')
-    end
-end
+function ToggleCruiseForward() toggleCruise('forward', 'hud_forward') end
+function ToggleCruiseBackward() toggleCruise('backward', 'hud_reverse') end
 
----------------------------------------------------------------
--- GET MAX SPEED (with upgrades + condition)
----------------------------------------------------------------
+-- ------------------------------------------------------------------ values for other files
+
+-- base speed plus the speed upgrade, capped at the game's limit, scaled by condition
+-- (full speed at 100%, Config.Condition.lowConditionSpeedCap of it at 0%)
 function GetMaxTrainSpeed()
     if not ActiveTrainConfig then return 15 end
-    local base = ActiveTrainConfig.maxSpeed
-    local upgradeBonus = 0
-    if ActiveTrainData and ActiveTrainData.upgrade_speed > 0 then
-        local tier = ActiveTrainData.upgrade_speed
-        if Config.Upgrades.speed[tier] then
-            upgradeBonus = Config.Upgrades.speed[tier].bonus
-        end
-    end
-    local max = math.min(base + upgradeBonus, 30) -- native cap
 
-    -- Gradual condition penalty:
-    -- 100% condition = full speed, 0% condition = 25% speed
-    -- Formula: multiplier = 0.25 + (0.75 * conditionPercent)
-    local maxCond = ActiveTrainConfig.maxCondition or 100
-    local condPct = math.max(0, math.min(1, (TrainCondition or 0) / maxCond))
-    local condMultiplier = Config.Condition.lowConditionSpeedCap + ((1 - Config.Condition.lowConditionSpeedCap) * condPct)
-    max = max * condMultiplier
+    local bonus = 0
+    local tier = ActiveTrainData and ActiveTrainData.upgrade_speed or 0
+    if tier > 0 and Config.Upgrades.speed[tier] then bonus = Config.Upgrades.speed[tier].bonus end
+    local top = math.min(ActiveTrainConfig.maxSpeed + bonus, 30)
 
-    return math.max(1, math.floor(max + 0.5)) -- minimum speed of 1, rounded
+    local health = math.max(0, math.min(1, (TrainCondition or 0) / (ActiveTrainConfig.maxCondition or 100)))
+    local floor = Config.Condition.lowConditionSpeedCap
+    return math.max(1, math.floor(top * (floor + (1 - floor) * health) + 0.5))
 end
 
----------------------------------------------------------------
--- GETTERS FOR HUD
----------------------------------------------------------------
 function GetCurrentSpeed()
-    if ActiveTrain and DoesEntityExist(ActiveTrain) then
-        return math.floor(GetEntitySpeed(ActiveTrain) + 0.5)
-    end
-    return 0
+    return trainAlive() and math.floor(GetEntitySpeed(ActiveTrain) + 0.5) or 0
 end
 
-function IsCruiseForward()
-    return cruiseForward
-end
-
-function IsCruiseBackward()
-    return cruiseBackward
-end
+function IsCruiseForward() return cruise.forward end
+function IsCruiseBackward() return cruise.backward end

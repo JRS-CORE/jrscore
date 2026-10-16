@@ -1,107 +1,63 @@
----------------------------------------------------------------
--- FULL LOCALE TABLE (for the NUI)
--- script.js localizes its own UI text from a full key->string
--- dictionary rather than one key at a time, so we hand it the
--- active locales/<lang>.json file directly (falling back to
--- en.json), matching Config.Language.
----------------------------------------------------------------
-local cachedLocaleTable = nil
+-- jrs_railroad | client: small helpers shared by the other client files
+-- Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+
+-- the whole active locale file, handed to the page so it can translate itself
+local localeCache
 function GetLocaleTable()
-    if cachedLocaleTable then return cachedLocaleTable end
-    local lang = Config.Language or 'en'
-    local raw = LoadResourceFile(GetCurrentResourceName(), ('locales/%s.json'):format(lang))
-    if not raw then
-        raw = LoadResourceFile(GetCurrentResourceName(), 'locales/en.json')
-    end
-    cachedLocaleTable = raw and json.decode(raw) or {}
-    return cachedLocaleTable
+    if localeCache then return localeCache end
+    local resource = GetCurrentResourceName()
+    local text = LoadResourceFile(resource, ('locales/%s.json'):format(Config.Language or 'en'))
+        or LoadResourceFile(resource, 'locales/en.json')
+    localeCache = text and json.decode(text) or {}
+    return localeCache
 end
 
----------------------------------------------------------------
--- NOTIFICATIONS (JRS)
----------------------------------------------------------------
-function Notify(msg, nType, duration)
-    JRS.NotifyT({
-        title = L('notify_title'),
-        description = msg,
-        type = nType or 'inform',
-        duration = duration or 5000,
-    })
+function Notify(message, kind, duration)
+    JRS.NotifyT({ title = L('notify_title'), description = message, type = kind or 'inform', duration = duration or 5000 })
 end
 
--- NOTE: server-side notifications must use TriggerClientEvent(GetCurrentResourceName() .. ':notify', ...)
--- from a server file so L() resolves on the server. Do NOT call
--- TriggerClientEvent from the client (it silently does nothing, which looks
--- like "notifications not working").
-
----------------------------------------------------------------
--- MODEL LOADING
----------------------------------------------------------------
 function LoadModel(model)
     if type(model) == 'string' then model = joaat(model) end
     RequestModel(model)
-    while not HasModelLoaded(model) do
-        Wait(100)
-    end
+    while not HasModelLoaded(model) do Wait(100) end
 end
 
+-- streams in every carriage model a train needs
 function LoadTrainCars(trainHash)
-    local wagonCount = Citizen.InvokeNative(0x635423D55CA84FC8, trainHash)
-    for i = 0, wagonCount - 1 do
-        local wagonModel = Citizen.InvokeNative(0x8DF5F6A19F99F0D5, trainHash, i)
-        while not HasModelLoaded(wagonModel) do
-            Citizen.InvokeNative(0xFA28FE3A6246FC30, wagonModel, 1)
+    local count = Citizen.InvokeNative(0x635423D55CA84FC8, trainHash)
+    for i = 0, count - 1 do
+        local car = Citizen.InvokeNative(0x8DF5F6A19F99F0D5, trainHash, i)
+        while not HasModelLoaded(car) do
+            Citizen.InvokeNative(0xFA28FE3A6246FC30, car, 1)
             Wait(100)
         end
     end
 end
 
----------------------------------------------------------------
--- DISTANCE HELPER
----------------------------------------------------------------
-function GetDistanceBetween(v1, v2)
-    return #(v1 - v2)
+function GetDistanceBetween(a, b) return #(a - b) end
+
+function DebugPrint(message)
+    if Config.Debug then print('[jrs_railroad] ' .. tostring(message)) end
 end
 
----------------------------------------------------------------
--- DEBUG PRINT
----------------------------------------------------------------
-function DebugPrint(msg)
-    if Config.Debug then
-        print('[jrs_railroad] ' .. tostring(msg))
-    end
-end
-
----------------------------------------------------------------
--- FIND NEAREST STATION
----------------------------------------------------------------
-function GetNearestStation(coords)
-    local nearest, nearestDist = nil, 9999
+-- closest station to a point, and how far it is
+function GetNearestStation(at)
+    local best, bestAway = nil, 9999
     for _, station in ipairs(Config.Stations) do
-        local dist = GetDistanceBetween(coords, station.coords)
-        if dist < nearestDist then
-            nearest = station
-            nearestDist = dist
-        end
+        local away = GetDistanceBetween(at, station.coords)
+        if away < bestAway then best, bestAway = station, away end
     end
-    return nearest, nearestDist
+    return best, bestAway
 end
 
----------------------------------------------------------------
--- FIND TRAIN CONFIG BY MODEL+COMPANY
----------------------------------------------------------------
+-- the train entry for a model, preferably of that company
 function FindTrainConfig(model, company)
-    for _, train in ipairs(Config.Trains) do
-        if train.model == model and train.company == company then
-            return train
-        end
-    end
-    -- fallback: just match model
+    local anyOwner
     for _, train in ipairs(Config.Trains) do
         if train.model == model then
-            return train
+            if train.company == company then return train end
+            anyOwner = anyOwner or train
         end
     end
-    return nil
+    return anyOwner
 end
-

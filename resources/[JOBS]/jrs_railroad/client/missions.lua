@@ -1,301 +1,243 @@
-local activeMission = nil
-local missionBlip = nil
+-- jrs_railroad | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_railroad | client: missions
+-- A delivery job takes barrels to destinations, a maintenance job repairs the track at places. Both run
+-- as a chain of legs: after each leg the closest stop that was not visited yet comes next. The server pays
+-- every finished leg (completeMission).
 
-local function CreateMissionBlip(coords, label, radius, color)
-    local blip = Citizen.InvokeNative(0x45F13B7E0A15C880,
-        -1282792512, coords.x, coords.y, coords.z, 20.0)
-    Citizen.InvokeNative(0x662D364ABF16DE2A, blip, color)
-    Citizen.InvokeNative(0x9CB1A1623062F402, blip, label)
-    return blip
+local mission                 -- the running job, or nil
+local blip
+
+local function markPlace(at, label, colour)
+    local b = Citizen.InvokeNative(0x45F13B7E0A15C880, -1282792512, at.x, at.y, at.z, 20.0)
+    Citizen.InvokeNative(0x662D364ABF16DE2A, b, colour)
+    Citizen.InvokeNative(0x9CB1A1623062F402, b, label)
+    return b
 end
 
--- Returns the index of the entry in `list` closest to `fromCoords`, skipping
--- any index present in `exclude` (a set: exclude[i] = true). Falls back to
--- the closest entry overall if every entry has been excluded.
-local function GetClosestIndex(list, fromCoords, exclude)
-    local bestIdx, bestDist
-    for i, entry in ipairs(list) do
-        if not (exclude and exclude[i]) then
-            local dist = GetDistanceBetween(fromCoords, entry.coords)
-            if not bestDist or dist < bestDist then
-                bestDist = dist
-                bestIdx = i
-            end
-        end
-    end
-    if not bestIdx then
+-- index of the closest entry of `list` that is not in `skip`; if all are skipped, the closest of all
+local function closest(list, from, skip)
+    local best, bestAway
+    local function scan(allowSkipped)
         for i, entry in ipairs(list) do
-            local dist = GetDistanceBetween(fromCoords, entry.coords)
-            if not bestDist or dist < bestDist then
-                bestDist = dist
-                bestIdx = i
+            if allowSkipped or not (skip and skip[i]) then
+                local away = GetDistanceBetween(from, entry.coords)
+                if not bestAway or away < bestAway then best, bestAway = i, away end
             end
         end
     end
-    return bestIdx
+    scan(false)
+    if not best then scan(true) end
+    return best
 end
 
-function IsOnMission()    return activeMission ~= nil end
-function GetActiveMissionInfo() return activeMission end
+function IsOnMission() return mission ~= nil end
+function GetActiveMissionInfo() return mission end
 
----------------------------------------------------------------
--- START MISSION
----------------------------------------------------------------
-function StartMission(missionType, station, destIndex)
-    if activeMission then Notify(L('mission_active'), 'error') return end
-    if missionType == 'delivery' then
-        -- StartDeliveryMission handles its own train requirement (it can
-        -- auto-spawn the correct one), so it doesn't need the generic check.
-        StartDeliveryMission(station, destIndex)
-    elseif missionType == 'maintenance' then
-        if not ActiveTrain or not DoesEntityExist(ActiveTrain) then
-            Notify(L('mission_no_train'), 'error') return
-        end
-        StartMaintenanceMission(station, destIndex)
+local function trainAlive() return ActiveTrain and DoesEntityExist(ActiveTrain) end
+local function companyOf() return (mission.startStation and mission.startStation.company) or (ActiveTrainConfig and ActiveTrainConfig.company) end
+
+function CleanupMission()
+    mission = nil
+    if blip then RemoveBlip(blip) blip = nil end
+    CleanupDeliveryCargo()
+end
+
+function FailMission()
+    Notify(L('mission_failed'), 'error')
+    CleanupMission()
+    if trainAlive() then SendTrainToYard() end
+end
+
+-- the first stop: the one the player chose, else the closest
+local function firstStop(list, picked)
+    if #list == 0 then return nil end
+    local index = (picked and list[picked]) and picked or closest(list, GetEntityCoords(ActiveTrain), {})
+    return index
+end
+
+-- after a leg: the next stop of the chain, or nil when the chain is done
+local function nextStop(list)
+    if mission.leg >= mission.totalLegs then return nil end
+    local index = closest(list, GetEntityCoords(ActiveTrain), mission.visited)
+    if not index then return nil end
+    mission.leg = mission.leg + 1
+    mission.visited[index] = true
+    return list[index]
+end
+
+-- ------------------------------------------------------------------ starting
+
+function StartMission(kind, station, pickedIndex)
+    if mission then return Notify(L('mission_active'), 'error') end
+
+    if kind == 'delivery' then
+        StartDeliveryMission(station, pickedIndex)             -- may start a train by itself
+    elseif kind == 'maintenance' then
+        if not trainAlive() then return Notify(L('mission_no_train'), 'error') end
+        StartMaintenanceMission(station, pickedIndex)
     end
 end
 
----------------------------------------------------------------
--- DELIVERY MISSION (job chain: closest stop each leg)
----------------------------------------------------------------
-function StartDeliveryMission(station, destIndex)
-    -- Delivery jobs need a physical flatbed car for the cargo barrels, and only
-    -- appleseed_config is coupled with one. If the player doesn't already have a
-    -- train out, auto-spawn the right one for this station's company (checking
-    -- the track is clear first) instead of requiring a manual deploy beforehand.
-    if Config.CargoDelivery and Config.CargoDelivery.Enabled then
-        if ActiveTrain and DoesEntityExist(ActiveTrain) then
-            if not ActiveTrainConfig or ActiveTrainConfig.model ~= Config.CargoDelivery.RequiredTrainModel then
-                Notify(L('delivery_wrong_train'), 'error', 8000)
-                return
-            end
-        else
-            local trainConfig = FindTrainConfig(Config.CargoDelivery.RequiredTrainModel, station.company)
-            if not trainConfig then
-                Notify(L('delivery_wrong_train'), 'error', 8000)
-                return
-            end
+-- ------------------------------------------------------------------ delivery
 
-            local canSpawn = JRS.Await('jrs_railroad:canSpawnTrain')
-            if not canSpawn then
-                Notify(L('train_already_spawned'), 'error')
-                return
-            end
+-- a delivery needs the flat car, which only one train model pulls: put that train on the track if none is out
+local function ensureDeliveryTrain(station)
+    local cargo = Config.CargoDelivery
+    if not (cargo and cargo.Enabled) then
+        if not trainAlive() then Notify(L('mission_no_train'), 'error') return false end
+        return true
+    end
 
-            if not IsTrainSpawnClear(station.spawnCoords) then
-                Notify(L('station_track_occupied'), 'error', 8000)
-                return
-            end
-
-            SpawnConfigTrain(trainConfig, false, station)
-            if not ActiveTrain or not DoesEntityExist(ActiveTrain) then
-                return -- SpawnConfigTrain already notified on failure
-            end
+    if trainAlive() then
+        if not ActiveTrainConfig or ActiveTrainConfig.model ~= cargo.RequiredTrainModel then
+            Notify(L('delivery_wrong_train'), 'error', 8000)
+            return false
         end
-    elseif not ActiveTrain or not DoesEntityExist(ActiveTrain) then
-        Notify(L('mission_no_train'), 'error')
-        return
+        return true
     end
 
-    local destList = Config.DeliveryDestinations
-    if #destList == 0 then return end
+    local config = FindTrainConfig(cargo.RequiredTrainModel, station.company)
+    if not config then Notify(L('delivery_wrong_train'), 'error', 8000) return false end
+    if not JRS.Await('jrs_railroad:canSpawnTrain') then Notify(L('train_already_spawned'), 'error') return false end
+    if not IsTrainSpawnClear(station.spawnCoords) then Notify(L('station_track_occupied'), 'error', 8000) return false end
 
-    local visited = {}
-    local idx
-    if destIndex and destList[destIndex] then
-        idx = destIndex
-    else
-        idx = GetClosestIndex(destList, GetEntityCoords(ActiveTrain), visited)
-    end
-    if not idx then return end
-    visited[idx] = true
+    SpawnConfigTrain(config, false, station)
+    return trainAlive()
+end
 
-    activeMission = {
-        type = 'delivery',
-        startStation = station,
-        leg = 1,
-        -- Manual destIndex selections stay a single-stop mission; the
-        -- "Start a Delivery Job" button (no destIndex) runs the full chain.
-        totalLegs = destIndex and 1 or (Config.Missions.delivery.jobLegs or 1),
-        visited = visited,
+function StartDeliveryMission(station, pickedIndex)
+    if not ensureDeliveryTrain(station) then return end
+
+    local places = Config.DeliveryDestinations
+    local index = firstStop(places, pickedIndex)
+    if not index then return end
+
+    mission = {
+        type = 'delivery', startStation = station, leg = 1,
+        -- a stop chosen by hand is a single trip; "start a job" runs the whole chain
+        totalLegs = pickedIndex and 1 or (Config.Missions.delivery.jobLegs or 1),
+        visited = { [index] = true },
     }
-
-    activeMission.cargoProps = SpawnDeliveryCargo(activeMission.totalLegs)
+    mission.cargoProps = SpawnDeliveryCargo(mission.totalLegs)
     Notify(L('cargo_load_instructions'), 'inform', 10000)
 
-    BeginDeliveryLeg(destList[idx])
+    BeginDeliveryLeg(places[index])
 end
 
-function BeginDeliveryLeg(dest)
-    local cargo = Config.Missions.delivery.cargoTypes[math.random(1, #Config.Missions.delivery.cargoTypes)]
-    activeMission.destination = dest
-    activeMission.cargo = cargo
+function BeginDeliveryLeg(place)
+    local types = Config.Missions.delivery.cargoTypes
+    local cargo = types[math.random(1, #types)]
+    mission.destination, mission.cargo = place, cargo
 
-    if missionBlip then RemoveBlip(missionBlip) end
-    missionBlip = CreateMissionBlip(dest.coords, dest.label, dest.radius or 25.0, 0xFF0000FF)
+    if blip then RemoveBlip(blip) end
+    blip = markPlace(place.coords, place.label, 0xFF0000FF)
+    SetCargoDestination(place)
 
-    SetCargoDestination(dest)
-
-    local legTag = activeMission.totalLegs > 1 and L('mission_leg_tag', activeMission.leg, activeMission.totalLegs) or ''
+    local tag = mission.totalLegs > 1 and L('mission_leg_tag', mission.leg, mission.totalLegs) or ''
     Notify(L('mission_cargo', cargo.label), 'inform', 7000)
     Wait(500)
-    Notify(L('mission_go_to', dest.label) .. legTag .. L('mission_follow_blip'), 'success', 10000)
+    Notify(L('mission_go_to', place.label) .. tag .. L('mission_follow_blip'), 'success', 10000)
 
-    local myLeg = activeMission.leg
+    local leg = mission.leg
     CreateThread(function()
-        local notifiedClose = false
-        local notifiedArrived = false
-        while activeMission and activeMission.type == 'delivery' and activeMission.leg == myLeg do
+        local close, arrived = false, false
+        while mission and mission.type == 'delivery' and mission.leg == leg do
             Wait(2000)
-            if not ActiveTrain or not DoesEntityExist(ActiveTrain) or IsEntityDead(PlayerPedId()) then
-                FailMission() break
+            if not trainAlive() or IsEntityDead(PlayerPedId()) then return FailMission() end
+
+            local away = GetDistanceBetween(GetEntityCoords(ActiveTrain), place.coords)
+            if away < 200 and not close then
+                close = true
+                Notify(L('mission_approaching', place.label), 'inform', 6000)
             end
-            local dist = GetDistanceBetween(GetEntityCoords(ActiveTrain), dest.coords)
-            if dist < 200 and not notifiedClose then
-                notifiedClose = true
-                Notify(L('mission_approaching', dest.label), 'inform', 6000)
-            end
-            if dist < (dest.radius or 25.0) and not notifiedArrived then
-                notifiedArrived = true
-                Notify(L('mission_carry_to', dest.label), 'success', 8000)
+            if away < (place.radius or 25.0) and not arrived then
+                arrived = true
+                Notify(L('mission_carry_to', place.label), 'success', 8000)
             end
         end
     end)
 end
 
+-- a barrel was delivered (called from cargo.lua)
 function CompleteDeliveryLeg()
-    if not activeMission then return end
-    local companyId = (activeMission.startStation and activeMission.startStation.company)
-        or (ActiveTrainConfig and ActiveTrainConfig.company)
-    TriggerServerEvent('jrs_railroad:completeMission',
-        activeMission.type, activeMission.destination, activeMission.cargo, companyId)
+    if not mission then return end
+    TriggerServerEvent('jrs_railroad:completeMission', mission.type, mission.destination, mission.cargo, companyOf())
 
-    if activeMission.leg >= activeMission.totalLegs then
+    local nextPlace = nextStop(Config.DeliveryDestinations)
+    if not nextPlace then
         Notify(L('delivery_job_complete'), 'success', 8000)
-        CleanupMission()
-        return
+        return CleanupMission()
     end
-
-    local nextIdx = GetClosestIndex(Config.DeliveryDestinations, GetEntityCoords(ActiveTrain), activeMission.visited)
-    if not nextIdx then
-        Notify(L('delivery_job_complete'), 'success', 8000)
-        CleanupMission()
-        return
-    end
-
-    activeMission.leg = activeMission.leg + 1
-    activeMission.visited[nextIdx] = true
-    BeginDeliveryLeg(Config.DeliveryDestinations[nextIdx])
+    BeginDeliveryLeg(nextPlace)
 end
 
----------------------------------------------------------------
--- MAINTENANCE MISSION (job chain: closest stop each leg)
----------------------------------------------------------------
-function StartMaintenanceMission(station, destIndex)
-    local cfg = Config.Missions.maintenance
-    if #cfg.locations == 0 then return end
+-- ------------------------------------------------------------------ maintenance
 
-    local visited = {}
-    local idx
-    if destIndex and cfg.locations[destIndex] then
-        idx = destIndex
-    else
-        idx = GetClosestIndex(cfg.locations, GetEntityCoords(ActiveTrain), visited)
-    end
-    if not idx then return end
-    visited[idx] = true
+function StartMaintenanceMission(station, pickedIndex)
+    local spec = Config.Missions.maintenance
+    local index = firstStop(spec.locations, pickedIndex)
+    if not index then return end
 
-    activeMission = {
-        type = 'maintenance',
-        startStation = station,
-        leg = 1,
-        totalLegs = destIndex and 1 or (cfg.jobLegs or 1),
-        visited = visited,
+    mission = {
+        type = 'maintenance', startStation = station, leg = 1,
+        totalLegs = pickedIndex and 1 or (spec.jobLegs or 1), visited = { [index] = true },
     }
-
-    BeginMaintenanceLeg(cfg.locations[idx])
+    BeginMaintenanceLeg(spec.locations[index])
 end
 
-function BeginMaintenanceLeg(loc)
-    activeMission.location = loc
+-- the repair itself: stand at the spot, the ped crouches and a progress bar runs
+local function repairHere(spec)
+    local ped = PlayerPedId()
+    Notify(L('mission_repair_start'), 'inform')
+    FreezeEntityPosition(ped, true)
+    TaskStartScenarioInPlace(ped, joaat('WORLD_HUMAN_CROUCH_INSPECT'), 0, true, false, false, false)
 
-    if missionBlip then RemoveBlip(missionBlip) end
-    missionBlip = CreateMissionBlip(loc.coords, loc.label, 25.0, 0xFFFF00FF)
+    local done = JRS.ProgressBar({
+        duration = spec.repairTime, label = L('mission_repair_start'), useWhileDead = false, canCancel = true,
+        disable = { move = true, combat = true },
+    })
+    ClearPedTasks(ped)
+    FreezeEntityPosition(ped, false)
+    return done
+end
 
-    local legTag = activeMission.totalLegs > 1 and (' (Job ' .. activeMission.leg .. '/' .. activeMission.totalLegs .. ')') or ''
-    Notify(L('maintenance_travel_to', loc.label, legTag), 'success', 10000)
+function BeginMaintenanceLeg(place)
+    mission.location = place
+    if blip then RemoveBlip(blip) end
+    blip = markPlace(place.coords, place.label, 0xFFFF00FF)
 
-    local myLeg = activeMission.leg
+    local tag = mission.totalLegs > 1 and (' (Job ' .. mission.leg .. '/' .. mission.totalLegs .. ')') or ''
+    Notify(L('maintenance_travel_to', place.label, tag), 'success', 10000)
+
+    local leg = mission.leg
     CreateThread(function()
-        local cfg = Config.Missions.maintenance
-        while activeMission and activeMission.type == 'maintenance' and activeMission.leg == myLeg do
+        local spec = Config.Missions.maintenance
+        while mission and mission.type == 'maintenance' and mission.leg == leg do
             Wait(1000)
-            if not ActiveTrain or not DoesEntityExist(ActiveTrain) or IsEntityDead(PlayerPedId()) then
-                FailMission() break
-            end
-            local pcoords = GetEntityCoords(PlayerPedId())
-            if GetDistanceBetween(pcoords, loc.coords) < 5 then
-                Notify(L('mission_repair_start'), 'inform')
-                local ped = PlayerPedId()
-                FreezeEntityPosition(ped, true)
-                TaskStartScenarioInPlace(ped, joaat('WORLD_HUMAN_CROUCH_INSPECT'), 0, true, false, false, false)
-                if JRS.ProgressBar({
-                    duration = cfg.repairTime,
-                    label = L('mission_repair_start'),
-                    useWhileDead = false,
-                    canCancel = true,
-                    disable = { move = true, combat = true },
-                }) then
-                    ClearPedTasks(ped) FreezeEntityPosition(ped, false)
+            if not trainAlive() or IsEntityDead(PlayerPedId()) then return FailMission() end
+
+            if GetDistanceBetween(GetEntityCoords(PlayerPedId()), place.coords) < 5 then
+                if repairHere(spec) then
                     Notify(L('mission_repair_complete'), 'success')
                     CompleteMaintenanceLeg()
                 else
-                    ClearPedTasks(ped) FreezeEntityPosition(ped, false)
                     Notify(L('mission_failed'), 'error')
                     FailMission()
                 end
-                break
+                return
             end
         end
     end)
 end
 
 function CompleteMaintenanceLeg()
-    if not activeMission then return end
-    local companyId = (activeMission.startStation and activeMission.startStation.company)
-        or (ActiveTrainConfig and ActiveTrainConfig.company)
-    TriggerServerEvent('jrs_railroad:completeMission',
-        activeMission.type, activeMission.location, nil, companyId)
+    if not mission then return end
+    TriggerServerEvent('jrs_railroad:completeMission', mission.type, mission.location, nil, companyOf())
 
-    if activeMission.leg >= activeMission.totalLegs then
+    local nextPlace = nextStop(Config.Missions.maintenance.locations)
+    if not nextPlace then
         Notify(L('maintenance_job_complete'), 'success', 8000)
-        CleanupMission()
-        return
+        return CleanupMission()
     end
-
-    local nextIdx = GetClosestIndex(Config.Missions.maintenance.locations, GetEntityCoords(ActiveTrain), activeMission.visited)
-    if not nextIdx then
-        Notify(L('maintenance_job_complete'), 'success', 8000)
-        CleanupMission()
-        return
-    end
-
-    activeMission.leg = activeMission.leg + 1
-    activeMission.visited[nextIdx] = true
-    BeginMaintenanceLeg(Config.Missions.maintenance.locations[nextIdx])
-end
-
----------------------------------------------------------------
--- FAIL / CLEANUP
----------------------------------------------------------------
-function FailMission()
-    Notify(L('mission_failed'), 'error')
-    CleanupMission()
-    if ActiveTrain and DoesEntityExist(ActiveTrain) then SendTrainToYard() end
-end
-
-function CleanupMission()
-    activeMission = nil
-    if missionBlip then RemoveBlip(missionBlip) missionBlip = nil end
-    CleanupDeliveryCargo()
+    BeginMaintenanceLeg(nextPlace)
 end

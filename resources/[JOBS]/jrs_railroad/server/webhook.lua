@@ -1,104 +1,84 @@
---[[
-    jrs_railroad Discord webhook logging.
-
-    Usage from any other server file:
-        Webhook.Send('economy', {
-            title       = 'Train Purchased',
-            description = 'Someone bought a train.',
-            type        = 'success', -- 'success' | 'error' | 'info' | 'warn'
-            fields      = {
-                { name = 'Player',  value = 'John Marston', inline = true },
-                { name = 'Cost',    value = '$350',         inline = true },
-            },
-        })
-
-    Sends are queued and drained on a timer so a burst of events (e.g. a
-    company being sold + all its employees/supplies cleaned up) never
-    fires more than one HTTP request every 300ms, which keeps this well
-    under Discord's per-webhook rate limit (~30 requests/minute).
-]]
+-- jrs_railroad | server: Discord logging and two helpers every server file uses
+-- Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+--
+--   Webhook.Send('economy', { title = 'Train Purchased', description = '...', type = 'success', fields = { { name = 'Cost', value = '$350', inline = true } } })
+--   Webhook.SendFields('economy', 'Train Purchased', { { 'Player', name }, { 'Cost', '$350' } }, 'success')
+--
+-- Posts wait in a queue and go out one every 300 ms, so a burst (a company sold with all its staff and
+-- stock) stays well under Discord's rate limit.
 
 Webhook = {}
 
-local queue = {}
-local processing = false
+local queue, draining = {}, false
 
-local function GetWebhookUrl(category)
-    local cfg = Config.Webhooks
-    if not cfg or not cfg.Enabled then return nil end
-    local url = cfg.URLs and cfg.URLs[category]
-    if not url or url == '' then
-        -- fall back to the admin webhook if the category has no URL of its own
-        url = cfg.URLs and cfg.URLs.admin
-    end
-    if not url or url == '' then return nil end
-    return url
+-- a notification on one player's screen (the client resource registers '<resource>:notify')
+function Say(src, text, kind, duration, title)
+    TriggerClientEvent(GetCurrentResourceName() .. ':notify', src, {
+        title = title or L('notify_title'), description = text, type = kind or 'inform', duration = duration or 5000,
+    })
 end
 
-local function ProcessQueue()
-    if processing then return end
-    processing = true
+-- "Firstname Lastname" of a framework player object
+function GetPlayerFullName(player)
+    if not player then return 'Unknown' end
+    local info = player.PlayerData.charinfo or {}
+    return (info.firstname or '') .. ' ' .. (info.lastname or '')
+end
+
+-- the URL of a category, falling back to the admin channel
+local function urlFor(category)
+    local cfg = Config.Webhooks
+    if not cfg or not cfg.Enabled or not cfg.URLs then return nil end
+    local url = cfg.URLs[category]
+    if not url or url == '' then url = cfg.URLs.admin end
+    if url and url ~= '' then return url end
+end
+
+local function drain()
+    if draining then return end
+    draining = true
 
     CreateThread(function()
         while #queue > 0 do
             local job = table.remove(queue, 1)
-            PerformHttpRequest(job.url, function(statusCode, response, headers)
-                if statusCode ~= 200 and statusCode ~= 204 then
-                    print(('[jrs_railroad] Webhook send failed (status %s): %s'):format(tostring(statusCode), tostring(response)))
+            PerformHttpRequest(job.url, function(status, body)
+                if status ~= 200 and status ~= 204 then
+                    print(('[jrs_railroad] webhook failed (status %s): %s'):format(tostring(status), tostring(body)))
                 end
             end, 'POST', json.encode(job.payload), { ['Content-Type'] = 'application/json' })
             Wait(300)
         end
-        processing = false
+        draining = false
     end)
 end
 
--- category: one of Config.Webhooks.URLs keys ('economy' | 'robbery' | 'employees' | 'admin')
--- data: { title, description, type, fields = {{name, value, inline}, ...}, footer }
+-- category is a key of Config.Webhooks.URLs; data = { title, description, type, fields, footer }
 function Webhook.Send(category, data)
-    local url = GetWebhookUrl(category)
+    local url = urlFor(category)
     if not url then return end
 
     local cfg = Config.Webhooks
-    local color = (cfg.Colors and cfg.Colors[data.type or 'info']) or 3447003
-
-    local embed = {
-        title       = data.title or 'JRS Railroad',
-        description = data.description,
-        color       = color,
-        fields      = data.fields or {},
-        footer      = { text = data.footer or 'jrs_railroad' },
-        timestamp   = os.date('!%Y-%m-%dT%H:%M:%SZ'),
+    queue[#queue + 1] = {
+        url = url,
+        payload = {
+            username = cfg.BotName or 'JRS Railroad',
+            avatar_url = (cfg.BotAvatar ~= '' and cfg.BotAvatar) or nil,
+            embeds = { {
+                title = data.title or 'JRS Railroad',
+                description = data.description,
+                color = (cfg.Colors and cfg.Colors[data.type or 'info']) or 3447003,
+                fields = data.fields or {},
+                footer = { text = data.footer or 'jrs_railroad' },
+                timestamp = os.date('!%Y-%m-%dT%H:%M:%SZ'),
+            } },
+        },
     }
-
-    local payload = {
-        username   = cfg.BotName or 'JRS Railroad',
-        avatar_url = (cfg.BotAvatar ~= '' and cfg.BotAvatar) or nil,
-        embeds     = { embed },
-    }
-
-    table.insert(queue, { url = url, payload = payload })
-    ProcessQueue()
+    drain()
 end
 
--- Convenience wrapper: builds the {name, value, inline} field list for you.
--- fieldPairs = { {'Player', name}, {'Cost', '$350'}, ... }
-function Webhook.SendFields(category, title, fieldPairs, wtype, description)
+-- same, but from { { name, value }, ... } pairs
+function Webhook.SendFields(category, title, pairList, kind, description)
     local fields = {}
-    for _, pair in ipairs(fieldPairs) do
-        table.insert(fields, { name = pair[1], value = tostring(pair[2]), inline = true })
-    end
-    Webhook.Send(category, {
-        title       = title,
-        description = description,
-        type        = wtype or 'info',
-        fields      = fields,
-    })
-end
-
--- Small helper used everywhere below to get "Firstname Lastname" safely.
-function GetPlayerFullName(Player)
-    if not Player then return 'Unknown' end
-    local ci = Player.PlayerData.charinfo or {}
-    return (ci.firstname or '') .. ' ' .. (ci.lastname or '')
+    for i, pair in ipairs(pairList) do fields[i] = { name = pair[1], value = tostring(pair[2]), inline = true } end
+    Webhook.Send(category, { title = title, description = description, type = kind or 'info', fields = fields })
 end

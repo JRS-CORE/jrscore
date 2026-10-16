@@ -1,301 +1,169 @@
-local ambientTrains = {}
-local ambientSpawned = false
+-- jrs_railroad | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_railroad | client: the trains that run by themselves
+-- The server picks one client to create them. Each one follows a route: it slows down near a stop, waits
+-- there and drives on, and sets the junctions of its route as it passes them.
 
-local function SpawnTrain(trainid, route, trainhash, startcoords, direction)
+local ambientTrains = {}
+local spawned = false
+
+-- per route: its stops, the junctions to set, the two speeds (near a stop / between stops) and whether it whistles
+local function routes()
+    return {
+        trainRouteOne = { stops = Config.RouteOneTrainStops, switches = Config.RouteOneTrainSwitches, near = 5.0, free = 15.0, whistle = true },
+        tramRouteOne = { stops = Config.RouteOneTramStops, switches = Config.RouteOneTramSwitches, near = 1.0, free = 2.0 },
+        trainRouteThree = { stops = Config.RouteThreeTrainStops, switches = Config.RouteThreeTrainSwitches, near = 8.0, free = 12.0 },
+    }
+end
+
+local function createTrain(hash, at, direction)
     SetRandomTrains(false)
-    local trainWagons = GetNumCarsFromTrainConfig(trainhash)
-    for wagonIndex = 0, trainWagons - 1 do
-        local trainWagonModel = GetTrainModelFromTrainConfigByCarIndex(trainhash, wagonIndex)
-        while not HasModelLoaded(trainWagonModel) do
-            RequestModel(trainWagonModel, 1)
+    for car = 0, GetNumCarsFromTrainConfig(hash) - 1 do
+        local model = GetTrainModelFromTrainConfigByCarIndex(hash, car)
+        while not HasModelLoaded(model) do
+            RequestModel(model, 1)
             Wait(100)
         end
     end
-    local train = CreateMissionTrain(trainhash, startcoords.x, startcoords.y, startcoords.z, direction)
+    local train = CreateMissionTrain(hash, at.x, at.y, at.z, direction)
     SetTrainSpeed(train, 0.0)
     SetModelAsNoLongerNeeded(train)
     NetworkRegisterEntityAsNetworked(train)
     return train
 end
 
-
 function SpawnAmbientRouteTrains()
-    if ambientSpawned then return end
-    for k, v in ipairs(Config.TrainSetup) do
-        local train = SpawnTrain(v.trainid, v.route, v.trainhash, v.startcoords, v.reversed or false)
+    if spawned then return end
+    for _, setup in ipairs(Config.TrainSetup) do
+        local train = createTrain(setup.trainhash, setup.startcoords, setup.reversed or false)
         SetTransportConfigFlag(train, 0, 1)
-        TriggerEvent('jrs_railroad:ambient:trackswithches', train, v.route)
-        TriggerEvent('jrs_railroad:ambient:startroute', train, v.route, v.trainname)
-        table.insert(ambientTrains, train)
+        TriggerEvent('jrs_railroad:ambient:trackswithches', train, setup.route)
+        TriggerEvent('jrs_railroad:ambient:startroute', train, setup.route, setup.trainname)
+        ambientTrains[#ambientTrains + 1] = train
     end
-    ambientSpawned = true
+    spawned = true
 end
 
 function DespawnAmbientRouteTrains()
     for _, train in ipairs(ambientTrains) do
-        if DoesEntityExist(train) then
-            DeleteEntity(train)
-        end
+        if DoesEntityExist(train) then DeleteEntity(train) end
     end
-    ambientTrains = {}
-    ambientSpawned = false
+    ambientTrains, spawned = {}, false
 end
 
 RegisterNetEvent('jrs_railroad:setAmbientState', function(active)
-    if active and not ambientSpawned then
-        local shouldSpawn = JRS.Await('jrs_railroad:shouldSpawnAmbient')
-        if shouldSpawn then
-            SpawnAmbientRouteTrains()
-        end
-    elseif not active and ambientSpawned then
+    if active and not spawned then
+        if JRS.Await('jrs_railroad:shouldSpawnAmbient') then SpawnAmbientRouteTrains() end
+    elseif not active and spawned then
         DespawnAmbientRouteTrains()
         TriggerServerEvent('jrs_railroad:ambientDespawned')
     end
 end)
 
-
+-- sets the junctions of the route when the train is within 15 m of one
 AddEventHandler('jrs_railroad:ambient:trackswithches', function(train, route)
+    local switches = routes()[route] and routes()[route].switches
+    if not switches then return end
 
-    while true do
+    while DoesEntityExist(train) do
         Wait(100)
-        if not train or not DoesEntityExist(train) then return end
-        local coords = GetEntityCoords(train)
-        local traincoords = vector3(coords.x, coords.y, coords.z)
-        
-        if train ~= nil and route == 'trainRouteOne' then
-           
-            for i = 1, #Config.RouteOneTrainSwitches do
-                local switchdist = #(Config.RouteOneTrainSwitches[i].coords - traincoords)
-                if switchdist < 15 then
-                    SetTrainTrackJunctionSwitch(Config.RouteOneTrainSwitches[i].trainTrack, Config.RouteOneTrainSwitches[i].junctionIndex, Config.RouteOneTrainSwitches[i].enabled)
-                    Citizen.InvokeNative(0x3ABFA128F5BF5A70, Config.RouteOneTrainSwitches[i].trainTrack, Config.RouteOneTrainSwitches[i].junctionIndex, Config.RouteOneTrainSwitches[i].enabled)
-                end
-            end
-        end
-        
-        if train ~= nil and route == 'tramRouteOne' then
-            
-            for i = 1, #Config.RouteOneTramSwitches do
-                local switchdist = #(Config.RouteOneTramSwitches[i].coords - traincoords)
-                if switchdist < 15 then
-                    SetTrainTrackJunctionSwitch(Config.RouteOneTramSwitches[i].trainTrack, Config.RouteOneTramSwitches[i].junctionIndex, Config.RouteOneTramSwitches[i].enabled)
-                    Citizen.InvokeNative(0x3ABFA128F5BF5A70, Config.RouteOneTramSwitches[i].trainTrack, Config.RouteOneTramSwitches[i].junctionIndex, Config.RouteOneTramSwitches[i].enabled)
-                end
-            end
-        end
-        
-        if train ~= nil and route == 'trainRouteThree' then
-            for i = 1, #Config.RouteThreeTrainSwitches do
-                local switchdist = #(Config.RouteThreeTrainSwitches[i].coords - traincoords)
-                if switchdist < 15 then
-                    SetTrainTrackJunctionSwitch(Config.RouteThreeTrainSwitches[i].trainTrack, Config.RouteThreeTrainSwitches[i].junctionIndex, Config.RouteThreeTrainSwitches[i].enabled)
-                    Citizen.InvokeNative(0x3ABFA128F5BF5A70, Config.RouteThreeTrainSwitches[i].trainTrack, Config.RouteThreeTrainSwitches[i].junctionIndex, Config.RouteThreeTrainSwitches[i].enabled)
-                end
+        local at = GetEntityCoords(train)
+        local here = vector3(at.x, at.y, at.z)
+        for _, switch in ipairs(switches) do
+            if #(switch.coords - here) < 15 then
+                SetTrainTrackJunctionSwitch(switch.trainTrack, switch.junctionIndex, switch.enabled)
+                Citizen.InvokeNative(0x3ABFA128F5BF5A70, switch.trainTrack, switch.junctionIndex, switch.enabled)
             end
         end
     end
-
 end)
 
+-- drives one train along its stops
+AddEventHandler('jrs_railroad:ambient:startroute', function(train, route)
+    local spec = routes()[route]
+    if not spec then return end
 
-AddEventHandler('jrs_railroad:ambient:startroute', function(train, route, trainname)
-
-    while true do
+    while DoesEntityExist(train) do
         Wait(0)
-        if not train or not DoesEntityExist(train) then return end
-        local coords = GetEntityCoords(train)
-        local traincoords = vector3(coords.x, coords.y, coords.z)
-        if train ~= nil and route == 'trainRouteOne' then
-            
-            for i = 1, #Config.RouteOneTrainStops do
-                local distance = #(Config.RouteOneTrainStops[i].coords - traincoords)
-                local stopspeed = 0.0
-                local cruisespeed = 5.0
-                local fullspeed = 15.0
-                if distance < Config.RouteOneTrainStops[i].dst then
-                    SetTrainCruiseSpeed(train, cruisespeed)
-                    Wait(1000)
-                    if distance < Config.RouteOneTrainStops[i].dst2 then
-                        SetTrainCruiseSpeed(train, stopspeed)
-                        TriggerTrainWhistle(train, "STOPPED", 1, 0)
-                        if Config.Debug then
-                            
-                        end
-                        Wait(Config.RouteOneTrainStops[i].waittime)
-                        TriggerTrainWhistle(train, "NEXT_STATION", 1, 0)
-                        if Config.Debug then
-                            
-                        end
-                        SetTrainCruiseSpeed(train, cruisespeed)
-                        Wait(10000)
-                    end
-                elseif distance > Config.RouteOneTrainStops[i].dst then
-                    SetTrainCruiseSpeed(train, fullspeed)
-                    Wait(25)
+        local at = GetEntityCoords(train)
+        local here = vector3(at.x, at.y, at.z)
+
+        for _, stop in ipairs(spec.stops) do
+            local away = #(stop.coords - here)
+            if away < stop.dst then
+                SetTrainCruiseSpeed(train, spec.near)
+                Wait(1000)
+                if away < stop.dst2 then
+                    SetTrainCruiseSpeed(train, 0.0)
+                    if spec.whistle then TriggerTrainWhistle(train, 'STOPPED', 1, 0) end
+                    Wait(stop.waittime)
+                    if spec.whistle then TriggerTrainWhistle(train, 'NEXT_STATION', 1, 0) end
+                    SetTrainCruiseSpeed(train, spec.near)
+                    Wait(10000)
                 end
-            end
-        end
-        if train ~= nil and route == 'tramRouteOne' then
-           
-            for i = 1, #Config.RouteOneTramStops do
-                local distance = #(Config.RouteOneTramStops[i].coords - traincoords)
-                local stopspeed = 0.0
-                local cruisespeed = 1.0
-                local fullspeed = 2.0
-                if distance < Config.RouteOneTramStops[i].dst then
-                    SetTrainCruiseSpeed(train, cruisespeed)
-                    Wait(1000)
-                    if distance < Config.RouteOneTramStops[i].dst2 then
-                        SetTrainCruiseSpeed(train, stopspeed)
-                        if Config.Debug then
-                            
-                        end
-                        Wait(Config.RouteOneTramStops[i].waittime)
-                        if Config.Debug then
-                           
-                        end
-                        SetTrainCruiseSpeed(train, cruisespeed)
-                        Wait(10000)
-                    end
-                elseif distance > Config.RouteOneTramStops[i].dst then
-                    SetTrainCruiseSpeed(train, fullspeed)
-                    Wait(25)
-                end
-            end
-        end
-        if train ~= nil and route == 'trainRouteThree' then
-            for i = 1, #Config.RouteThreeTrainStops do
-                local distance = #(Config.RouteThreeTrainStops[i].coords - traincoords)
-                local stopspeed = 0.0
-                local cruisespeed = 8.0
-                local fullspeed = 12.0
-                if distance < Config.RouteThreeTrainStops[i].dst then
-                    SetTrainCruiseSpeed(train, cruisespeed)
-                    Wait(1000)
-                    if distance < Config.RouteThreeTrainStops[i].dst2 then
-                        SetTrainCruiseSpeed(train, stopspeed)
-                        Wait(Config.RouteThreeTrainStops[i].waittime)
-                        SetTrainCruiseSpeed(train, cruisespeed)
-                        Wait(10000)
-                    end
-                elseif distance > Config.RouteThreeTrainStops[i].dst then
-                    SetTrainCruiseSpeed(train, fullspeed)
-                    Wait(25)
-                end
+            elseif away > stop.dst then
+                SetTrainCruiseSpeed(train, spec.free)
+                Wait(25)
             end
         end
     end
-    
 end)
 
--------------------------------------------------------------------------------
--- setup train blips
--------------------------------------------------------------------------------
-function trainChecker(train)
-    if IsThisModelATrain(GetEntityModel(train)) then
-        local trainTrailerNumber = Citizen.InvokeNative(0x60B7D1DCC312697D, train)
-        local isTrainIsReal = GetTrainCarriage(train,trainTrailerNumber-1)
-        if isTrainIsReal ~= 0 then
-            if not Citizen.InvokeNative(0x9FA00E2FC134A9D0, train) then
-                local createdBlip = addBlipToTrain(-399496385, train, "Train")
-                if Config.Debug then
-                   
-                end
-            end
-        end
+-- ------------------------------------------------------------------ blips for every train in the world
+
+local function blipTrain(vehicle)
+    if not IsThisModelATrain(GetEntityModel(vehicle)) then return end
+    local cars = Citizen.InvokeNative(0x60B7D1DCC312697D, vehicle)
+    if GetTrainCarriage(vehicle, cars - 1) ~= 0 and not Citizen.InvokeNative(0x9FA00E2FC134A9D0, vehicle) then
+        local blip = Citizen.InvokeNative(0x23f74c2fda6e7c61, -399496385, vehicle)
+        Citizen.InvokeNative(0x9CB1A1623062F402, blip, 'Train')
     end
 end
 
-function addBlipToTrain(blipType,train,blipText)
-    local blip = Citizen.InvokeNative(0x23f74c2fda6e7c61, blipType, train)
-    Citizen.InvokeNative(0x9CB1A1623062F402, blip, blipText)
-    return blip
-end
-
--- RedM has no FindFirstVehicle / FindNextVehicle: walk the vehicle pool instead
-function getTrains()
-    for _, veh in ipairs(GetGamePool('CVehicle')) do
-        trainChecker(veh)
-    end
-end
-
-Citizen.CreateThread(function()
+-- RedM has no FindFirstVehicle: walk the vehicle pool
+CreateThread(function()
     while true do
-        getTrains()
+        for _, vehicle in ipairs(GetGamePool('CVehicle')) do blipTrain(vehicle) end
         Wait(10000)
     end
 end)
 
-function FindNearestName(coords)
-    local nearestDist = math.huge
-    local nearestName = 'Unknown'
-    for _, stop in ipairs(Config.RouteOneTrainStops) do
-        local dist = #(stop.coords - coords)
-        if dist < nearestDist then
-            nearestDist = dist
-            nearestName = stop.name
+-- the name of the stop closest to a position, or 'En Route' when none is within 200 m
+function FindNearestName(at)
+    local best, bestAway = 'Unknown', math.huge
+    for _, spec in pairs(routes()) do
+        for _, stop in ipairs(spec.stops) do
+            local away = #(stop.coords - at)
+            if away < bestAway then best, bestAway = stop.name, away end
         end
     end
-    for _, stop in ipairs(Config.RouteOneTramStops) do
-        local dist = #(stop.coords - coords)
-        if dist < nearestDist then
-            nearestDist = dist
-            nearestName = stop.name
-        end
-    end
-    for _, stop in ipairs(Config.RouteThreeTrainStops) do
-        local dist = #(stop.coords - coords)
-        if dist < nearestDist then
-            nearestDist = dist
-            nearestName = stop.name
-        end
-    end
-    if nearestDist > 200 then
-        nearestName = 'En Route'
-    end
-    return nearestName
+    return bestAway > 200 and 'En Route' or best
 end
 
 RegisterCommand('trainpos', function()
     local options = {}
-
-    if ActiveTrain and DoesEntityExist(ActiveTrain) then
-        local coords = GetEntityCoords(ActiveTrain)
-        local label = ActiveTrainConfig and ActiveTrainConfig.label or 'Active Train'
-        table.insert(options, { title = label, description = FindNearestName(coords), icon = 'train' })
-    end
-
-    for _, train in ipairs(ambientTrains) do
-        if DoesEntityExist(train) then
-            local coords = GetEntityCoords(train)
-            table.insert(options, { title = L('menu_route_train'), description = FindNearestName(coords), icon = 'train' })
+    local function add(entity, title, icon)
+        if entity and DoesEntityExist(entity) then
+            options[#options + 1] = { title = title, description = FindNearestName(GetEntityCoords(entity)), icon = icon }
         end
     end
 
-    if ambientTram and DoesEntityExist(ambientTram) then
-        local coords = GetEntityCoords(ambientTram)
-        table.insert(options, { title = L('menu_saint_denis_trolley'), description = FindNearestName(coords), icon = 'tram' })
-    end
+    add(ActiveTrain, ActiveTrainConfig and ActiveTrainConfig.label or 'Active Train', 'train')
+    for _, train in ipairs(ambientTrains) do add(train, L('menu_route_train'), 'train') end
+    add(ambientTram, L('menu_saint_denis_trolley'), 'tram')
 
-    if #options == 0 then
-        Notify(L('no_trains_found'), 'error')
-        return
-    end
-
+    if #options == 0 then return Notify(L('no_trains_found'), 'error') end
     JRS.RegisterContext({ id = 'trainpos_menu', title = L('menu_train_locations'), options = options })
     JRS.ShowContext('trainpos_menu')
 end, false)
 
-RegisterCommand('setjunction', function(source, args)
+-- /setjunction <track> <index> <0|1>   (for finding out which junction does what)
+RegisterCommand('setjunction', function(_, args)
     if #args < 3 then
         print('Usage: /setjunction <trackName> <junctionIndex> <0|1>')
-        print('Example: /setjunction TRAINS_OLD_WEST03 2 1')
-        return
+        return print('Example: /setjunction TRAINS_OLD_WEST03 2 1')
     end
-    local hash = joaat(args[1])
-    local idx = tonumber(args[2])
-    local enabled = tonumber(args[3]) == 1
-    SetTrainTrackJunctionSwitch(hash, idx, enabled)
-    Citizen.InvokeNative(0x3ABFA128F5BF5A70, hash, idx, enabled and 1 or 0)
-    print(string.format('Set junction: hash=%d (%s), idx=%d, enabled=%s', hash, args[1], idx, tostring(enabled)))
+    local track, index, on = joaat(args[1]), tonumber(args[2]), tonumber(args[3]) == 1
+    SetTrainTrackJunctionSwitch(track, index, on)
+    Citizen.InvokeNative(0x3ABFA128F5BF5A70, track, index, on and 1 or 0)
+    print(('Set junction: hash=%d (%s), idx=%d, enabled=%s'):format(track, args[1], index, tostring(on)))
 end, false)

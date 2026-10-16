@@ -1,61 +1,58 @@
-local StationPromptGroup = GetRandomIntInRange(0, 0xffffff)
-local StationPrompt = nil
-local stationBlips = {}
-local currentStation = nil
+-- jrs_railroad | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_railroad | client: stations
+-- Stations have a blip and a hold prompt that opens the station window (NUI). What the window shows depends on
+-- the player's role at the company of that station (owner, driver, or nobody). The window talks back through
+-- the NUI callbacks at the end of this file; each one asks the server and then returns fresh data.
 
----------------------------------------------------------------
--- INIT: Disable random trains, create prompts, create blips
----------------------------------------------------------------
+local stationGroup = GetRandomIntInRange(0, 0xffffff)
+local stationPrompt
+local stationBlips, facilityBlips = {}, {}
+local current                               -- the station whose window is open
+
+local ambientConductor, ambientBlip        -- (ambientTram is global: /trainpos lists it)
+
+-- ------------------------------------------------------------------ start up
+
 CreateThread(function()
     SetRandomTrains(false)
     CreateStationPrompt()
     CreateStationBlips()
     CreateFacilityBlips()
     SpawnAmbientTram()
-    -- Spawn ambient route trains (server ensures only one client does it)
-    local shouldSpawn = JRS.Await('jrs_railroad:shouldSpawnAmbient')
-    if shouldSpawn then
-        local ambientActive = JRS.Await('jrs_railroad:getAmbientState')
-        if ambientActive then
-            SpawnAmbientRouteTrains()
-        end
+
+    -- ambient route trains: the server lets only one client spawn them
+    if JRS.Await('jrs_railroad:shouldSpawnAmbient') and JRS.Await('jrs_railroad:getAmbientState') then
+        SpawnAmbientRouteTrains()
     end
 end)
 
----------------------------------------------------------------
--- AMBIENT TRAM (NPC-driven, no player interaction)
--- Spawns once on script start, runs around Saint Denis
----------------------------------------------------------------
-local ambientTram = nil
-local ambientTramConductor = nil
-local ambientTramBlip = nil
+-- ------------------------------------------------------------------ the tram that always runs in Saint Denis
+
+local function loadWagons(model)
+    for i = 0, N_0x635423d55ca84fc8(model) - 1 do
+        local wagon = N_0x8df5f6a19f99f0d5(model, i)
+        RequestModel(wagon)
+        while not HasModelLoaded(wagon) do Wait(0) end
+    end
+end
 
 function SpawnAmbientTram()
-    if not Config.AmbientTram or not Config.AmbientTram.enabled then return end
-
     local cfg = Config.AmbientTram
-    local coords = cfg.spawnCoords
-    local trainHash = joaat(cfg.model)
+    if not cfg or not cfg.enabled then return end
 
-    -- Load wagon models
-    local wagons = N_0x635423d55ca84fc8(trainHash)
-    for i = 0, wagons - 1 do
-        local wagonModel = N_0x8df5f6a19f99f0d5(trainHash, i)
-        RequestModel(wagonModel)
-        while not HasModelLoaded(wagonModel) do Wait(0) end
-    end
+    local model = joaat(cfg.model)
+    loadWagons(model)
 
-    -- Spawn tram with NPC conductor + passengers
-    ambientTram = Citizen.InvokeNative(0xC239DBD9A57D2A71, trainHash, coords.x, coords.y, coords.z, cfg.direction, cfg.passengers, true, true)
+    local at = cfg.spawnCoords
+    ambientTram = Citizen.InvokeNative(0xC239DBD9A57D2A71, model, at.x, at.y, at.z, cfg.direction, cfg.passengers, true, true)
     SetTrainSpeed(ambientTram, cfg.speed)
     SetTrainCruiseSpeed(ambientTram, cfg.speed)
 
-    -- Wait for conductor to appear, then protect them
-    local conductor = GetPedInVehicleSeat(ambientTram, -1)
-    local attempts = 0
-    while not DoesEntityExist(conductor) and attempts < 100 do
+    -- the conductor appears a moment later; make him untouchable
+    local conductor, tries = GetPedInVehicleSeat(ambientTram, -1), 0
+    while not DoesEntityExist(conductor) and tries < 100 do
         conductor = GetPedInVehicleSeat(ambientTram, -1)
-        attempts = attempts + 1
+        tries = tries + 1
         Wait(10)
     end
     if DoesEntityExist(conductor) then
@@ -64,425 +61,258 @@ function SpawnAmbientTram()
         SetEntityInvincible(conductor, true)
         SetBlockingOfNonTemporaryEvents(conductor, true)
         SetEntityCanBeDamaged(conductor, false)
-        ambientTramConductor = conductor
+        ambientConductor = conductor
     end
 
-    -- Create blip for the tram
-    ambientTramBlip = Citizen.InvokeNative(0x23F74C2FDA6E7C61, Config.Blips.train.hash, ambientTram)
-    SetBlipScale(ambientTramBlip, Config.Blips.train.scale)
-    Citizen.InvokeNative(0x9CB1A1623062F402, ambientTramBlip, cfg.label or 'Saint Denis Trolley')
-
+    ambientBlip = Citizen.InvokeNative(0x23F74C2FDA6E7C61, Config.Blips.train.hash, ambientTram)
+    SetBlipScale(ambientBlip, Config.Blips.train.scale)
+    Citizen.InvokeNative(0x9CB1A1623062F402, ambientBlip, cfg.label or 'Saint Denis Trolley')
     DebugPrint('Ambient tram spawned in Saint Denis')
 end
 
----------------------------------------------------------------
--- STATION PROMPT
----------------------------------------------------------------
+-- ------------------------------------------------------------------ prompt and blips
+
 function CreateStationPrompt()
-    StationPrompt = PromptRegisterBegin()
-    PromptSetControlAction(StationPrompt, 0x760A9C6F) -- G key
-    local str = CreateVarString(10, 'LITERAL_STRING', L('station_prompt'))
-    PromptSetText(StationPrompt, str)
-    PromptSetEnabled(StationPrompt, true)
-    PromptSetVisible(StationPrompt, true)
-    PromptSetHoldMode(StationPrompt, true)
-    PromptSetGroup(StationPrompt, StationPromptGroup)
-    PromptRegisterEnd(StationPrompt)
+    stationPrompt = PromptRegisterBegin()
+    PromptSetControlAction(stationPrompt, 0x760A9C6F)                  -- G
+    PromptSetText(stationPrompt, CreateVarString(10, 'LITERAL_STRING', L('station_prompt')))
+    PromptSetEnabled(stationPrompt, true)
+    PromptSetVisible(stationPrompt, true)
+    PromptSetHoldMode(stationPrompt, true)
+    PromptSetGroup(stationPrompt, stationGroup)
+    PromptRegisterEnd(stationPrompt)
 end
 
----------------------------------------------------------------
--- STATION BLIPS
----------------------------------------------------------------
+local function blipAt(at, sprite, scale, colour, name)
+    local blip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, at.x, at.y, at.z)
+    SetBlipSprite(blip, sprite, true)
+    SetBlipScale(blip, scale)
+    if colour then Citizen.InvokeNative(0x662D364ABF16DE2F, blip, joaat(colour)) end
+    Citizen.InvokeNative(0x9CB1A1623062F402, blip, name)
+    return blip
+end
+
 function CreateStationBlips()
     for _, station in ipairs(Config.Stations) do
-        local blip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, station.coords.x, station.coords.y, station.coords.z)
-        SetBlipSprite(blip, Config.Blips.station.hash, true)
-        SetBlipScale(blip, Config.Blips.station.scale)
         local company = Config.Companies[station.company]
-        if company then
-            Citizen.InvokeNative(0x662D364ABF16DE2F, blip, joaat(company.blipColor))
-        end
-        Citizen.InvokeNative(0x9CB1A1623062F402, blip, station.label)
-        table.insert(stationBlips, blip)
+        stationBlips[#stationBlips + 1] = blipAt(station.coords, Config.Blips.station.hash, Config.Blips.station.scale, company and company.blipColor, station.label)
     end
 end
 
----------------------------------------------------------------
--- WATER TOWER + MAINTENANCE DEPOT BLIPS
----------------------------------------------------------------
-local facilityBlips = {}
-
+-- water towers and maintenance depots of the stations that have them
 function CreateFacilityBlips()
-    for _, station in ipairs(Config.Stations) do
-        if station.hasWaterTower and station.waterTowerCoords then
-            local blip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, station.waterTowerCoords.x, station.waterTowerCoords.y, station.waterTowerCoords.z)
-            SetBlipSprite(blip, joaat("blip_donate_food"), true)
-            SetBlipScale(blip, Config.Blips.water.scale)
-            Citizen.InvokeNative(0x662D364ABF16DE2F, blip, joaat('BLIP_MODIFIER_MP_COLOR_13'))
-            Citizen.InvokeNative(0x9CB1A1623062F402, blip, station.label .. ' - Water Tower')
-            table.insert(facilityBlips, blip)
+    for _, s in ipairs(Config.Stations) do
+        if s.hasWaterTower and s.waterTowerCoords then
+            facilityBlips[#facilityBlips + 1] = blipAt(s.waterTowerCoords, joaat('blip_donate_food'), Config.Blips.water.scale, 'BLIP_MODIFIER_MP_COLOR_13', s.label .. ' - Water Tower')
         end
-
-        if station.hasMaintenanceDepot and station.depotCoords then
-            local blip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, station.depotCoords.x, station.depotCoords.y, station.depotCoords.z)
-            SetBlipSprite(blip, joaat("blip_event_railroad_camp"), true)
-            SetBlipScale(blip, Config.Blips.depot.scale)
-            Citizen.InvokeNative(0x662D364ABF16DE2F, blip, joaat('BLIP_MODIFIER_MP_COLOR_11'))
-            Citizen.InvokeNative(0x9CB1A1623062F402, blip, station.label .. ' - Maintenance Depot')
-            table.insert(facilityBlips, blip)
+        if s.hasMaintenanceDepot and s.depotCoords then
+            facilityBlips[#facilityBlips + 1] = blipAt(s.depotCoords, joaat('blip_event_railroad_camp'), Config.Blips.depot.scale, 'BLIP_MODIFIER_MP_COLOR_11', s.label .. ' - Maintenance Depot')
         end
     end
 end
 
--- Helper: check if player is near a water tower
-function IsNearWaterTower()
-    local pcoords = GetEntityCoords(PlayerPedId())
-    for _, station in ipairs(Config.Stations) do
-        if station.hasWaterTower and station.waterTowerCoords then
-            if GetDistanceBetween(pcoords, station.waterTowerCoords) < 20 then
-                return true
-            end
-        end
+local function nearFacility(flag, key)
+    local here = GetEntityCoords(PlayerPedId())
+    for _, s in ipairs(Config.Stations) do
+        if s[flag] and s[key] and GetDistanceBetween(here, s[key]) < 20 then return true end
     end
     return false
 end
 
--- Helper: check if player is near a maintenance depot
-function IsNearMaintenanceDepot()
-    local pcoords = GetEntityCoords(PlayerPedId())
-    for _, station in ipairs(Config.Stations) do
-        if station.hasMaintenanceDepot and station.depotCoords then
-            if GetDistanceBetween(pcoords, station.depotCoords) < 20 then
-                return true
-            end
-        end
-    end
-    return false
-end
+function IsNearWaterTower() return nearFacility('hasWaterTower', 'waterTowerCoords') end
+function IsNearMaintenanceDepot() return nearFacility('hasMaintenanceDepot', 'depotCoords') end
 
----------------------------------------------------------------
--- MAIN LOOP: Station proximity detection
----------------------------------------------------------------
 CreateThread(function()
     while true do
         Wait(5)
-        local sleep = true
-        local pcoords = GetEntityCoords(PlayerPedId())
-
+        local near = false
+        local here = GetEntityCoords(PlayerPedId())
         for _, station in ipairs(Config.Stations) do
-            local dist = GetDistanceBetween(pcoords, station.coords)
-            if dist < Config.StationInteractRadius then
-                sleep = false
-                local groupLabel = CreateVarString(10, 'LITERAL_STRING', station.label)
-                PromptSetActiveGroupThisFrame(StationPromptGroup, groupLabel)
-                if PromptHasHoldModeCompleted(StationPrompt) then
-                    currentStation = station
+            if GetDistanceBetween(here, station.coords) < Config.StationInteractRadius then
+                near = true
+                PromptSetActiveGroupThisFrame(stationGroup, CreateVarString(10, 'LITERAL_STRING', station.label))
+                if PromptHasHoldModeCompleted(stationPrompt) then
+                    current = station
                     OpenStationHUD(station)
                 end
             end
         end
-
-        if sleep then
-            Wait(1500)
-        end
+        if not near then Wait(1500) end
     end
 end)
 
----------------------------------------------------------------
--- OPEN STATION HUD (V2: role-based)
----------------------------------------------------------------
-function OpenStationHUD(station)
-    DebugPrint('Opening station HUD: ' .. station.label)
+-- ------------------------------------------------------------------ the station window
 
-    local companyId = station.company
-
-    -- V2: Determine player's role at this station
-    local playerRole = JRS.Await('jrs_railroad:getPlayerRole', companyId)
-    local ownership = JRS.Await('jrs_railroad:getCompanyOwnership', companyId)
-    local canSpawn = JRS.Await('jrs_railroad:canSpawnTrain')
-
-    -- Build trains list for this company
-    local companyTrainConfigs = {}
-    for i, train in ipairs(Config.Trains) do
-        if train.company == companyId then
-            table.insert(companyTrainConfigs, {
-                index = i,
-                model = train.model,
-                label = train.label,
-                cost = train.cost,
-                sellPrice = train.sellPrice,
-                maxSpeed = train.maxSpeed,
-                maxFuel = train.maxFuel,
-                maxWater = train.maxWater,
-                maxCondition = train.maxCondition,
-                requiredRank = train.requiredRank,
-                upgradeable = train.upgradeable,
-                hasPassengerCars = train.hasPassengerCars or false,
-                company = train.company,
-            })
+-- the trains of the config that belong to a company, with the fields the window needs
+local function trainsOf(companyId)
+    local list = {}
+    for i, t in ipairs(Config.Trains) do
+        if t.company == companyId then
+            list[#list + 1] = {
+                index = i, model = t.model, label = t.label, cost = t.cost, sellPrice = t.sellPrice, maxSpeed = t.maxSpeed,
+                maxFuel = t.maxFuel, maxWater = t.maxWater, maxCondition = t.maxCondition, requiredRank = t.requiredRank,
+                upgradeable = t.upgradeable, hasPassengerCars = t.hasPassengerCars or false, company = t.company,
+            }
         end
     end
+    return list
+end
 
-    -- Get company trains from DB
-    local companyTrains = JRS.Await('jrs_railroad:getCompanyTrains', companyId) or {}
+function OpenStationHUD(station)
+    DebugPrint('Opening station HUD: ' .. station.label)
+    local id = station.company
 
-    -- Get role-specific data
-    local employees = nil
-    local pendingApps = nil
-    local supplies = nil
-    local myEmployeeData = nil
-    local myMembership = nil
-    local cashRegister = 0
+    local role = JRS.Await('jrs_railroad:getPlayerRole', id)
+    local ownership = JRS.Await('jrs_railroad:getCompanyOwnership', id)
 
-    myMembership = JRS.Await('jrs_railroad:getMyCompanyMembership', companyId)
-    local companyUpgrades = JRS.Await('jrs_railroad:getCompanyUpgrades', companyId) or {}
-
-    if playerRole == 'owner' then
-        employees = JRS.Await('jrs_railroad:getEmployees', companyId)
-        pendingApps = JRS.Await('jrs_railroad:getPendingApplications', companyId)
-        supplies = JRS.Await('jrs_railroad:getCompanySupplies', companyId)
-        cashRegister = ownership and ownership.cash_register or 0
-    elseif playerRole == 'driver' then
-        myEmployeeData = JRS.Await('jrs_railroad:getMyEmployeeData', companyId)
-        supplies = JRS.Await('jrs_railroad:getCompanySupplies', companyId)
+    -- owners see everything, drivers see their own record and the supplies, others see neither
+    local employees, applications, supplies, mine, cash
+    if role == 'owner' then
+        employees = JRS.Await('jrs_railroad:getEmployees', id)
+        applications = JRS.Await('jrs_railroad:getPendingApplications', id)
+        supplies = JRS.Await('jrs_railroad:getCompanySupplies', id)
+        cash = ownership and ownership.cash_register or 0
+    elseif role == 'driver' then
+        mine = JRS.Await('jrs_railroad:getMyEmployeeData', id)
+        supplies = JRS.Await('jrs_railroad:getCompanySupplies', id)
     end
 
-    local companyLabel = Config.Companies[companyId] and Config.Companies[companyId].label or companyId
-    if ownership and ownership.company_name then
-        companyLabel = ownership.company_name
-    end
+    local label = ownership and ownership.company_name or (Config.Companies[id] and Config.Companies[id].label) or id
 
     SendNUIMessage({
         action = 'openStation',
-        station = {
-            id = station.id,
-            label = station.label,
-            company = companyId,
-            companyLabel = companyLabel,
-        },
-        playerRole = playerRole,
+        station = { id = station.id, label = station.label, company = id, companyLabel = label },
+        playerRole = role,
         ownership = ownership,
-        companyTrains = companyTrains,
-        companyTrainConfigs = companyTrainConfigs,
-        companyUpgrades = companyUpgrades,
-        canSpawn = canSpawn,
-        employees = employees or {},
-        pendingApps = pendingApps or {},
-        supplies = supplies or {},
-        myEmployeeData = myEmployeeData,
-        myMembership = myMembership,
-        cashRegister = cashRegister,
-        ranks = Config.Ranks,
-        companies = Config.Companies,
-        upgrades = Config.Upgrades,
-        supplyItems = Config.SupplyItems,
-        companyPurchasePrice = Config.CompanyPurchasePrice,
-        deliveryDestinations = Config.DeliveryDestinations,
-        maintenanceLocations = Config.Missions.maintenance.locations,
-        missions = Config.Missions,
+        companyTrains = JRS.Await('jrs_railroad:getCompanyTrains', id) or {},
+        companyTrainConfigs = trainsOf(id),
+        companyUpgrades = JRS.Await('jrs_railroad:getCompanyUpgrades', id) or {},
+        canSpawn = JRS.Await('jrs_railroad:canSpawnTrain'),
+        employees = employees or {}, pendingApps = applications or {}, supplies = supplies or {},
+        myEmployeeData = mine,
+        myMembership = JRS.Await('jrs_railroad:getMyCompanyMembership', id),
+        cashRegister = cash or 0,
+        ranks = Config.Ranks, companies = Config.Companies, upgrades = Config.Upgrades, supplyItems = Config.SupplyItems,
+        companyPurchasePrice = Config.CompanyPurchasePrice, deliveryDestinations = Config.DeliveryDestinations,
+        maintenanceLocations = Config.Missions.maintenance.locations, missions = Config.Missions,
         hasPassengerCars = ActiveTrainConfig and ActiveTrainConfig.hasPassengerCars or false,
-        companyStats = JRS.Await('jrs_railroad:getCompanyStats', companyId) or {},
+        companyStats = JRS.Await('jrs_railroad:getCompanyStats', id) or {},
         allCompanyStats = JRS.Await('jrs_railroad:getAllCompanyStats') or {},
         lang = GetLocaleTable(),
     })
-
     SetNuiFocus(true, true)
 end
 
----------------------------------------------------------------
--- GET CURRENT STATION
----------------------------------------------------------------
-function GetCurrentStation()
-    return currentStation
+function GetCurrentStation() return current end
+
+-- ------------------------------------------------------------------ callbacks from the window
+
+local function closeWindow()
+    SendNUIMessage({ action = 'closeStation' })
+    SetNuiFocus(false, false)
 end
 
----------------------------------------------------------------
--- NUI CALLBACKS
----------------------------------------------------------------
-RegisterNUICallback('closeStation', function(data, cb)
+RegisterNUICallback('closeStation', function(_, done)
     SetNuiFocus(false, false)
-    cb({})
+    done({})
 end)
 
-RegisterNUICallback('buyTrain', function(data, cb)
-    TriggerServerEvent('jrs_railroad:buyTrain', data.trainIndex, currentStation.id)
-    Wait(500)
-    -- Refresh data
-    local ownedTrains = JRS.Await('jrs_railroad:getOwnedTrains')
-    cb({ success = true, ownedTrains = ownedTrains or {} })
+-- An action that sends one event to the server, waits for it to settle and answers with fresh data.
+-- `args(data)` gives the event's arguments, `fresh(data)` the answer (a table merged into { success = true }).
+local function action(name, event, args, wait, fresh)
+    RegisterNUICallback(name, function(data, done)
+        TriggerServerEvent(event, table.unpack(args(data)))
+        Wait(wait or 500)
+        local answer = { success = true }
+        for k, v in pairs(fresh and fresh(data) or {}) do answer[k] = v end
+        done(answer)
+    end)
+end
+
+local function ask(callback, ...) return JRS.Await(callback, ...) or {} end
+
+action('buyTrain', 'jrs_railroad:buyTrain', function(d) return { d.trainIndex, current.id } end, 500,
+    function() return { ownedTrains = ask('jrs_railroad:getOwnedTrains') } end)
+
+action('buyCompanyTrain', 'jrs_railroad:buyTrain', function(d) return { d.trainIndex, current.id } end, 500,
+    function() return { companyTrains = ask('jrs_railroad:getCompanyTrains', current.company) } end)
+
+action('purchaseUpgrade', 'jrs_railroad:purchaseUpgrade', function(d) return { d.companyId, d.trainModel, d.upgradeType } end, 500,
+    function(d) return { companyUpgrades = ask('jrs_railroad:getCompanyUpgrades', d.companyId) } end)
+
+action('buyCompany', 'jrs_railroad:buyCompany', function(d) return { d.companyId } end)
+action('sellCompany', 'jrs_railroad:sellCompany', function(d) return { d.companyId } end)
+action('renameCompany', 'jrs_railroad:renameCompany', function(d) return { d.companyId, d.newName } end, 300)
+action('applyAsDriver', 'jrs_railroad:applyAsDriver', function(d) return { d.companyId } end)
+
+action('withdrawFunds', 'jrs_railroad:withdrawFunds', function(d) return { d.companyId, d.amount } end, 500, function(d)
+    local ownership = JRS.Await('jrs_railroad:getCompanyOwnership', d.companyId)
+    return { cashRegister = ownership and ownership.cash_register or 0 }
 end)
 
-RegisterNUICallback('sellTrain', function(data, cb)
-    -- If the train being sold is currently spawned, despawn it first
+action('approveDriver', 'jrs_railroad:approveDriver', function(d) return { d.companyId, d.employeeId } end, 500, function(d)
+    return { employees = ask('jrs_railroad:getEmployees', d.companyId), pendingApps = ask('jrs_railroad:getPendingApplications', d.companyId) }
+end)
+
+action('rejectDriver', 'jrs_railroad:rejectDriver', function(d) return { d.companyId, d.employeeId } end, 500,
+    function(d) return { pendingApps = ask('jrs_railroad:getPendingApplications', d.companyId) } end)
+
+action('fireDriver', 'jrs_railroad:fireDriver', function(d) return { d.companyId, d.employeeId } end, 500,
+    function(d) return { employees = ask('jrs_railroad:getEmployees', d.companyId) } end)
+
+action('addSupply', 'jrs_railroad:addSupply', function(d) return { d.companyId, d.itemName, d.quantity } end, 500,
+    function(d) return { supplies = ask('jrs_railroad:getCompanySupplies', d.companyId) } end)
+
+action('takeSupply', 'jrs_railroad:takeSupply', function(d) return { d.companyId, d.itemName, d.quantity } end, 500,
+    function(d) return { supplies = ask('jrs_railroad:getCompanySupplies', d.companyId) } end)
+
+RegisterNUICallback('sellTrain', function(data, done)
+    -- a train that is out has to be taken away before it is sold
     if ActiveTrain and DoesEntityExist(ActiveTrain) and ActiveTrainData and ActiveTrainData.id == data.trainId then
         CleanupActiveTrain()
         TriggerServerEvent('jrs_railroad:setTrainSpawned', false, data.trainId)
     end
     TriggerServerEvent('jrs_railroad:sellTrain', data.trainId)
     Wait(500)
-    local ownedTrains = JRS.Await('jrs_railroad:getOwnedTrains')
-    cb({ success = true, ownedTrains = ownedTrains or {} })
+    done({ success = true, ownedTrains = ask('jrs_railroad:getOwnedTrains') })
 end)
 
-RegisterNUICallback('spawnTrain', function(data, cb)
-    SendNUIMessage({ action = 'closeStation' })
-    SetNuiFocus(false, false)
-    cb({ success = true })
+-- these close the window and then do their thing
+local function leaving(name, run)
+    RegisterNUICallback(name, function(data, done)
+        closeWindow()
+        done({ success = true })
+        run(data)
+    end)
+end
 
-    local canSpawn = JRS.Await('jrs_railroad:canSpawnTrain')
-    if not canSpawn then
-        Notify(L('train_already_spawned'), 'error')
-        return
-    end
+leaving('spawnTrain', function(data)
+    if not JRS.Await('jrs_railroad:canSpawnTrain') then return Notify(L('train_already_spawned'), 'error') end
 
-    -- V2: Spawn from Config index (no DB train record needed)
     if data.trainIndex then
-        local trainConfig = Config.Trains[data.trainIndex]
-        if not trainConfig then
-            Notify(L('train_config_not_found'), 'error')
-            return
-        end
-        SpawnConfigTrain(trainConfig, data.direction or false, currentStation)
+        local config = Config.Trains[data.trainIndex]
+        if not config then return Notify(L('train_config_not_found'), 'error') end
+        SpawnConfigTrain(config, data.direction or false, current)
     elseif data.trainId then
-        -- Legacy: spawn from DB id
-        SpawnPlayerTrain(data.trainId, data.direction or false, currentStation)
+        SpawnPlayerTrain(data.trainId, data.direction or false, current)          -- an older save that has a database id
     end
 end)
 
-RegisterNUICallback('parkTrain', function(data, cb)
-    SendNUIMessage({ action = 'closeStation' })
-    SetNuiFocus(false, false)
-    cb({ success = true })
-    ParkPlayerTrain()
-end)
+leaving('parkTrain', function() ParkPlayerTrain() end)
+leaving('despawnTrain', function() DespawnPlayerTrain() end)
+leaving('startMission', function(data) StartMission(data.missionType, current, data.destIndex) end)
 
-RegisterNUICallback('despawnTrain', function(data, cb)
-    SendNUIMessage({ action = 'closeStation' })
-    SetNuiFocus(false, false)
-    cb({ success = true })
-    DespawnPlayerTrain()
-end)
+-- the server finished a job; the next time a window opens it fetches fresh data anyway
+RegisterNetEvent('jrs_railroad:refreshStationData', function() end)
 
-RegisterNUICallback('purchaseUpgrade', function(data, cb)
-    TriggerServerEvent('jrs_railroad:purchaseUpgrade', data.companyId, data.trainModel, data.upgradeType)
-    Wait(500)
-    local upgrades = JRS.Await('jrs_railroad:getCompanyUpgrades', data.companyId)
-    cb({ success = true, companyUpgrades = upgrades or {} })
-end)
-
-RegisterNUICallback('startMission', function(data, cb)
-    SendNUIMessage({ action = 'closeStation' })
-    SetNuiFocus(false, false)
-    cb({ success = true })
-    StartMission(data.missionType, currentStation, data.destIndex)
-end)
-
----------------------------------------------------------------
--- V2: COMPANY MANAGEMENT NUI CALLBACKS
----------------------------------------------------------------
-RegisterNUICallback('buyCompany', function(data, cb)
-    TriggerServerEvent('jrs_railroad:buyCompany', data.companyId)
-    Wait(500)
-    cb({ success = true })
-end)
-
-RegisterNUICallback('sellCompany', function(data, cb)
-    TriggerServerEvent('jrs_railroad:sellCompany', data.companyId)
-    Wait(500)
-    cb({ success = true })
-end)
-
-RegisterNUICallback('renameCompany', function(data, cb)
-    TriggerServerEvent('jrs_railroad:renameCompany', data.companyId, data.newName)
-    Wait(300)
-    cb({ success = true })
-end)
-
-RegisterNUICallback('withdrawFunds', function(data, cb)
-    TriggerServerEvent('jrs_railroad:withdrawFunds', data.companyId, data.amount)
-    Wait(500)
-    local ownership = JRS.Await('jrs_railroad:getCompanyOwnership', data.companyId)
-    cb({ success = true, cashRegister = ownership and ownership.cash_register or 0 })
-end)
-
-RegisterNUICallback('applyAsDriver', function(data, cb)
-    TriggerServerEvent('jrs_railroad:applyAsDriver', data.companyId)
-    Wait(500)
-    cb({ success = true })
-end)
-
-RegisterNUICallback('approveDriver', function(data, cb)
-    TriggerServerEvent('jrs_railroad:approveDriver', data.companyId, data.employeeId)
-    Wait(500)
-    local employees = JRS.Await('jrs_railroad:getEmployees', data.companyId)
-    local pending = JRS.Await('jrs_railroad:getPendingApplications', data.companyId)
-    cb({ success = true, employees = employees or {}, pendingApps = pending or {} })
-end)
-
-RegisterNUICallback('rejectDriver', function(data, cb)
-    TriggerServerEvent('jrs_railroad:rejectDriver', data.companyId, data.employeeId)
-    Wait(500)
-    local pending = JRS.Await('jrs_railroad:getPendingApplications', data.companyId)
-    cb({ success = true, pendingApps = pending or {} })
-end)
-
-RegisterNUICallback('fireDriver', function(data, cb)
-    TriggerServerEvent('jrs_railroad:fireDriver', data.companyId, data.employeeId)
-    Wait(500)
-    local employees = JRS.Await('jrs_railroad:getEmployees', data.companyId)
-    cb({ success = true, employees = employees or {} })
-end)
-
-RegisterNUICallback('addSupply', function(data, cb)
-    TriggerServerEvent('jrs_railroad:addSupply', data.companyId, data.itemName, data.quantity)
-    Wait(500)
-    local supplies = JRS.Await('jrs_railroad:getCompanySupplies', data.companyId)
-    cb({ success = true, supplies = supplies or {} })
-end)
-
-RegisterNUICallback('takeSupply', function(data, cb)
-    TriggerServerEvent('jrs_railroad:takeSupply', data.companyId, data.itemName, data.quantity)
-    Wait(500)
-    local supplies = JRS.Await('jrs_railroad:getCompanySupplies', data.companyId)
-    cb({ success = true, supplies = supplies or {} })
-end)
-
-RegisterNUICallback('buyCompanyTrain', function(data, cb)
-    TriggerServerEvent('jrs_railroad:buyTrain', data.trainIndex, currentStation.id)
-    Wait(500)
-    local trains = JRS.Await('jrs_railroad:getCompanyTrains', currentStation.company)
-    cb({ success = true, companyTrains = trains or {} })
-end)
-
----------------------------------------------------------------
--- REFRESH STATION DATA (after mission complete)
----------------------------------------------------------------
-RegisterNetEvent('jrs_railroad:refreshStationData', function(companyId)
-    -- Data was updated server-side. Player sees notification with XP/pay info.
-    -- Next time they open a station HUD, fresh data will be fetched.
-end)
-
-----------------------------------------------------------------
--- CLEANUP
----------------------------------------------------------------
 AddEventHandler('onResourceStop', function(resource)
-    if resource == GetCurrentResourceName() then
-        SetNuiFocus(false, false)
-        DespawnPlayerTrain()
-        DespawnAmbientRouteTrains()
-        if ambientTramBlip then
-            RemoveBlip(ambientTramBlip)
-            ambientTramBlip = nil
-        end
-        for _, blip in ipairs(stationBlips) do
-            RemoveBlip(blip)
-        end
-        for _, blip in ipairs(facilityBlips) do
-            RemoveBlip(blip)
-        end
-    end
+    if resource ~= GetCurrentResourceName() then return end
+    SetNuiFocus(false, false)
+    DespawnPlayerTrain()
+    DespawnAmbientRouteTrains()
+    if ambientBlip then RemoveBlip(ambientBlip) end
+    for _, blip in ipairs(stationBlips) do RemoveBlip(blip) end
+    for _, blip in ipairs(facilityBlips) do RemoveBlip(blip) end
 end)
 
-AddEventHandler('playerDropped', function()
-    DespawnPlayerTrain()
-end)
+AddEventHandler('playerDropped', function() DespawnPlayerTrain() end)
