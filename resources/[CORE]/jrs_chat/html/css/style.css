@@ -454,3 +454,7 @@ textarea:focus, input:focus {
 .suggestion p { font: 700 1.2vh Arial, sans-serif; letter-spacing: .1em; }
 .suggestion .param { border-radius: 0; border-color: rgba(255, 255, 255, .14); }
 .help { font-size: 1.15vh; }
+
+/* the window fades out when nobody is typing */
+.chat-window { transition: opacity 0.6s ease, transform 0.6s ease; }
+.chat-window.faded { opacity: 0; transform: translateY(-12px); }

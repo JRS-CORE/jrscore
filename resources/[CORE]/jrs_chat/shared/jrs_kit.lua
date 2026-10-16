@@ -1,3 +1,4 @@
+-- jrs_chat | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 -- JRS kit: small helpers on top of jrs_core / jrs_inventory / jrs_progressbar.
 -- Shared by the JRS scripts so they all talk to jrs_core / jrs_inventory the same way.
 -- Needs `jrs_api 'ext'` in the fxmanifest.

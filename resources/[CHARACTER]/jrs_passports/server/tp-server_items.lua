@@ -1,47 +1,21 @@
+-- jrs_passports | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_passports | server: using the passport item shows it to everybody close by
 
------------------------------------------------------------
---[[ Items Registration  ]]--
------------------------------------------------------------
+JRS.UsableData(Config.PassportItem, 'jrs_passports', function(data)
+    local src = data.source
+    local row = MySQL.single.await('SELECT * FROM `passports` WHERE `identityId` = ?', { data.metadata.identityId })
+    if not row then return end
 
-JRS.UsableData(Config.PassportItem, "jrs_passports", function(data)
-	local _source  = data.source
-	local metadata = data.metadata
+    -- the expiry date is shown in the server's year
+    row.expiration_date = os.date('%Y-%m-%d %H:%M:%S', row.expiration_date):gsub('^%d%d%d%d', Config.Year)
 
-	exports.oxmysql:execute('SELECT * FROM `passports` WHERE `identityId` = @identityId', { ['identityId'] = metadata.identityId }, function(result)
-		
-		-- If the player is has no passport registration, we don't display, we return.
-		if (result == nil ) or ( result and result[1] == nil ) then
-			return
-		end
-
-		local res = result[1] -- retrieves all passport data since identityId is valid.
-
-
-		-- Expiration Date to string.
-		local date_string = os.date("%Y-%m-%d %H:%M:%S", res.expiration_date)
-		local new_date_string = date_string:gsub("^%d%d%d%d", Config.Year)
-
-		res.expiration_date = new_date_string
-
-		local coords        = GetEntityCoords(GetPlayerPed(_source))
-		local onlinePlayers = JRS.Players()
-
-		for index, player in pairs(onlinePlayers.players) do
-
-			local targetSource = tonumber(player.source)
-			local targetCoords = GetEntityCoords(GetPlayerPed(targetSource))
-			local distance     = #(coords - targetCoords)
-
-			if distance <= Config.DisplayPassportCardDistance then
-
-				TriggerClientEvent('jrs_inventory:CloseInv', targetSource)
-				Wait(500)
-				TriggerClientEvent('jrs_passports:client:onPassportItemUse', targetSource, res)
-
-			end
-
-		end
-
-	end)
-
+    local here = GetEntityCoords(GetPlayerPed(src))
+    for _, player in pairs(JRS.Players().players) do
+        local target = tonumber(player.source)
+        if #(here - GetEntityCoords(GetPlayerPed(target))) <= Config.DisplayPassportCardDistance then
+            TriggerClientEvent('jrs_inventory:CloseInv', target)
+            Wait(500)
+            TriggerClientEvent('jrs_passports:client:onPassportItemUse', target, row)
+        end
+    end
 end)

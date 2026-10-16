@@ -1,3 +1,4 @@
+-- jrs_passports | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 -- Config.Language = 'en' or 'ar'. The prompt title stays English (no Arabic glyphs in the game font).
 local strings = {
   en = {

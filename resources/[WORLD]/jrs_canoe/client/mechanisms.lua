@@ -1,76 +1,42 @@
+-- jrs_canoe | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_canoe | client: carrying a canoe
 
---[[-------------------------------------------------------
- Threads
-]]---------------------------------------------------------
-
-Citizen.CreateThread(function() 
-    RegisterCanoeDropActionPrompt() 
-
-    if Config.UseInteractPrompt then 
-        JRS.AddModelTarget(Config.Models, Config.ModelsTargetOptions)
-    end
-
+CreateThread(function()
+    RegisterCanoeDropActionPrompt()
+    if Config.UseInteractPrompt then JRS.AddModelTarget(Config.Models, Config.ModelsTargetOptions) end
 end)
 
+-- controls that make no sense with a canoe on the shoulder
+local BLOCKED <const> = {
+    0xD9D0E1C0, 0x8FFC75D6, 0xD23C3EBE, 0xCEFD9220,                    -- jump, sprint, crouch, mount
+    0x07CE1E61, 0xF84FA74F, 0x1F80208B, 0xE30CD707,                    -- attack, aim, melee, reload
+    0xB2F377E8, 0x4CC0E2FE, 0xC1989F95, 0xCB2E7FA2,                    -- weapon wheel, inventory, enter vehicle
+}
+
 AddEventHandler('jrs_canoe:client:tasks', function()
+    local _, canoe = IsCarryingCanoe()
 
-    local retval, canoeEntity = IsCarryingCanoe()
-
-    Citizen.CreateThread(function()
-
-        while IsEntityAttached(canoeEntity) do
-
-            Wait(0) 
-            
+    CreateThread(function()
+        while IsEntityAttached(canoe) do
+            Wait(0)
             local ped = PlayerPedId()
-
             Citizen.InvokeNative(0x433083750C5E064A, ped, Config.SetPedMaxMoveBlendRatio)
+            for _, control in ipairs(BLOCKED) do DisableControlAction(0, control, true) end
 
-            DisableControlAction(0, 0xD9D0E1C0, true) -- Jump
-			DisableControlAction(0, 0x8FFC75D6, true) -- Sprint
-			DisableControlAction(0, 0xD23C3EBE, true) -- Crouch
-			DisableControlAction(0, 0xCEFD9220, true) -- Mount horse
-			
-			-- Combat
-			DisableControlAction(0, 0x07CE1E61, true) -- Attack
-			DisableControlAction(0, 0xF84FA74F, true) -- Aim
-			DisableControlAction(0, 0x1F80208B, true) -- Melee
-			DisableControlAction(0, 0xE30CD707, true) -- Reload
-			
-			-- Weapons / inventory
-			DisableControlAction(0, 0xB2F377E8, true) -- Weapon wheel
-			DisableControlAction(0, 0x4CC0E2FE, true) -- Inventory
-			DisableControlAction(0, 0xC1989F95, true) -- Inventory
-
-			-- Vehicles / wagons
-			DisableControlAction(0, 0xCB2E7FA2, true) -- Enter vehicle/wagon
-
-            if Config.RemoveStaminaWhileCarrying.Enabled then
-                -- removing stamine while carrying
-                Citizen.InvokeNative(0xC3D4B754C0E86B9E, ped, - Config.RemoveStaminaWhileCarrying.RemoveValue)
-
-                -- if not enough stamina, drop the canoe.
+            local tiring = Config.RemoveStaminaWhileCarrying
+            if tiring.Enabled then
+                Citizen.InvokeNative(0xC3D4B754C0E86B9E, ped, -tiring.RemoveValue)
                 if Citizen.InvokeNative(0x22F2A386D43048A9, ped) == false then
                     DropCarriedCanoe()
-    
-                    ShowNotification(Locales['CANNOT_CARRY_NOT_ENOUGH_STAMINA'], {r = 255, g = 0, b = 0, a = 255})
+                    ShowNotification(Locales['CANNOT_CARRY_NOT_ENOUGH_STAMINA'], { r = 255, g = 0, b = 0, a = 255 })
                 end
-
             end
 
-            -- Prompt displaying while carrying canoe.
-
-            local PromptGroup, PromptList = GetCanoeActionPromptData()
-            local label = CreateVarString(10, 'LITERAL_STRING', LocalesEN['DROP_CANOE_ACTION'])
-            PromptSetActiveGroupThisFrame(PromptGroup, label)
-
-            if Citizen.InvokeNative(0xC92AC953F0A982AE, PromptList) or IsEntityDead(ped) or IsPedSwimming(ped) or IsPedSwimmingUnderWater(ped) then
+            local group, prompt = GetCanoeActionPromptData()
+            PromptSetActiveGroupThisFrame(group, CreateVarString(10, 'LITERAL_STRING', LocalesEN['DROP_CANOE_ACTION']))
+            if Citizen.InvokeNative(0xC92AC953F0A982AE, prompt) or IsEntityDead(ped) or IsPedSwimming(ped) or IsPedSwimmingUnderWater(ped) then
                 DropCarriedCanoe()
             end
-    
         end
-
     end)
-    
-
 end)

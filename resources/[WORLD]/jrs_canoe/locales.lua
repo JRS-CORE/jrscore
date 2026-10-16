@@ -1,3 +1,4 @@
+-- jrs_canoe | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 local strings = {
     en = {
         ['CANNOT_CARRY_NOT_ENOUGH_STAMINA'] = "You don't have enough strength to keep carrying the canoe",

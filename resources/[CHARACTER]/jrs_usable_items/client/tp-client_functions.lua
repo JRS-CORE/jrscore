@@ -1,174 +1,92 @@
-local PromptPutAway = nil
-local PromptUse     = nil
-local PromptChange  = nil
+-- jrs_usable_items | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_usable_items | client helpers: the three prompts, animations, models and the ped's worn parts
 
----------------------------------------------------------------
---[[ Prompts ]]--
----------------------------------------------------------------
+-- ------------------------------------------------------------------ prompts
 
-function RegisterPutAwayPrompt(text, hold)
-	PromptPutAway = nil
+local prompts = { putaway = nil, use = nil, change = nil }
+local KEYS <const> = { putaway = 0x3B24C470, use = 0x07B8BEAF, change = 0xD51B784F }
 
-	local str        = text
-	local holdbutton = hold or false
-
-	local prompt = PromptRegisterBegin()
-	PromptSetControlAction(prompt, 0x3B24C470)
-	str = CreateVarString(10, 'LITERAL_STRING', str)
-	PromptSetText(prompt, str)
-	PromptSetEnabled(prompt, false)
-	PromptSetVisible(prompt, false)
-	PromptSetHoldMode(prompt, holdbutton)
-	PromptRegisterEnd(prompt)
-
-	PromptPutAway = prompt
+-- a prompt that stays hidden until the item scripts turn it on
+local function register(which, text, hold)
+    local prompt = PromptRegisterBegin()
+    PromptSetControlAction(prompt, KEYS[which])
+    PromptSetText(prompt, CreateVarString(10, 'LITERAL_STRING', text))
+    PromptSetEnabled(prompt, false)
+    PromptSetVisible(prompt, false)
+    PromptSetHoldMode(prompt, hold or false)
+    PromptRegisterEnd(prompt)
+    prompts[which] = prompt
 end
 
-function GetPromptPutAway()
-	return PromptPutAway
+function RegisterPutAwayPrompt(text, hold) register('putaway', text, hold) end
+function RegisterUsePrompt(text, hold) register('use', text, hold) end
+function RegisterChangePrompt(text, hold) register('change', text, hold) end
+
+function GetPromptPutAway() return prompts.putaway end
+function GetPromptUse() return prompts.use end
+function GetPromptChange() return prompts.change end
+
+-- ------------------------------------------------------------------ animations
+
+-- plays `body` of `dict` on `actor` once the dictionary is loaded (gives up after 1.5 s)
+function Anim(actor, dict, body, duration, flags, introTiming, exitTiming)
+    CreateThread(function()
+        RequestAnimDict(dict)
+        local tries = 5
+        while not HasAnimDictLoaded(dict) and tries > 0 do
+            tries = tries - 1
+            if tries == 0 then print('Animation Failed to Load') end
+            Wait(300)
+        end
+        TaskPlayAnim(actor, dict, body, tonumber(introTiming) or 1.0, tonumber(exitTiming) or 1.0, duration or -1, flags or 1, 1, false, false, false, 0, true)
+    end)
 end
 
-function RegisterUsePrompt(text, hold)
-	PromptUse = nil
-	
-	local str        = text
-	local holdbutton = hold or false
-
-	local prompt = PromptRegisterBegin()
-	PromptSetControlAction(prompt, 0x07B8BEAF)
-	str = CreateVarString(10, 'LITERAL_STRING', str)
-	PromptSetText(prompt, str)
-	PromptSetEnabled(prompt, false)
-	PromptSetVisible(prompt, false)
-	PromptSetHoldMode(prompt, holdbutton)
-	PromptRegisterEnd(prompt)
-
-	PromptUse = prompt
-end
-
-function GetPromptUse()
-	return PromptUse
-end
-
-function RegisterChangePrompt(text, hold)
-	PromptChange = nil
-
-	local str        = text
-	local holdbutton = hold or false
-
-	local prompt = PromptRegisterBegin()
-	PromptSetControlAction(prompt, 0xD51B784F)
-	str = CreateVarString(10, 'LITERAL_STRING', str)
-	PromptSetText(prompt, str)
-	PromptSetEnabled(prompt, false)
-	PromptSetVisible(prompt, false)
-	PromptSetHoldMode(prompt, holdbutton)
-	PromptRegisterEnd(prompt)
-
-	PromptChange = prompt
-end
-
-function GetPromptChange()
-	return PromptChange
-end
-
----------------------------------------------------------------
---[[ Animations ]]--
----------------------------------------------------------------
-
-function Anim(actor, dict, body, duration, flags, introtiming, exittiming)
-	Citizen.CreateThread(function()
-		RequestAnimDict(dict)
-		local dur = duration or -1
-		local flag = flags or 1
-		local intro = tonumber(introtiming) or 1.0
-		local exit = tonumber(exittiming) or 1.0
-		timeout = 5
-		while (not HasAnimDictLoaded(dict) and timeout>0) do
-			timeout = timeout-1
-			if timeout == 0 then 
-				print("Animation Failed to Load")
-			end
-			Citizen.Wait(300)
-		end
-		TaskPlayAnim(actor, dict, body, intro, exit, dur, flag --[[1 for repeat--]], 1, false, false, false, 0, true)
-	end)
-end
-	
 function StopAnim(dict, body)
-	Citizen.CreateThread(function()
-		StopAnimTask(PlayerPedId(), dict, body, 1.0)
-	end)
+    CreateThread(function() StopAnimTask(PlayerPedId(), dict, body, 1.0) end)
 end
 
----------------------------------------------------------------
---[[ Models ]]--
----------------------------------------------------------------
+-- ------------------------------------------------------------------ models
 
-function LoadModel(inputModel)
-    local model = GetHashKey(inputModel)
- 
-    RequestModel(model)
- 
-    while not HasModelLoaded(model) do RequestModel(model)
-        Citizen.Wait(10)
-    end
- end
+function LoadModel(name)
+    local hash = joaat(name)
+    repeat RequestModel(hash) Wait(10) until HasModelLoaded(hash)
+end
 
- function RemoveEntityProperly(entity, objectHash)
+function RemoveEntityProperly(entity, modelHash)
     DeleteEntity(entity)
     DeletePed(entity)
-    SetEntityAsNoLongerNeeded( entity )
-
-    if objectHash then
-        SetModelAsNoLongerNeeded(objectHash)
-    end
+    SetEntityAsNoLongerNeeded(entity)
+    if modelHash then SetModelAsNoLongerNeeded(modelHash) end
 end
 
----------------------------------------------------------------
---[[ Other ]]--
----------------------------------------------------------------
+-- ------------------------------------------------------------------ what the ped wears
 
+local function nativeComponentCount(ped) return Citizen.InvokeNative(0x90403E8107B60E81, ped) end
+local function nativeMetaPedType(ped) return Citizen.InvokeNative(0xEC9A1261BF0CE510, ped) end
+local function nativeComponentAt(ped, index, struct) return Citizen.InvokeNative(0x77BA37622E22023B, ped, index, true, struct, struct) end
+local function nativeComponentCategory(component, pedType) return Citizen.InvokeNative(0x5FF9A878C3D115B8, component, pedType, true) end
+
+-- the component hash worn in `category` (e.g. 'hair'), or every worn component as category -> hash
 function GetCurrentPedComponent(ped, category)
+    local count = nativeComponentCount(ped)
+    if not count then return 0 end
 
-    local componentsCount = GetNumComponentsInPed(ped)
-    if not componentsCount then
-        return 0
-    end
-    local metaPedType = GetMetaPedType(ped)
-    local dataStruct = DataView.ArrayBuffer(6 * 8)
-    local fullPedComponents = {}
-    for i = 0, componentsCount, 1 do
-        local componentHash = GetShopPedComponentAtIndex(ped, i, true, dataStruct:Buffer(), dataStruct:Buffer())
-        if componentHash then
-            local componentCategoryHash = GetShopPedComponentCategory(componentHash, metaPedType, true)
-            if category ~= nil then
-                if GetHashKey(category) == componentCategoryHash then
-                    return componentHash
-                end
-            else
-                fullPedComponents[componentCategoryHash] = componentHash
-            end
+    local pedType = nativeMetaPedType(ped)
+    local struct = DataView.ArrayBuffer(6 * 8)
+    local worn = {}
+    for i = 0, count do
+        local component = nativeComponentAt(ped, i, struct:Buffer())
+        if component then
+            local group = nativeComponentCategory(component, pedType)
+            if category == nil then worn[group] = component
+            elseif joaat(category) == group then return component end
         end
     end
-    if category then
-        return 0
-    end
-    return fullPedComponents
+    return category and 0 or worn
 end
 
-function GetNumComponentsInPed(ped)
-    return Citizen.InvokeNative(0x90403E8107B60E81, ped)
-end
-
-function GetMetaPedType(ped)
-    return Citizen.InvokeNative(0xEC9A1261BF0CE510, ped)
-end
-
-function GetShopPedComponentAtIndex(ped, index, bool, struct1, struct2)
-    return Citizen.InvokeNative(0x77BA37622E22023B, ped, index, bool, struct1, struct2)
-end
-
-function GetShopPedComponentCategory(componentHash, metaPedType, bool)
-    return Citizen.InvokeNative(0x5FF9A878C3D115B8, componentHash, metaPedType, bool)
-end
+function GetNumComponentsInPed(ped) return nativeComponentCount(ped) end
+function GetMetaPedType(ped) return nativeMetaPedType(ped) end
+function GetShopPedComponentAtIndex(ped, index, flag, a, b) return Citizen.InvokeNative(0x77BA37622E22023B, ped, index, flag, a, b) end
+function GetShopPedComponentCategory(component, pedType, flag) return Citizen.InvokeNative(0x5FF9A878C3D115B8, component, pedType, flag) end

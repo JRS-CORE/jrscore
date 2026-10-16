@@ -1,104 +1,58 @@
-Vue.component("message", {
-  template: "#message_template",
-  data() {
-    return {};
-  },
-  computed: {
-    textEscaped() {
-      let s = this.template ? this.template : this.templates[this.templateId];
+// jrs_chat | turns a chat message (template + arguments) into the HTML that is shown
+'use strict';
 
-      if (this.template) {
-        //We disable templateId since we are using a direct raw template
-        this.templateId = -1;
-      }
+const Message = (() => {
+  const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+  const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (c) => ESCAPES[c]);
 
-      //This hack is required to preserve backwards compatability
-      if (
-        this.templateId == CONFIG.defaultTemplateId &&
-        this.args.length == 1
-      ) {
-        s = this.templates[CONFIG.defaultAltTemplateId]; //Swap out default template :/
-      }
+  const STYLES = {
+    '*': 'font-weight: bold;',
+    _: 'text-decoration: underline;',
+    '~': 'text-decoration: line-through;',
+    '=': 'text-decoration: underline line-through;',
+    r: 'text-decoration: none;font-weight: normal;',
+  };
 
-      s = s.replace(/{(\d+)}/g, (match, number) => {
-        const argEscaped =
-          this.args[number] != undefined
-            ? this.escape(this.args[number])
-            : match;
-        if (number == 0 && this.color) {
-          //color is deprecated, use templates or ^1 etc.
-          return this.colorizeOld(argEscaped);
-        }
-        return argEscaped;
-      });
-      return this.colorize(s);
+  // ^0..^9 switch the colour; ^* ^_ ^~ ^= style the rest of the line until ^r
+  function colorize(text) {
+    let html = '<span>' + text.replace(/\^([0-9])/g, (_, n) => `</span><span class="color-${n}">`) + '</span>';
+    const styled = /\^(_|\*|=|~|\/|r)(.*?)(?=$|\^r|<\/em>)/;
+    while (styled.test(html)) {
+      html = html.replace(styled, (_, code, inner) => `<em style="${STYLES[code]}">${inner}</em>`);
     }
-  },
-  methods: {
-    colorizeOld(str) {
-      return `<span style="color: rgb(${this.color[0]}, ${this.color[1]}, ${
-        this.color[2]
-      })">${str}</span>`;
-    },
-    colorize(str) {
-      let s =
-        "<span>" +
-        str.replace(
-          /\^([0-9])/g,
-          (str, color) => `</span><span class="color-${color}">`
-        ) +
-        "</span>";
-
-      const styleDict = {
-        "*": "font-weight: bold;",
-        _: "text-decoration: underline;",
-        "~": "text-decoration: line-through;",
-        "=": "text-decoration: underline line-through;",
-        r: "text-decoration: none;font-weight: normal;"
-      };
-
-      const styleRegex = /\^(\_|\*|\=|\~|\/|r)(.*?)(?=$|\^r|<\/em>)/;
-      while (s.match(styleRegex)) {
-        //Any better solution would be appreciated :P
-        s = s.replace(
-          styleRegex,
-          (str, style, inner) => `<em style="${styleDict[style]}">${inner}</em>`
-        );
-      }
-      return s.replace(/<span[^>]*><\/span[^>]*>/g, "");
-    },
-    escape(unsafe) {
-      return String(unsafe)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-  },
-  props: {
-    templates: {
-      type: Object
-    },
-    args: {
-      type: Array
-    },
-    template: {
-      type: String,
-      default: null
-    },
-    templateId: {
-      type: String,
-      default: CONFIG.defaultTemplateId
-    },
-    multiline: {
-      type: Boolean,
-      default: false
-    },
-    color: {
-      //deprecated
-      type: Array,
-      default: false
-    }
+    return html.replace(/<span[^>]*><\/span[^>]*>/g, '');
   }
-});
+
+  // old-style `color` ([r, g, b]) wraps the first argument
+  const tint = (text, rgb) => `<span style="color: rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})">${text}</span>`;
+
+  // `message` = { template, templateId, args, color, multiline }; `templates` maps id -> template
+  function render(message, templates) {
+    const args = Array.isArray(message.args) ? message.args : [];
+    let templateId = message.templateId || CONFIG.defaultTemplateId;
+    let template = message.template;
+
+    if (!template) {
+      if (templateId === CONFIG.defaultTemplateId && args.length === 1) templateId = CONFIG.defaultAltTemplateId;
+      template = templates[templateId] || '';
+    }
+
+    const filled = template.replace(/{(\d+)}/g, (whole, index) => {
+      if (args[index] === undefined || args[index] === null) return whole;
+      const safe = escapeHtml(args[index]);
+      return index === '0' && message.color ? tint(safe, message.color) : safe;
+    });
+    return colorize(filled);
+  }
+
+  function element(message, templates) {
+    const row = document.createElement('div');
+    row.className = message.multiline ? 'msg multiline' : 'msg';
+    const body = document.createElement('span');
+    body.innerHTML = render(message, templates);
+    row.appendChild(body);
+    return row;
+  }
+
+  return { render, element };
+})();

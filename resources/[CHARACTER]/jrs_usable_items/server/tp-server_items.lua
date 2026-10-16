@@ -1,54 +1,30 @@
+-- jrs_usable_items | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_usable_items | server
+-- Every item in Config.UsableItems is a usable item. Using one may need another item (matches), costs
+-- durability, and then tells the client to play the routine.
 
----------------------------------------------------------------
---[[ General Events ]]--
----------------------------------------------------------------
-
-RegisterNetEvent("jrs_usable_items:remove")
-AddEventHandler("jrs_usable_items:remove", function(itemName)
-	local _source = source
-
-	if Config.UsableItems[itemName] == nil then
-		return
-	end
-
-	JRS.Remove(_source, itemName, 1)
-
+RegisterNetEvent('jrs_usable_items:remove', function(name)
+    if Config.UsableItems[name] then JRS.Remove(source, name, 1) end
 end)
 
----------------------------------------------------------------
---[[ Items ]]--
----------------------------------------------------------------
+CreateThread(function()
+    for item, spec in pairs(Config.UsableItems) do
+        JRS.UsableData(item, 'jrs_usable_items', function(data)
+            local src = data.source
 
-Citizen.CreateThread(function()
+            local need = spec.RequiredItemUse
+            if need.Enabled and JRS.Count(src, need.Item) < need.Quantity then
+                return SendNotification(src, need.Warning, 'error')
+            end
 
-	for item, itemData in pairs (Config.UsableItems) do
+            local wear = spec.RemoveDurabilityOnUse
+            if wear.Enabled then
+                JRS.Noop(src, item, math.random(wear.RemoveValue.min, wear.RemoveValue.max), item.itemId, true)
+            end
+            if need.Enabled and need.Remove then JRS.Remove(src, need.Item, need.Quantity) end
 
-		JRS.UsableData(item, "jrs_usable_items", function(data)
-			local _source = data.source
-
-			if itemData.RequiredItemUse.Enabled then 
-				local itemQuantity = JRS.Count(_source, itemData.RequiredItemUse.Item)
-
-				if itemQuantity < itemData.RequiredItemUse.Quantity then
-					SendNotification(_source, itemData.RequiredItemUse.Warning, "error")
-					return
-				end
-
-			end
-
-			if itemData.RemoveDurabilityOnUse.Enabled then
-				local randomValueRemove = math.random(itemData.RemoveDurabilityOnUse.RemoveValue.min, itemData.RemoveDurabilityOnUse.RemoveValue.max)
-				JRS.Noop(_source, item, randomValueRemove, item.itemId, true)
-			end
-
-			if itemData.RequiredItemUse.Enabled and itemData.RequiredItemUse.Remove then 
-				JRS.Remove(_source, itemData.RequiredItemUse.Item, itemData.RequiredItemUse.Quantity)
-			end
-
-			TriggerClientEvent("jrs_usable_items:client:use", _source, item)
-			TriggerClientEvent('jrs_inventory:CloseInv', _source)
-		end)
-
-	end
-
+            TriggerClientEvent('jrs_usable_items:client:use', src, item)
+            TriggerClientEvent('jrs_inventory:CloseInv', src)
+        end)
+    end
 end)

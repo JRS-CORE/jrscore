@@ -1,18 +1,6 @@
-
-exports('OpenCanoeRentingShop', function(storeId, city)
-    OpenCanoeRentingShop(storeId, city)
-end)
-
-exports('IsCarryingCanoe', function()
-    local retval, entity = IsCarryingCanoe()
-    return retval -- returns boolean
-end)
-
-exports('GetCanoeEntityObject', function()
-    local retval, entity = IsCarryingCanoe()
-    return entity -- returns 0 if invalid.
-end)
-
-exports('IsModelCanoe', function(model)
-    return IsModelCanoe(model) -- returns boolean
-end)
+-- jrs_canoe | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_canoe | exports for other resources
+exports('OpenCanoeRentingShop', function(storeId, city) OpenCanoeRentingShop(storeId, city) end)
+exports('IsCarryingCanoe', function() return (IsCarryingCanoe()) end)
+exports('GetCanoeEntityObject', function() return select(2, IsCarryingCanoe()) end)    -- 0 when none
+exports('IsModelCanoe', function(model) return IsModelCanoe(model) end)

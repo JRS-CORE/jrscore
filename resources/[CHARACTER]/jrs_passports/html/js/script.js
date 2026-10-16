@@ -1,49 +1,53 @@
+// jrs_passports | the passport card. Texts are written with textContent, the photo is a CSS background.
+'use strict';
 
+const card = document.getElementById('jrs_passports');
+const $ = (id) => document.getElementById(id);
+const say = (id, text) => { $(id).textContent = text == null ? '' : String(text); };
 
-document.addEventListener('DOMContentLoaded', function() {  $("#jrs_passports").fadeOut(); }, false);
-function CloseNUI() { $("#jrs_passports").fadeOut(1000); $.post('http://jrs_passports/close', JSON.stringify({})); }
+let fadeTimer;
+function fadeIn(ms) {
+  clearTimeout(fadeTimer);
+  card.style.transition = `opacity ${ms}ms`;
+  card.style.display = 'block';
+  requestAnimationFrame(() => { card.style.opacity = '1'; });
+}
+function fadeOut(ms) {
+  card.style.transition = `opacity ${ms}ms`;
+  card.style.opacity = '0';
+  fadeTimer = setTimeout(() => { card.style.display = 'none'; }, ms);
+}
 
-$(function() {
+function closeCard() {
+  fadeOut(1000);
+  fetch('https://jrs_passports/close', { method: 'POST', body: '{}' }).catch(() => {});
+}
 
-	window.addEventListener('message', function(event) {
-		
-    var item = event.data;
+function fill(info, words) {
+  const name = `${info.firstname} ${info.lastname}`;
+  say('main-full-name-title', words.fullname);
+  say('main-full-name-text', name);
+  say('main-dob-title', words.dob);
+  say('main-dob-text', info.dob);
+  say('main-sex-title', words.sex);
+  say('main-sex-text', info.sex);
+  say('main-id-text', info.identity_id);
+  say('main-signature-title', words.signature);
+  say('main-signature-text', name);
+  say('main-expiration-title', info.expiration);
+  $('main-avatar-image-display').style.backgroundImage = `url("${String(info.avatar_url).replace(/["\\\n]/g, '')}")`;
+}
 
-		if (item.type == "enable") {
-			document.body.style.display = item.enable ? "block" : "none";
-
-    } else if (item.action == 'updateInformation'){
-
-      let prod_user = item.info;
-      let prod_locale = item.locales;
-
-      $("#main-full-name-title").text(prod_locale.fullname);
-      $("#main-full-name-text").text(prod_user.firstname + ' ' + prod_user.lastname);
-
-      $("#main-dob-title").text(prod_locale.dob);
-      $("#main-dob-text").text(prod_user.dob);
-
-      $("#main-sex-title").text(prod_locale.sex);
-      $("#main-sex-text").text(prod_user.sex);
-
-      $("#main-id-text").text(prod_user.identity_id);
-      
-      $("#main-signature-title").text(prod_locale.signature);
-      $("#main-signature-text").text(prod_user.firstname + ' ' + prod_user.lastname);
-
-      $("#main-expiration-title").text(prod_user.expiration);
-
-      // load avatar image
-      $("#main-avatar-image-display").css('background-image', 'url("' + prod_user.avatar_url + '")');
-
-      $("#center-side").show();
-      $("#jrs_passports").fadeIn(1000);
-
-    } else if (item.action == "close") {
-      CloseNUI();
-    }
-
-  });
-
-
+window.addEventListener('message', ({ data }) => {
+  if (data.type === 'enable') {
+    document.body.style.display = data.enable ? 'block' : 'none';
+  } else if (data.action === 'updateInformation') {
+    fill(data.info, data.locales);
+    $('center-side').style.display = 'block';
+    fadeIn(1000);
+  } else if (data.action === 'close') {
+    closeCard();
+  }
 });
+
+card.style.display = 'none';

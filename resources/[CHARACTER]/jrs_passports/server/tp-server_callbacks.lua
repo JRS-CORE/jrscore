@@ -1,29 +1,13 @@
------------------------------------------------------------
---[[ Callbacks  ]]--
------------------------------------------------------------
+-- jrs_passports | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_passports | server callbacks
 
-JRS.CreateCallback("jrs_passports:callbacks:isRegistered", function(source, cb)
-    local _source        = source
-	local xPlayer        = JRS.MethodPlayer(_source)
-	local charIdentifier = xPlayer.getCharacterIdentifier()
+-- the passport row of a character, or nil
+function PassportOf(charIdentifier)
+    return MySQL.single.await('SELECT * FROM `passports` WHERE `charidentifier` = ?', { charIdentifier })
+end
 
-	local finished, isRegistered, identityData = false, false, {}
-
-    exports.oxmysql:execute("SELECT * FROM `passports` WHERE `charidentifier` = @charidentifier", { ['charidentifier'] = charIdentifier }, function(result)
-		
-		if result and result[1] then
-			identityData = result[1]
-			isRegistered = true
-		end
-
-		finished = true
-
-	end)
-
-	while not finished do
-		Wait(500)
-	end
-
-	return cb( { registered = isRegistered, data = identityData })
-
+JRS.CreateCallback('jrs_passports:callbacks:isRegistered', function(src, reply)
+    local player = JRS.MethodPlayer(src)
+    local row = player and PassportOf(player.getCharacterIdentifier())
+    reply({ registered = row ~= nil, data = row or {} })
 end)

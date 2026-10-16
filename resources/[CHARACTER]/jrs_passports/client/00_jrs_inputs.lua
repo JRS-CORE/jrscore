@@ -1,15 +1,20 @@
--- text / yes-no inputs on the JRS input + menu
-function PassportTextInput(d, cb)
+-- jrs_passports | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_passports | client: the text and yes/no questions, on the JRS input and confirm windows
+
+-- asks for a text; the callback gets what was typed, or 'DECLINE'
+function PassportTextInput(question, done)
     CreateThread(function()
-        local text = JRS.Input(d.title or '', d.desc or '')
-        cb(text or 'DECLINE')
+        done(JRS.Input(question.title or '', question.desc or '') or 'DECLINE')
     end)
 end
 
-function PassportButtonInput(d, cb)
+-- asks yes or no; the callback gets 'ACCEPT' or 'DECLINE'
+function PassportButtonInput(question, done)
     CreateThread(function()
-        local answer = JRS.Confirm({ header = d.title, content = d.desc,
-            labels = { confirm = d.buttonparam1, cancel = d.buttonparam2 } })
-        cb(answer == 'confirm' and 'ACCEPT' or 'DECLINE')
+        local answer = JRS.Confirm({
+            header = question.title, content = question.desc,
+            labels = { confirm = question.buttonparam1, cancel = question.buttonparam2 },
+        })
+        done(answer == 'confirm' and 'ACCEPT' or 'DECLINE')
     end)
 end
