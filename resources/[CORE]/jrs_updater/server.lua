@@ -7,6 +7,50 @@ local function log(color, msg)
     print(('%s[%s]^7 %s'):format(color, RESOURCE, msg))
 end
 
+local WIDTH = 72
+local function rule(char)
+    print('^5' .. string.rep(char or '=', WIDTH) .. '^7')
+end
+
+local LOGO = [=[
+        _   _____     _____    _____    ____    _____    ______
+       | | |  __ \   / ____|  / ____|  / __ \  |  __ \  |  ____|
+       | | | |__) | | (___   | |      | |  | | | |__) | | |__
+   _   | | |  _  /   \___ \  | |      | |  | | |  _  /  |  __|
+  | |__| | | | \ \   ____) | | |____  | |__| | | | \ \  | |____
+   \____/  |_|  \_\ |_____/   \_____|  \____/  |_|  \_\ |______|
+]=]
+
+local function countJrsResources()
+    local started, total = 0, 0
+    for i = 0, GetNumResources() - 1 do
+        local name = GetResourceByFindIndex(i)
+        if name and name:sub(1, 4) == 'jrs_' then
+            total = total + 1
+            if GetResourceState(name) == 'started' then started = started + 1 end
+        end
+    end
+    return started, total
+end
+
+local function printBanner()
+    local pack = GetResourceMetadata(RESOURCE, 'jrscore_pack', 0) or '?'
+    local started, total = countJrsResources()
+    print('')
+    rule('=')
+    for line in LOGO:gmatch('[^\n]+') do print('^5' .. line .. '^7') end
+    print('')
+    print('^7  FREE RedM ROLEPLAY FRAMEWORK')
+    rule('-')
+    print(('^7  Version     : ^2%s^7'):format(pack))
+    print(('^7  Resources   : ^2%d^7 / %d jrs_* started'):format(started, total))
+    print(('^7  GitHub      : ^5github.com/%s^7'):format(Config.Repo))
+    print(('^7  Updates     : first check in %ds, then every %sh  (^3%s^7 to check now)'):format(
+        Config.StartDelaySec, Config.IntervalHours > 0 and tostring(Config.IntervalHours) or '-', Config.Command))
+    rule('=')
+    print('')
+end
+
 -- HTTP GET that can be awaited from a thread.
 local function httpGet(url)
     local p = promise.new()
@@ -145,7 +189,9 @@ local function runCheck(manual)
     running = true
 
     local ok, err = pcall(function()
-        log('^5', ('checking %s (%s) ...'):format(Config.Repo, Config.Branch))
+        print('')
+        rule('-')
+        log('^5', ('UPDATE CHECK  %s (%s)'):format(Config.Repo, Config.Branch))
 
         local remote, why = listRemoteResources()
         if not remote then
@@ -213,6 +259,9 @@ local function runCheck(manual)
             log('^3', 'update by copying the new files from GitHub into your resources folder (keep your config files), then restart.')
         end
 
+        rule('-')
+        print('')
+
         lastReport = {
             checkedAt = os.time(), packOutdated = packOutdated and tag or false,
             outdated = outdated, newer = newer, missing = missing, upToDate = current,
@@ -232,6 +281,11 @@ RegisterCommand(Config.Command, function(source)
 end, true)
 
 exports('GetUpdateStatus', function() return lastReport end)
+
+CreateThread(function()
+    Wait(500)
+    printBanner()
+end)
 
 CreateThread(function()
     if not Config.CheckOnStart then return end
