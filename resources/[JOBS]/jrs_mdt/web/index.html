@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MDT</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app" class="hidden">
+        <div id="window">
+            <header>
+                <div class="brand"><span class="star">&#9733;</span><span id="title">MDT</span></div>
+                <div id="officer" class="officer"></div>
+                <button id="closeBtn" class="icon" title="Close">&#10005;</button>
+            </header>
+            <div class="body">
+                <nav id="nav"></nav>
+                <main id="content"></main>
+            </div>
+        </div>
+    </div>
+
+    <div id="jail" class="hidden">
+        <div class="jail-box">
+            <h3 id="jailTitle"></h3>
+            <p id="jailText"></p>
+            <div id="jailCount"></div>
+            <button id="jailAbort" class="btn danger"></button>
+            <button id="jailDone" class="btn hidden"></button>
+        </div>
+    </div>
+
+    <div id="modalRoot"></div>
+    <div id="toasts"></div>
+
+    <script src="i18n.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

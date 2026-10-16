@@ -1,353 +1,192 @@
--- ============================================
--- Authoritative Role Synchronization System
--- Server-side role management using Config.LawJobs
--- ============================================
+-- jrs_mdt | server: keeps every client told what rank each online officer has
+-- Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- The server's copy is the truth; clients may ask for it and report theirs so a mismatch can be corrected.
 
+local roles = {}                       -- source -> role data of an online officer
+local version = 1
 
--- Authoritative server state for player roles
-local PlayerRoles = {}
-local ConfigVersion = 1
-local ConfigValidated = false
-
--- ============================================
--- Config Validation
--- ============================================
-local function validateLawJobsConfig()
-    if not Config.LawJobs then
-        print('[jrs_mdt] ERROR: Config.LawJobs is not defined!')
-        return false
-    end
-    
+local function checkLawJobs()
     if type(Config.LawJobs) ~= 'table' then
         print('[jrs_mdt] ERROR: Config.LawJobs must be a table!')
         return false
     end
-    
-    local validCount = 0
-    for jobName, jobConfig in pairs(Config.LawJobs) do
-        if type(jobName) ~= 'string' then
-            print('[jrs_mdt] WARNING: LawJob key must be a string, skipping: ' .. tostring(jobName))
-        elseif not jobConfig.label then
-            print('[jrs_mdt] WARNING: LawJob "' .. jobName .. '" missing label')
-        elseif not jobConfig.grades or type(jobConfig.grades) ~= 'table' then
-            print('[jrs_mdt] WARNING: LawJob "' .. jobName .. '" missing grades table')
+
+    local valid = 0
+    for name, job in pairs(Config.LawJobs) do
+        if type(name) ~= 'string' then
+            print('[jrs_mdt] WARNING: LawJob key must be a string, skipping: ' .. tostring(name))
+        elseif not job.label then
+            print('[jrs_mdt] WARNING: LawJob "' .. name .. '" has no label')
+        elseif type(job.grades) ~= 'table' then
+            print('[jrs_mdt] WARNING: LawJob "' .. name .. '" has no grades table')
         else
-            for gradeLevel, gradeConfig in pairs(jobConfig.grades) do
-                if type(gradeLevel) ~= 'number' then
-                    print('[jrs_mdt] WARNING: LawJob "' .. jobName .. '" has non-numeric grade key: ' .. tostring(gradeLevel))
-                end
+            for level in pairs(job.grades) do
+                if type(level) ~= 'number' then print('[jrs_mdt] WARNING: LawJob "' .. name .. '" has a non numeric grade: ' .. tostring(level)) end
             end
-            validCount = validCount + 1
+            valid = valid + 1
         end
     end
-    
-    if validCount == 0 then
-        print('[jrs_mdt] ERROR: No valid LawJobs defined in Config.LawJobs!')
-        return false
-    end
-    
-    print('[jrs_mdt] Config.LawJobs validated: ' .. validCount .. ' law job(s) defined')
+
+    if valid == 0 then print('[jrs_mdt] ERROR: no valid law job in Config.LawJobs!') return false end
+    print('[jrs_mdt] Config.LawJobs checked: ' .. valid .. ' law job(s)')
     return true
 end
 
--- ============================================
--- Player Role Management
--- ============================================
-local function getPlayerRoleData(src)
-    local player = MDTCore.GetPlayer(src)
-    if not player then return nil end
-    
-    local job = player.PlayerData.job
-    if not job or not job.name then return nil end
-    
-    local jobConfig = Config.LawJobs[job.name]
-    if not jobConfig then return nil end
-    
-    local gradeLevel = job.grade and job.grade.level or 0
-    local gradeConfig = jobConfig.grades[gradeLevel] or Config.Defaults.jobGrade
-    
+-- role data of an online officer, nil when the player is not law
+local function roleOf(src)
+    local player, department, grade = MDT.Standing(src)
+    if not department then return nil end
+
+    local info = player.PlayerData.charinfo
+    local level = player.PlayerData.job.grade and player.PlayerData.job.grade.level or 0
     return {
         source = src,
         citizenid = player.PlayerData.citizenid,
-        name = player.PlayerData.charinfo and player.PlayerData.charinfo.firstname and 
-               player.PlayerData.charinfo.firstname .. ' ' .. player.PlayerData.charinfo.lastname or 'Unknown',
-        job = {
-            name = job.name,
-            label = jobConfig.label,
-            grade = gradeLevel,
-            gradeLabel = gradeConfig.label or 'Unknown'
-        },
+        name = info and info.firstname and info.firstname .. ' ' .. info.lastname or 'Unknown',
+        job = { name = player.PlayerData.job.name, label = department.label, grade = level, gradeLabel = grade.label or 'Unknown' },
         permissions = {
-            canCreateRecords = gradeConfig.canCreateRecords == true,
-            canDeleteRecords = gradeConfig.canDeleteRecords == true,
-            canManageWarrants = gradeConfig.canManageWarrants == true,
-            isAdmin = gradeConfig.isAdmin == true
+            canCreateRecords = grade.canCreateRecords == true, canDeleteRecords = grade.canDeleteRecords == true,
+            canManageWarrants = grade.canManageWarrants == true, isAdmin = grade.isAdmin == true,
         },
-        configVersion = ConfigVersion
+        configVersion = version,
     }
 end
 
-local function updatePlayerRole(src)
-    local roleData = getPlayerRoleData(src)
-    
-    if roleData then
-        local previousRole = PlayerRoles[src]
-        PlayerRoles[src] = roleData
-        
-        if previousRole then
-            if previousRole.job.name ~= roleData.job.name or previousRole.job.grade ~= roleData.job.grade then
-                TriggerClientEvent('jrs_mdt:roleSync:roleUpdated', -1, {
-                    source = src,
-                    roleData = roleData,
-                    changeType = 'update'
-                })
-            end
-        else
-            TriggerClientEvent('jrs_mdt:roleSync:roleUpdated', -1, {
-                source = src,
-                roleData = roleData,
-                changeType = 'add'
-            })
-        end
-        
-        return roleData
-    else
-        if PlayerRoles[src] then
-            local oldData = PlayerRoles[src]
-            PlayerRoles[src] = nil
-            TriggerClientEvent('jrs_mdt:roleSync:roleUpdated', -1, {
-                source = src,
-                roleData = oldData,
-                changeType = 'remove'
-            })
-        end
-        return nil
-    end
+local function tellAll(src, data, change)
+    TriggerClientEvent('jrs_mdt:roleSync:roleUpdated', -1, { source = src, roleData = data, changeType = change })
 end
 
-local function removePlayerRole(src)
-    if PlayerRoles[src] then
-        local oldData = PlayerRoles[src]
-        PlayerRoles[src] = nil
-        TriggerClientEvent('jrs_mdt:roleSync:roleUpdated', -1, {
-            source = src,
-            roleData = oldData,
-            changeType = 'remove'
-        })
-    end
+-- re-reads one player: announces the add, the change or the removal
+local function refresh(src)
+    local fresh, old = roleOf(src), roles[src]
+    roles[src] = fresh
+
+    if fresh and not old then tellAll(src, fresh, 'add')
+    elseif fresh and (old.job.name ~= fresh.job.name or old.job.grade ~= fresh.job.grade) then tellAll(src, fresh, 'update')
+    elseif old and not fresh then tellAll(src, old, 'remove') end
+    return fresh
 end
 
--- ============================================
--- Get All Current Roles
--- ============================================
-local function getAllPlayerRoles()
-    local roles = {}
-    for source, roleData in pairs(PlayerRoles) do
-        roles[#roles + 1] = roleData
-    end
-    return roles
+local function everyRole()
+    local list = {}
+    for _, role in pairs(roles) do list[#list + 1] = role end
+    return list
 end
 
--- ============================================
--- Force Refresh All Roles
--- ============================================
-local function forceRefreshAllRoles()
-    ConfigVersion = ConfigVersion + 1
-    
-    for source, _ in pairs(PlayerRoles) do
-        updatePlayerRole(source)
-    end
-    
-    TriggerClientEvent('jrs_mdt:roleSync:forceRefresh', -1, {
-        configVersion = ConfigVersion,
-        roles = getAllPlayerRoles()
-    })
-    
-    print('[jrs_mdt] Force refreshed all roles, new config version: ' .. ConfigVersion)
+local function refreshAll()
+    version = version + 1
+    for src in pairs(roles) do refresh(src) end
+    TriggerClientEvent('jrs_mdt:roleSync:forceRefresh', -1, { configVersion = version, roles = everyRole() })
+    print('[jrs_mdt] roles refreshed, version ' .. version)
 end
+
+-- ------------------------------------------------------------------ what clients ask for
 
 RegisterNetEvent('jrs_mdt:roleSync:requestRoles', function()
     local src = source
-    TriggerClientEvent('jrs_mdt:roleSync:receiveRoles', src, {
-        configVersion = ConfigVersion,
-        roles = getAllPlayerRoles(),
-        yourRole = PlayerRoles[src]
-    })
+    TriggerClientEvent('jrs_mdt:roleSync:receiveRoles', src, { configVersion = version, roles = everyRole(), yourRole = roles[src] })
 end)
 
 RegisterNetEvent('jrs_mdt:roleSync:requestMyRole', function()
     local src = source
-    local roleData = PlayerRoles[src]
-    TriggerClientEvent('jrs_mdt:roleSync:receiveMyRole', src, roleData)
+    TriggerClientEvent('jrs_mdt:roleSync:receiveMyRole', src, roles[src])
 end)
 
-RegisterNetEvent('jrs_mdt:roleSync:validateLocalState', function(localRole)
+RegisterNetEvent('jrs_mdt:roleSync:validateLocalState', function(theirs)
     local src = source
-    local serverRole = PlayerRoles[src]
-    
-    if localRole and serverRole then
-        if localRole.job.name ~= serverRole.job.name or 
-           localRole.job.grade ~= serverRole.job.grade or
-           localRole.configVersion ~= serverRole.configVersion then
-            TriggerClientEvent('jrs_mdt:roleSync:stateMismatch', src, {
-                localState = localRole,
-                serverState = serverRole,
-                message = locale('role_state_mismatch')
-            })
+    local mine = roles[src]
+
+    local function mismatch(message) TriggerClientEvent('jrs_mdt:roleSync:stateMismatch', src, { localState = theirs, serverState = mine, message = message }) end
+
+    if theirs and mine then
+        if theirs.job.name ~= mine.job.name or theirs.job.grade ~= mine.job.grade or theirs.configVersion ~= mine.configVersion then
+            mismatch(locale('role_state_mismatch'))
         end
-    elseif localRole and not serverRole then
-        TriggerClientEvent('jrs_mdt:roleSync:stateMismatch', src, {
-            localState = localRole,
-            serverState = nil,
-            message = locale('role_local_no_server')
-        })
-    elseif not localRole and serverRole then
-        TriggerClientEvent('jrs_mdt:roleSync:stateMismatch', src, {
-            localState = nil,
-            serverState = serverRole,
-            message = locale('role_server_no_local')
-        })
+    elseif theirs then
+        mismatch(locale('role_local_no_server'))
+    elseif mine then
+        mismatch(locale('role_server_no_local'))
     end
 end)
 
 RegisterNetEvent('jrs_mdt:roleSync:adminForceRefresh', function()
     local src = source
-    local roleData = PlayerRoles[src]
-    
-    if roleData and roleData.permissions.isAdmin then
-        forceRefreshAllRoles()
-        TriggerClientEvent('jrs_mdt:roleSync:refreshComplete', src, {
-            success = true,
-            message = locale('role_refresh_success'),
-            configVersion = ConfigVersion
-        })
-    else
-        TriggerClientEvent('jrs_mdt:roleSync:refreshComplete', src, {
-            success = false,
-            message = locale('role_refresh_denied')
-        })
-    end
+    local allowed = roles[src] and roles[src].permissions.isAdmin
+
+    if allowed then refreshAll() end
+    TriggerClientEvent('jrs_mdt:roleSync:refreshComplete', src, allowed
+        and { success = true, message = locale('role_refresh_success'), configVersion = version }
+        or { success = false, message = locale('role_refresh_denied') })
 end)
 
--- ============================================
--- Player Connection Handlers
--- ============================================
+-- ------------------------------------------------------------------ keeping it current
+
 AddEventHandler('jrs:SelectedCharacter', function(src)
     if not src then return end
     Wait(1000)
-    updatePlayerRole(src)
-end)
-
-AddEventHandler('playerDropped', function(reason)
-    local src = source
-    removePlayerRole(src)
+    refresh(src)
 end)
 
 AddEventHandler('jrs_core:server:jobChanged', function(src)
     Wait(500)
-    updatePlayerRole(src)
+    refresh(src)
 end)
 
--- ============================================
--- Callbacks
--- ============================================
-JRS.Callback('jrs_mdt:roleSync:getRoles', function(source)
-    return getAllPlayerRoles()
-end)
-
-JRS.Callback('jrs_mdt:roleSync:getMyRole', function(source)
-    return PlayerRoles[source]
-end)
-
-JRS.Callback('jrs_mdt:roleSync:getConfigVersion', function(source)
-    return ConfigVersion
-end)
-
-JRS.Callback('jrs_mdt:roleSync:getValidatedJobs', function(source)
-    local jobs = {}
-    for jobName, jobConfig in pairs(Config.LawJobs) do
-        jobs[jobName] = {
-            label = jobConfig.label,
-            grades = jobConfig.grades
-        }
+AddEventHandler('playerDropped', function()
+    local src = source
+    if roles[src] then
+        tellAll(src, roles[src], 'remove')
+        roles[src] = nil
     end
+end)
+
+-- ------------------------------------------------------------------ callbacks
+
+JRS.Callback('jrs_mdt:roleSync:getRoles', everyRole)
+JRS.Callback('jrs_mdt:roleSync:getMyRole', function(src) return roles[src] end)
+JRS.Callback('jrs_mdt:roleSync:getConfigVersion', function() return version end)
+
+JRS.Callback('jrs_mdt:roleSync:getValidatedJobs', function()
+    local jobs = {}
+    for name, job in pairs(Config.LawJobs) do jobs[name] = { label = job.label, grades = job.grades } end
     return jobs
 end)
 
-JRS.Callback('jrs_mdt:server:getConfigRoles', function(source)
-    local roles = {}
-    for jobName, jobConfig in pairs(Config.LawJobs) do
+-- every department with the permissions of each rank, for the admin screen
+JRS.Callback('jrs_mdt:server:getConfigRoles', function()
+    local list = {}
+    for name, job in pairs(Config.LawJobs) do
         local grades = {}
-        for gradeLevel, gradeConfig in pairs(jobConfig.grades) do
-            table.insert(grades, {
-                level = gradeLevel,
-                label = gradeConfig.label,
+        for level, grade in pairs(job.grades) do
+            grades[#grades + 1] = {
+                level = level, label = grade.label,
                 permissions = {
-                    canCreateRecords = gradeConfig.canCreateRecords == true,
-                    canDeleteRecords = gradeConfig.canDeleteRecords == true,
-                    canManageWarrants = gradeConfig.canManageWarrants == true,
-                    isAdmin = gradeConfig.isAdmin == true
-                }
-            })
+                    canCreateRecords = grade.canCreateRecords == true, canDeleteRecords = grade.canDeleteRecords == true,
+                    canManageWarrants = grade.canManageWarrants == true, isAdmin = grade.isAdmin == true,
+                },
+            }
         end
         table.sort(grades, function(a, b) return a.level < b.level end)
-        table.insert(roles, {
-            name = jobName,
-            label = jobConfig.label,
-            grades = grades,
-            isConfigRole = true
-        })
+        list[#list + 1] = { name = name, label = job.label, grades = grades, isConfigRole = true }
     end
-    table.sort(roles, function(a, b) return a.label < b.label end)
-    return roles
+    table.sort(list, function(a, b) return a.label < b.label end)
+    return list
 end)
 
--- ============================================
--- Exports
--- ============================================
-exports('getPlayerRole', function(source)
-    return PlayerRoles[source]
-end)
+-- ------------------------------------------------------------------ exports
 
-exports('getAllPlayerRoles', getAllPlayerRoles)
+exports('getPlayerRole', function(src) return roles[src] end)
+exports('getAllPlayerRoles', everyRole)
+exports('getValidatedLawJobs', function() return Config.LawJobs end)
+exports('isLawJob', function(name) return Config.LawJobs[name] ~= nil end)
+exports('hasPermission', function(src, permission) return roles[src] ~= nil and roles[src].permissions[permission] == true end)
+exports('isAdmin', function(src) return roles[src] ~= nil and roles[src].permissions.isAdmin == true end)
+exports('forceRefreshRoles', refreshAll)
 
-exports('getValidatedLawJobs', function()
-    local jobs = {}
-    for jobName, jobConfig in pairs(Config.LawJobs) do
-        jobs[jobName] = jobConfig
-    end
-    return jobs
-end)
-
-exports('isLawJob', function(jobName)
-    return Config.LawJobs[jobName] ~= nil
-end)
-
-exports('hasPermission', function(source, permission)
-    local role = PlayerRoles[source]
-    if not role then return false end
-    return role.permissions[permission] == true
-end)
-
-exports('isAdmin', function(source)
-    return exports[GetCurrentResourceName()]:hasPermission(source, 'isAdmin')
-end)
-
-exports('forceRefreshRoles', forceRefreshAllRoles)
-
--- ============================================
--- Initialization
--- ============================================
 CreateThread(function()
     Wait(2000)
-    
-    ConfigValidated = validateLawJobsConfig()
-    
-    if ConfigValidated then
-        local players = MDTCore.GetPlayers()
-        for _, src in ipairs(players) do
-            updatePlayerRole(src)
-        end
-        print('[jrs_mdt] Role sync initialized with ' .. #getAllPlayerRoles() .. ' active law officers')
-    end
+    if not checkLawJobs() then return end
+
+    for _, id in ipairs(MDTCore.GetPlayers()) do refresh(tonumber(id)) end
+    print('[jrs_mdt] role sync is running with ' .. #everyRole() .. ' law officer(s)')
 end)

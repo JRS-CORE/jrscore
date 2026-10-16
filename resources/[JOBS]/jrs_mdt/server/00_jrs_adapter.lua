@@ -1,3 +1,4 @@
+-- jrs_mdt | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 -- JRS characters in the player shape the MDT code works with.
 MDTCore = {}
 

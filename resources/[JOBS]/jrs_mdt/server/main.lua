@@ -1,709 +1,334 @@
+-- jrs_mdt | server: access, citizens, records, warrants, BOLOs, reports and the home numbers
+-- Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 
--- ============================================
--- Configuration State & Validation
--- ============================================
 local configVersion = 1
 
-local function validateConfig()
-    if not Config.LawJobs then
-        Config.LawJobs = {}
-        print('[jrs_mdt] ' .. locale('config_warning_missing'))
-    end
-    
-    for jobName, jobConfig in pairs(Config.LawJobs) do
-        if not jobConfig.label then
-            jobConfig.label = jobName
-        end
-        if not jobConfig.grades then
-            jobConfig.grades = {}
-        end
-        
-        for grade, gradeConfig in pairs(jobConfig.grades) do
+-- fills in whatever the config left out
+local function normaliseConfig()
+    Config.LawJobs = Config.LawJobs or {}
+    Config.Settings = Config.Settings or {
+        command = 'mdt', requireOnDuty = true, maxSearchResults = 50, recordRetentionDays = 0, warrantExpirationDays = 0, debug = false,
+    }
+
+    for jobName, job in pairs(Config.LawJobs) do
+        job.label = job.label or jobName
+        job.grades = job.grades or {}
+        for _, grade in pairs(job.grades) do
             for key, value in pairs(Config.Defaults.jobGrade) do
-                if gradeConfig[key] == nil then
-                    gradeConfig[key] = value
-                end
+                if grade[key] == nil then grade[key] = value end
             end
         end
     end
-    
-    if not Config.Settings then
-        Config.Settings = {
-            command = 'mdt',
-            requireOnDuty = true,
-            maxSearchResults = 50,
-            recordRetentionDays = 0,
-            warrantExpirationDays = 0,
-            debug = false
-        }
-    end
-    
+
     configVersion = configVersion + 1
-    
-    if Config.Settings.debug then
-        print('[jrs_mdt] ' .. locale('config_validated', configVersion))
-    end
+    if Config.Settings.debug then print('[jrs_mdt] ' .. locale('config_validated', configVersion)) end
 end
 
--- ============================================
--- Config Helper Functions
--- ============================================
-local function isLawJob(jobName)
-    return Config.LawJobs[jobName] ~= nil
-end
+AddEventHandler('onResourceStart', function(resource)
+    if resource == GetCurrentResourceName() then normaliseConfig() end
+end)
 
-local function getGradeConfig(jobName, grade)
-    local jobConfig = Config.LawJobs[jobName]
-    if not jobConfig then return nil end
-    
-    local gradeConfig = jobConfig.grades[grade]
-    if not gradeConfig then
-        return Config.Defaults.jobGrade
-    end
-    
-    return gradeConfig
-end
+-- ------------------------------------------------------------------ exports
 
-local function hasJobPermission(jobName, grade, permission)
-    local gradeConfig = getGradeConfig(jobName, grade)
-    if not gradeConfig then return false end
-    return gradeConfig[permission] == true
-end
-
--- ============================================
--- Access Validation Functions
--- ============================================
-local function hasAccess(source)
-    local player = MDTCore.GetPlayer(source)
-    if not player then return false end
-    
-    local job = player.PlayerData.job
-    if not job then return false end
-    
-    if not isLawJob(job.name) then return false end
-    
-    if Config.Settings.requireOnDuty and not job.onduty then
-        return false
-    end
-    
-    return true
-end
-
-local function hasPermission(source, permission)
-    local player = MDTCore.GetPlayer(source)
-    if not player then return false end
-    
-    local job = player.PlayerData.job
-    if not job then return false end
-    
-    return hasJobPermission(job.name, job.grade.level, permission)
-end
-
-local function getPermissions(source)
-    local player = MDTCore.GetPlayer(source)
-    if not player then return nil end
-    
-    local job = player.PlayerData.job
-    if not job or not isLawJob(job.name) then
-        return nil
-    end
-    
-    return getGradeConfig(job.name, job.grade.level)
-end
-
--- ============================================
--- Server Exports
--- ============================================
-exports('hasAccess', hasAccess)
-exports('hasPermission', hasPermission)
-exports('getPermissions', getPermissions)
+exports('hasAccess', MDT.Access)
+exports('getPermissions', MDT.Grade)
+exports('getSettings', function() return Config.Settings end)
+exports('getConfigVersion', function() return configVersion end)
 
 exports('getLawJobs', function()
     local jobs = {}
-    for jobName, jobConfig in pairs(Config.LawJobs) do
-        jobs[jobName] = {
-            label = jobConfig.label,
-            grades = jobConfig.grades
-        }
-    end
+    for name, job in pairs(Config.LawJobs) do jobs[name] = { label = job.label, grades = job.grades } end
     return jobs
 end)
 
-exports('getSettings', function()
-    return Config.Settings
-end)
-
-exports('getConfigVersion', function()
-    return configVersion
-end)
-
+-- loads shared/config.lua again without a restart
 exports('reloadConfig', function()
-    Config.LawJobs = {}
-    Config.Settings = {}
-    
-    local configFile = LoadResourceFile(GetCurrentResourceName(), 'shared/config.lua')
-    if configFile then
-        local loadFunc, err = load(configFile, 'config.lua')
-        if loadFunc then
-            loadFunc()
-            validateConfig()
-            return true, locale('config_reloaded', configVersion)
-        else
-            return false, locale('config_parse_failed', tostring(err))
-        end
-    end
-    return false, locale('config_load_failed')
+    local text = LoadResourceFile(GetCurrentResourceName(), 'shared/config.lua')
+    if not text then return false, locale('config_load_failed') end
+
+    Config.LawJobs, Config.Settings = {}, {}
+    local chunk, err = load(text, 'config.lua')
+    if not chunk then return false, locale('config_parse_failed', tostring(err)) end
+
+    chunk()
+    normaliseConfig()
+    return true, locale('config_reloaded', configVersion)
 end)
 
--- ============================================
--- Server Events (Config)
--- ============================================
+-- ------------------------------------------------------------------ access events
+
 RegisterNetEvent('jrs_mdt:server:checkAccess', function()
-    local source = source
-    local access = hasAccess(source)
-    local permissions = access and getPermissions(source) or nil
-    
-    TriggerClientEvent('jrs_mdt:client:accessResult', source, {
-        hasAccess = access,
-        permissions = permissions,
-        jobLabel = access and MDTCore.GetPlayer(source).PlayerData.job.label or nil
+    local src = source
+    local allowed = MDT.Access(src)
+    TriggerClientEvent('jrs_mdt:client:accessResult', src, {
+        hasAccess = allowed,
+        permissions = allowed and MDT.Grade(src) or nil,
+        jobLabel = allowed and MDTCore.GetPlayer(src).PlayerData.job.label or nil,
     })
 end)
 
 RegisterNetEvent('jrs_mdt:server:checkPermission', function(permission)
-    local source = source
-    TriggerClientEvent('jrs_mdt:client:permissionResult', source, {
-        permission = permission,
-        hasPermission = hasPermission(source, permission)
-    })
+    local src = source
+    TriggerClientEvent('jrs_mdt:client:permissionResult', src, { permission = permission, hasPermission = MDT.Can(src, permission) })
 end)
 
 RegisterNetEvent('jrs_mdt:server:reloadConfig', function()
-    local source = source
-    
-    if not hasPermission(source, 'isAdmin') then
-        TriggerClientEvent('jrs_mdt:client:notify', source, {
-            type = 'error',
-            message = locale('notification_no_permission_reload')
-        })
-        return
+    local src = source
+    if not MDT.Can(src, 'isAdmin') then
+        return TriggerClientEvent('jrs_mdt:client:notify', src, { type = 'error', message = locale('notification_no_permission_reload') })
     end
-    
-    local success, message = exports[GetCurrentResourceName()]:reloadConfig()
-    
-    TriggerClientEvent('jrs_mdt:client:notify', source, {
-        type = success and 'success' or 'error',
-        message = message
-    })
-    
-    if success then
-        local players = MDTCore.GetPlayers()
-        for _, playerId in ipairs(players) do
-            local target = tonumber(playerId)
-            if hasAccess(target) then
-                TriggerClientEvent('jrs_mdt:client:configUpdated', target, configVersion)
-            end
+
+    local ok, message = exports[GetCurrentResourceName()]:reloadConfig()
+    TriggerClientEvent('jrs_mdt:client:notify', src, { type = ok and 'success' or 'error', message = message })
+
+    if ok then
+        for _, id in ipairs(MDTCore.GetPlayers()) do
+            if MDT.Access(tonumber(id)) then TriggerClientEvent('jrs_mdt:client:configUpdated', tonumber(id), configVersion) end
         end
     end
 end)
 
 RegisterNetEvent('jrs_mdt:server:getConfig', function()
-    local source = source
-    if not hasPermission(source, 'isAdmin') then return end
-    
-    TriggerClientEvent('jrs_mdt:client:receiveConfig', source, {
-        lawJobs = Config.LawJobs,
-        settings = Config.Settings,
-        version = configVersion
-    })
+    local src = source
+    if not MDT.Can(src, 'isAdmin') then return end
+    TriggerClientEvent('jrs_mdt:client:receiveConfig', src, { lawJobs = Config.LawJobs, settings = Config.Settings, version = configVersion })
 end)
 
--- ============================================
--- Resource Events
--- ============================================
-AddEventHandler('onResourceStart', function(resourceName)
-    if resourceName ~= GetCurrentResourceName() then return end
-    validateConfig()
-end)
+-- a callback that only runs for officers; `fallback` is what everybody else gets
+local function lawCallback(name, fallback, permission, handler)
+    JRS.Callback(name, function(src, ...)
+        if not MDT.Access(src) or (permission and not MDT.Can(src, permission)) then return fallback end
+        return handler(src, ...)
+    end)
+end
 
--- ============================================
--- Callbacks: Citizens
--- ============================================
-JRS.Callback('jrs_mdt:server:getAllCitizens', function(source)
-    if not hasAccess(source) then return {} end
+-- ------------------------------------------------------------------ citizens
 
-    local results = MySQL.query.await("SELECT citizenid, charinfo, job FROM jrs_mdt_players")
-    if not results then return {} end
+-- marks every citizen in `byId` that has an active warrant
+local function markWanted(byId)
+    local ids = {}
+    for id in pairs(byId) do ids[#ids + 1] = id end
+    if #ids == 0 then return end
 
-    local citizenids = {}
-    local citizensMap = {}
-    for _, row in ipairs(results) do
-        local charinfo = row.charinfo and json.decode(row.charinfo) or {}
-        local job = row.job and json.decode(row.job) or {}
-        table.insert(citizenids, row.citizenid)
-        citizensMap[row.citizenid] = {
-            citizenid = row.citizenid,
-            charinfo = charinfo,
-            job = job,
-            isWanted = false
-        }
+    local rows = MySQL.query.await("SELECT DISTINCT citizenid FROM mdt_warrants WHERE citizenid IN " .. MDT.Marks(ids) .. " AND status = 'active'", ids)
+    for _, row in ipairs(rows or {}) do
+        if byId[row.citizenid] then byId[row.citizenid].isWanted = true end
     end
+end
 
-    if #citizenids > 0 then
-        local placeholders = {}
-        for i = 1, #citizenids do
-            table.insert(placeholders, '?')
-        end
-        local warrantQuery = 'SELECT DISTINCT citizenid FROM mdt_warrants WHERE citizenid IN (' .. table.concat(placeholders, ',') .. ") AND status = 'active'"
-        local warrantResults = MySQL.query.await(warrantQuery, citizenids)
-        if warrantResults then
-            for _, warrant in ipairs(warrantResults) do
-                if citizensMap[warrant.citizenid] then
-                    citizensMap[warrant.citizenid].isWanted = true
-                end
-            end
+-- every character that passes `keep(row, charinfo)`
+local function citizenList(keep)
+    local byId = {}
+    for _, row in ipairs(MySQL.query.await('SELECT citizenid, charinfo, job FROM jrs_mdt_players') or {}) do
+        local info = row.charinfo and json.decode(row.charinfo) or {}
+        if not keep or keep(row, info) then
+            byId[row.citizenid] = { citizenid = row.citizenid, charinfo = info, job = row.job and json.decode(row.job) or {}, isWanted = false }
         end
     end
 
-    local citizens = {}
-    for _, citizen in pairs(citizensMap) do
-        table.insert(citizens, citizen)
-    end
+    markWanted(byId)
+    local list = {}
+    for _, citizen in pairs(byId) do list[#list + 1] = citizen end
+    return list
+end
 
-    return citizens
-end)
+lawCallback('jrs_mdt:server:getAllCitizens', {}, nil, function() return citizenList() end)
 
-JRS.Callback('jrs_mdt:server:searchCitizens', function(source, query)
-    if not hasAccess(source) then return {} end
-
+-- every word of the search has to appear in the id or the name
+lawCallback('jrs_mdt:server:searchCitizens', {}, nil, function(_, query)
     query = string.lower(query or '')
     if #query < 2 then return {} end
 
-    local searchTerms = {}
-    for term in string.gmatch(query, '%S+') do
-        table.insert(searchTerms, term)
-    end
+    local words = {}
+    for word in query:gmatch('%S+') do words[#words + 1] = word end
 
-    local results = MySQL.query.await("SELECT citizenid, charinfo, job FROM jrs_mdt_players")
-    if not results then return {} end
-
-    local citizenids = {}
-    local citizensMap = {}
-    for _, row in ipairs(results) do
-        local charinfo = row.charinfo and json.decode(row.charinfo) or {}
-        local job = row.job and json.decode(row.job) or {}
-
-        local citizenid = string.lower(row.citizenid or '')
-        local firstname = string.lower(charinfo.firstname or '')
-        local lastname = string.lower(charinfo.lastname or '')
-        local fullname = firstname .. ' ' .. lastname
-
-        local matchesAll = true
-        for _, term in ipairs(searchTerms) do
-            local matchesTerm = (
-                string.find(citizenid, term, 1, true) or
-                string.find(firstname, term, 1, true) or
-                string.find(lastname, term, 1, true) or
-                string.find(fullname, term, 1, true)
-            )
-            if not matchesTerm then
-                matchesAll = false
-                break
-            end
+    return citizenList(function(row, info)
+        local first, last = (info.firstname or ''):lower(), (info.lastname or ''):lower()
+        local haystack = (row.citizenid or ''):lower() .. ' ' .. first .. ' ' .. last .. ' ' .. first .. ' ' .. last
+        for _, word in ipairs(words) do
+            if not haystack:find(word, 1, true) then return false end
         end
-
-        if matchesAll then
-            table.insert(citizenids, row.citizenid)
-            citizensMap[row.citizenid] = {
-                citizenid = row.citizenid,
-                charinfo = charinfo,
-                job = job,
-                isWanted = false
-            }
-        end
-    end
-
-    if #citizenids > 0 then
-        local placeholders = {}
-        for i = 1, #citizenids do
-            table.insert(placeholders, '?')
-        end
-        local warrantQuery = 'SELECT DISTINCT citizenid FROM mdt_warrants WHERE citizenid IN (' .. table.concat(placeholders, ',') .. ") AND status = 'active'"
-        local warrantResults = MySQL.query.await(warrantQuery, citizenids)
-        if warrantResults then
-            for _, warrant in ipairs(warrantResults) do
-                if citizensMap[warrant.citizenid] then
-                    citizensMap[warrant.citizenid].isWanted = true
-                end
-            end
-        end
-    end
-
-    local citizens = {}
-    for _, citizen in pairs(citizensMap) do
-        table.insert(citizens, citizen)
-    end
-
-    return citizens
+        return true
+    end)
 end)
 
-JRS.Callback('jrs_mdt:server:getCitizen', function(source, citizenid)
-    if not hasAccess(source) then return nil end
-
-    local citizen = nil
-
-    local target = MDTCore.GetPlayerByCitizenId(citizenid)
-    if target then
-        local data = target.PlayerData
+-- the full file of one citizen: live data when online, the character table otherwise
+lawCallback('jrs_mdt:server:getCitizen', nil, nil, function(_, citizenid)
+    local citizen
+    local online = MDTCore.GetPlayerByCitizenId(citizenid)
+    if online then
+        local data = online.PlayerData
         citizen = {
-            citizenid = data.citizenid,
-            charinfo = data.charinfo,
-            job = data.job,
-            money = data.money,
-            metadata = data.metadata,
-            playerId = data.source
+            citizenid = data.citizenid, charinfo = data.charinfo, job = data.job, money = data.money,
+            metadata = data.metadata, playerId = data.source,
         }
     else
-        local result = MySQL.query.await(
-            'SELECT citizenid, charinfo, job, money, metadata FROM jrs_mdt_players WHERE citizenid = ?',
-            { citizenid }
-        )
-
-        if result and result[1] then
-            local row = result[1]
+        local row = MySQL.query.await('SELECT citizenid, charinfo, job, money, metadata FROM jrs_mdt_players WHERE citizenid = ?', { citizenid })
+        row = row and row[1]
+        if row then
             citizen = {
                 citizenid = row.citizenid,
-                charinfo = row.charinfo and json.decode(row.charinfo) or {},
-                job = row.job and json.decode(row.job) or {},
-                money = row.money and json.decode(row.money) or {},
-                metadata = row.metadata and json.decode(row.metadata) or {}
+                charinfo = row.charinfo and json.decode(row.charinfo) or {}, job = row.job and json.decode(row.job) or {},
+                money = row.money and json.decode(row.money) or {}, metadata = row.metadata and json.decode(row.metadata) or {},
             }
         end
     end
+    if not citizen then return nil end
 
-    if citizen then
-        local profileResult = MySQL.query.await(
-            'SELECT profile_picture FROM mdt_citizen_profiles WHERE citizenid = ?',
-            { citizenid }
-        )
-        citizen.profilePicture = profileResult and profileResult[1] and profileResult[1].profile_picture or nil
+    local profile = MySQL.query.await('SELECT profile_picture FROM mdt_citizen_profiles WHERE citizenid = ?', { citizenid })
+    citizen.profilePicture = profile and profile[1] and profile[1].profile_picture or nil
 
-        local warrantResult = MySQL.query.await(
-            "SELECT id FROM mdt_warrants WHERE citizenid = ? AND status = 'active' LIMIT 1",
-            { citizenid }
-        )
-        citizen.isWanted = warrantResult and warrantResult[1] ~= nil
+    local warrant = MySQL.query.await("SELECT id FROM mdt_warrants WHERE citizenid = ? AND status = 'active' LIMIT 1", { citizenid })
+    citizen.isWanted = warrant ~= nil and warrant[1] ~= nil
 
-        local recordsResult = MySQL.query.await(
-            'SELECT * FROM mdt_records WHERE citizenid = ? ORDER BY created_at DESC',
-            { citizenid }
-        )
-        citizen.records = recordsResult or {}
-    end
-
+    citizen.records = MySQL.query.await('SELECT * FROM mdt_records WHERE citizenid = ? ORDER BY created_at DESC', { citizenid }) or {}
     return citizen
 end)
 
-JRS.Callback('jrs_mdt:server:setProfilePicture', function(source, data)
-    if not hasAccess(source) or not hasPermission(source, 'canCreateRecords') then return false end
-
-    local citizenid = data.citizenid
-    local pictureUrl = data.url
-
-    if not citizenid then return false end
-
-    -- Use INSERT ... ON DUPLICATE KEY UPDATE for upsert
-    MySQL.query.await(
-        'INSERT INTO mdt_citizen_profiles (citizenid, profile_picture) VALUES (?, ?) ON DUPLICATE KEY UPDATE profile_picture = ?',
-        { citizenid, pictureUrl, pictureUrl }
-    )
-
+lawCallback('jrs_mdt:server:setProfilePicture', false, 'canCreateRecords', function(_, data)
+    if not data.citizenid then return false end
+    MySQL.query.await('INSERT INTO mdt_citizen_profiles (citizenid, profile_picture) VALUES (?, ?) ON DUPLICATE KEY UPDATE profile_picture = ?',
+        { data.citizenid, data.url, data.url })
     return true
 end)
 
--- ============================================
--- Callbacks: Criminal Records
--- ============================================
-JRS.Callback('jrs_mdt:server:getRecords', function(source, citizenid)
-    if not hasAccess(source) then return {} end
-    
-    local query = citizenid 
-        and 'SELECT * FROM mdt_records WHERE citizenid = ? ORDER BY created_at DESC'
-        or 'SELECT * FROM mdt_records ORDER BY created_at DESC'
-    
-    local params = citizenid and { citizenid } or {}
-    local results = MySQL.query.await(query, params)
-    return results or {}
+-- ------------------------------------------------------------------ criminal records
+
+lawCallback('jrs_mdt:server:getRecords', {}, nil, function(_, citizenid)
+    if citizenid then return MySQL.query.await('SELECT * FROM mdt_records WHERE citizenid = ? ORDER BY created_at DESC', { citizenid }) or {} end
+    return MySQL.query.await('SELECT * FROM mdt_records ORDER BY created_at DESC') or {}
 end)
 
-JRS.Callback('jrs_mdt:server:addRecord', function(source, data)
-    if not hasAccess(source) or not hasPermission(source, 'canCreateRecords') then return false end
-    
-    local player = MDTCore.GetPlayer(source)
-    if not player then return false end
-    
-    local officerName = player.PlayerData.charinfo.firstname .. ' ' .. player.PlayerData.charinfo.lastname
-    local officerCid = player.PlayerData.citizenid
-    
-    local insertId = MySQL.insert.await(
+lawCallback('jrs_mdt:server:addRecord', false, 'canCreateRecords', function(src, data)
+    local officer, cid = MDT.Officer(src)
+    if not officer then return false end
+
+    local id = MySQL.insert.await(
         'INSERT INTO mdt_records (citizenid, name, crime, description, fine, jailtime, officer, officer_cid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        { data.citizenid, data.name, data.crime, data.description, data.fine or 0, data.jailtime or 0, officerName, officerCid }
-    )
-    
-    return insertId and true or false
+        { data.citizenid, data.name, data.crime, data.description, data.fine or 0, data.jailtime or 0, officer, cid })
+    return id ~= nil
 end)
 
-JRS.Callback('jrs_mdt:server:deleteRecord', function(source, recordId)
-    if not hasAccess(source) or not hasPermission(source, 'canDeleteRecords') then return false end
-    
-    local affectedRows = MySQL.query.await('DELETE FROM mdt_records WHERE id = ?', { recordId })
-    return affectedRows and affectedRows.affectedRows > 0
+lawCallback('jrs_mdt:server:deleteRecord', false, 'canDeleteRecords', function(_, id)
+    return MDT.Touched(MySQL.query.await('DELETE FROM mdt_records WHERE id = ?', { id }))
 end)
 
--- ============================================
--- Callbacks: Warrants
--- ============================================
-JRS.Callback('jrs_mdt:server:getWarrants', function(source)
-    if not hasAccess(source) then return {} end
-    
-    local results = MySQL.query.await('SELECT * FROM mdt_warrants ORDER BY created_at DESC')
-    return results or {}
+-- ------------------------------------------------------------------ warrants
+
+lawCallback('jrs_mdt:server:getWarrants', {}, nil, function()
+    return MySQL.query.await('SELECT * FROM mdt_warrants ORDER BY created_at DESC') or {}
 end)
 
-JRS.Callback('jrs_mdt:server:addWarrant', function(source, data)
-    if not hasAccess(source) or not hasPermission(source, 'canManageWarrants') then return false end
-    
-    local player = MDTCore.GetPlayer(source)
-    if not player then return false end
-    
-    local officerName = player.PlayerData.charinfo.firstname .. ' ' .. player.PlayerData.charinfo.lastname
-    local officerCid = player.PlayerData.citizenid
-    
-    local insertId = MySQL.insert.await(
-        'INSERT INTO mdt_warrants (citizenid, name, reason, status, officer, officer_cid) VALUES (?, ?, ?, ?, ?, ?)',
-        { data.citizenid, data.name, data.reason, 'active', officerName, officerCid }
-    )
-    
-    return insertId and true or false
+lawCallback('jrs_mdt:server:addWarrant', false, 'canManageWarrants', function(src, data)
+    local officer, cid = MDT.Officer(src)
+    if not officer then return false end
+
+    local id = MySQL.insert.await('INSERT INTO mdt_warrants (citizenid, name, reason, status, officer, officer_cid) VALUES (?, ?, ?, ?, ?, ?)',
+        { data.citizenid, data.name, data.reason, 'active', officer, cid })
+    return id ~= nil
 end)
 
-JRS.Callback('jrs_mdt:server:updateWarrant', function(source, data)
-    if not hasAccess(source) or not hasPermission(source, 'canManageWarrants') then return false end
-    
-    local affectedRows = MySQL.query.await(
-        'UPDATE mdt_warrants SET status = ? WHERE id = ?',
-        { data.status, data.id }
-    )
-    return affectedRows and affectedRows.affectedRows > 0
+lawCallback('jrs_mdt:server:updateWarrant', false, 'canManageWarrants', function(_, data)
+    return MDT.Touched(MySQL.query.await('UPDATE mdt_warrants SET status = ? WHERE id = ?', { data.status, data.id }))
 end)
 
-JRS.Callback('jrs_mdt:server:deleteWarrant', function(source, warrantId)
-    if not hasAccess(source) or not hasPermission(source, 'canManageWarrants') then return false end
-    
-    local affectedRows = MySQL.query.await('DELETE FROM mdt_warrants WHERE id = ?', { warrantId })
-    return affectedRows and affectedRows.affectedRows > 0
+lawCallback('jrs_mdt:server:deleteWarrant', false, 'canManageWarrants', function(_, id)
+    return MDT.Touched(MySQL.query.await('DELETE FROM mdt_warrants WHERE id = ?', { id }))
 end)
 
--- ============================================
--- Callbacks: BOLOs
--- ============================================
-JRS.Callback('jrs_mdt:server:getBolos', function(source)
-    if not hasAccess(source) then return {} end
-    
-    local results = MySQL.query.await('SELECT * FROM mdt_bolos ORDER BY created_at DESC')
-    return results or {}
+-- ------------------------------------------------------------------ BOLOs
+
+lawCallback('jrs_mdt:server:getBolos', {}, nil, function()
+    return MySQL.query.await('SELECT * FROM mdt_bolos ORDER BY created_at DESC') or {}
 end)
 
-JRS.Callback('jrs_mdt:server:addBolo', function(source, data)
-    if not hasAccess(source) then return false end
-    
-    local player = MDTCore.GetPlayer(source)
-    if not player then return false end
-    
-    local officerName = player.PlayerData.charinfo.firstname .. ' ' .. player.PlayerData.charinfo.lastname
-    local officerCid = player.PlayerData.citizenid
-    
-    local insertId = MySQL.insert.await(
-        'INSERT INTO mdt_bolos (title, description, last_seen, officer, officer_cid) VALUES (?, ?, ?, ?, ?)',
-        { data.title, data.description, data.lastSeen, officerName, officerCid }
-    )
-    
-    return insertId and true or false
+lawCallback('jrs_mdt:server:addBolo', false, nil, function(src, data)
+    local officer, cid = MDT.Officer(src)
+    if not officer then return false end
+
+    local id = MySQL.insert.await('INSERT INTO mdt_bolos (title, description, last_seen, officer, officer_cid) VALUES (?, ?, ?, ?, ?)',
+        { data.title, data.description, data.lastSeen, officer, cid })
+    return id ~= nil
 end)
 
-JRS.Callback('jrs_mdt:server:deleteBolo', function(source, boloId)
-    if not hasAccess(source) or not hasPermission(source, 'canDeleteRecords') then return false end
-    
-    local affectedRows = MySQL.query.await('DELETE FROM mdt_bolos WHERE id = ?', { boloId })
-    return affectedRows and affectedRows.affectedRows > 0
+lawCallback('jrs_mdt:server:deleteBolo', false, 'canDeleteRecords', function(_, id)
+    return MDT.Touched(MySQL.query.await('DELETE FROM mdt_bolos WHERE id = ?', { id }))
 end)
 
--- ============================================
--- Callbacks: Reports
--- ============================================
-JRS.Callback('jrs_mdt:server:getReports', function(source)
-    if not hasAccess(source) then return {} end
-    
-    local results = MySQL.query.await('SELECT * FROM mdt_reports ORDER BY created_at DESC')
-    if not results then return {} end
-    
-    for _, report in ipairs(results) do
-        if type(report.officers) == 'string' then
-            report.officers = json.decode(report.officers) or {}
-        end
-        if type(report.suspects) == 'string' then
-            report.suspects = json.decode(report.suspects) or {}
-        end
-        if type(report.evidence) == 'string' then
-            report.evidence = json.decode(report.evidence) or {}
-        end
-        
-        local linkedCharges = MySQL.query.await([[
-            SELECT 
-                ca.charge_id,
-                ic.charge_name,
-                ic.citizen_name,
-                ic.fine,
-                ic.jailtime,
-                ic.officer
+-- ------------------------------------------------------------------ reports
+
+lawCallback('jrs_mdt:server:getReports', {}, nil, function()
+    local reports = MDT.Decode(MySQL.query.await('SELECT * FROM mdt_reports ORDER BY created_at DESC'), 'officers', 'suspects', 'evidence')
+
+    -- the newest charge attached to each report, for the list view
+    for _, report in ipairs(reports) do
+        local linked = MySQL.query.await([[
+            SELECT ca.charge_id, ic.charge_name, ic.citizen_name, ic.fine, ic.jailtime, ic.officer
             FROM mdt_charge_attachments ca
             INNER JOIN mdt_issued_charges ic ON ca.charge_id = ic.id
             WHERE ca.report_id = ?
             ORDER BY ca.attached_at DESC
             LIMIT 1
         ]], { report.id })
-        
-        if linkedCharges and linkedCharges[1] then
-            report.linkedCharge = linkedCharges[1]
-        else
-            report.linkedCharge = nil
-        end
+        report.linkedCharge = linked and linked[1] or nil
     end
-    
-    return results
+    return reports
 end)
 
-JRS.Callback('jrs_mdt:server:getReport', function(source, reportId)
-    if not hasAccess(source) then return nil end
-    
-    local results = MySQL.query.await('SELECT * FROM mdt_reports WHERE id = ?', { reportId })
-    local report = results and results[1] or nil
-    
-    if report then
-        if type(report.officers) == 'string' then
-            report.officers = json.decode(report.officers) or {}
-        end
-        if type(report.suspects) == 'string' then
-            report.suspects = json.decode(report.suspects) or {}
-        end
-        if type(report.evidence) == 'string' then
-            report.evidence = json.decode(report.evidence) or {}
-        end
-    end
-    
-    return report
+lawCallback('jrs_mdt:server:getReport', nil, nil, function(_, id)
+    local rows = MDT.Decode(MySQL.query.await('SELECT * FROM mdt_reports WHERE id = ?', { id }), 'officers', 'suspects', 'evidence')
+    return rows[1]
 end)
 
-JRS.Callback('jrs_mdt:server:createReport', function(source, data)
-    if not hasAccess(source) or not hasPermission(source, 'canCreateRecords') then return false end
-    
-    local player = MDTCore.GetPlayer(source)
-    if not player then return false end
-    
-    local officerName = player.PlayerData.charinfo.firstname .. ' ' .. player.PlayerData.charinfo.lastname
-    local officerCid = player.PlayerData.citizenid
-    local timestamp = os.date('%Y-%m-%d %H:%M:%S')
-    
-    local insertId = MySQL.insert.await(
+lawCallback('jrs_mdt:server:createReport', false, 'canCreateRecords', function(src, data)
+    local officer, cid = MDT.Officer(src)
+    if not officer then return false end
+
+    local id = MySQL.insert.await(
         'INSERT INTO mdt_reports (title, type, description, officers, suspects, evidence, officer, officer_cid, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        { 
-            data.title, 
-            data.type or 'incident', 
-            data.description,
-            json.encode(data.officers or {}),
-            json.encode(data.suspects or {}),
-            json.encode(data.evidence or {}),
-            officerName,
-            officerCid,
-            timestamp
-        }
-    )
-    
-    return insertId and true or false
+        { data.title, data.type or 'incident', data.description, json.encode(data.officers or {}), json.encode(data.suspects or {}),
+          json.encode(data.evidence or {}), officer, cid, os.date('%Y-%m-%d %H:%M:%S') })
+    return id ~= nil
 end)
 
-JRS.Callback('jrs_mdt:server:deleteReport', function(source, reportId)
-    if not hasAccess(source) or not hasPermission(source, 'canDeleteRecords') then return false end
-    
-    local affectedRows = MySQL.query.await('DELETE FROM mdt_reports WHERE id = ?', { reportId })
-    return affectedRows and affectedRows.affectedRows > 0
+lawCallback('jrs_mdt:server:deleteReport', false, 'canDeleteRecords', function(_, id)
+    return MDT.Touched(MySQL.query.await('DELETE FROM mdt_reports WHERE id = ?', { id }))
 end)
 
--- Report Comments
-JRS.Callback('jrs_mdt:server:getReportComments', function(source, reportId)
-    if not hasAccess(source) then return {} end
-    
-    local results = MySQL.query.await('SELECT * FROM mdt_report_comments WHERE report_id = ? ORDER BY created_at ASC', { reportId })
-    return results or {}
+lawCallback('jrs_mdt:server:getReportComments', {}, nil, function(_, reportId)
+    return MySQL.query.await('SELECT * FROM mdt_report_comments WHERE report_id = ? ORDER BY created_at ASC', { reportId }) or {}
 end)
 
-JRS.Callback('jrs_mdt:server:addReportComment', function(source, data)
-    if not hasAccess(source) or not hasPermission(source, 'canCreateRecords') then return false end
-    
-    local player = MDTCore.GetPlayer(source)
-    if not player then return false end
-    
-    local officerName = player.PlayerData.charinfo.firstname .. ' ' .. player.PlayerData.charinfo.lastname
-    local officerCid = player.PlayerData.citizenid
-    local timestamp = os.date('%Y-%m-%d %H:%M:%S')
-    
-    local insertId = MySQL.insert.await(
-        'INSERT INTO mdt_report_comments (report_id, author, author_cid, content, created_at) VALUES (?, ?, ?, ?, ?)',
-        { data.reportId, officerName, officerCid, data.content, timestamp }
-    )
-    
-    return insertId and true or false
+lawCallback('jrs_mdt:server:addReportComment', false, 'canCreateRecords', function(src, data)
+    local officer, cid = MDT.Officer(src)
+    if not officer then return false end
+
+    local id = MySQL.insert.await('INSERT INTO mdt_report_comments (report_id, author, author_cid, content, created_at) VALUES (?, ?, ?, ?, ?)',
+        { data.reportId, officer, cid, data.content, os.date('%Y-%m-%d %H:%M:%S') })
+    return id ~= nil
 end)
 
--- ============================================
--- Callbacks: Officer Info & Stats
--- ============================================
-JRS.Callback('jrs_mdt:server:getOfficerInfo', function(source)
-    if not hasAccess(source) then return nil end
-    
-    local player = MDTCore.GetPlayer(source)
-    if not player then return nil end
-    
+-- ------------------------------------------------------------------ the officer and the home numbers
+
+lawCallback('jrs_mdt:server:getOfficerInfo', nil, nil, function(src)
+    local officer, cid, player = MDT.Officer(src)
+    if not officer then return nil end
+    return { name = officer, citizenid = cid, job = player.PlayerData.job, permissions = MDT.Grade(src) }
+end)
+
+local function countOf(sql)
+    local row = MySQL.query.await(sql)
+    return row and row[1] and row[1].count or 0
+end
+
+lawCallback('jrs_mdt:server:getStats', nil, nil, function()
     return {
-        name = player.PlayerData.charinfo.firstname .. ' ' .. player.PlayerData.charinfo.lastname,
-        citizenid = player.PlayerData.citizenid,
-        job = player.PlayerData.job,
-        permissions = getPermissions(source)
+        records = countOf('SELECT COUNT(*) AS count FROM mdt_records'),
+        activeWarrants = countOf("SELECT COUNT(*) AS count FROM mdt_warrants WHERE status = 'active'"),
+        activeBolos = countOf('SELECT COUNT(*) AS count FROM mdt_bolos'),
+        reports = countOf('SELECT COUNT(*) AS count FROM mdt_reports'),
+        unpaidFines = countOf("SELECT COUNT(*) AS count FROM mdt_fines WHERE status IN ('unpaid', 'overdue')"),
     }
 end)
 
-JRS.Callback('jrs_mdt:server:getStats', function(source)
-    if not hasAccess(source) then return nil end
-    
-    local recordCount = MySQL.query.await('SELECT COUNT(*) as count FROM mdt_records')
-    local activeWarrants = MySQL.query.await("SELECT COUNT(*) as count FROM mdt_warrants WHERE status = 'active'")
-    local boloCount = MySQL.query.await('SELECT COUNT(*) as count FROM mdt_bolos')
-    local reportCount = MySQL.query.await('SELECT COUNT(*) as count FROM mdt_reports')
-    local unpaidFines = MySQL.query.await("SELECT COUNT(*) as count FROM mdt_fines WHERE status IN ('unpaid', 'overdue')")
-    
-    return {
-        records = recordCount and recordCount[1] and recordCount[1].count or 0,
-        activeWarrants = activeWarrants and activeWarrants[1] and activeWarrants[1].count or 0,
-        activeBolos = boloCount and boloCount[1] and boloCount[1].count or 0,
-        reports = reportCount and reportCount[1] and reportCount[1].count or 0,
-        unpaidFines = unpaidFines and unpaidFines[1] and unpaidFines[1].count or 0
-    }
-end)
-
--- ============================================
--- Callbacks: Config Data
--- ============================================
-JRS.Callback('jrs_mdt:server:getIncidentTypes', function(source)
-    if not hasAccess(source) then return {} end
-    return Config.IncidentTypes or {}
-end)
+lawCallback('jrs_mdt:server:getIncidentTypes', {}, nil, function() return Config.IncidentTypes or {} end)

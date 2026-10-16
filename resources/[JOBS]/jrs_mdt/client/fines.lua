@@ -1,320 +1,184 @@
+-- jrs_mdt | client: paying fines at the clerks and keeping the player's list of open fines
+-- Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 
-local playerFines = {}
-local finesTargetCreated = false
+local fines = {}                                  -- the player's unpaid and overdue fines
+local clerksReady = false
 
-local function hasUnpaidFines()
-    return #playerFines > 0
+local CLERK_MODEL <const> = joaat('u_m_m_valsheriff_01')
+
+local function total()
+    local sum = 0
+    for _, fine in ipairs(fines) do sum = sum + (fine.total_amount or 0) end
+    return sum
 end
 
-local function getTotalFinesAmount()
-    local total = 0
-    for _, fine in ipairs(playerFines) do
-        total = total + (fine.total_amount or 0)
-    end
-    return total
+-- "2 days 3 hours left" for a unix due time, and the seconds that remain
+local function timeLeft(due)
+    if type(due) ~= 'number' or due <= 0 then return locale('fines_unknown'), 0 end
+
+    local seconds = due - GetCloudTimeAsInt()
+    if seconds <= 0 then return locale('fines_overdue'), 0 end
+
+    local days, hours = seconds // 86400, seconds % 86400 // 3600
+    local minutes, rest = seconds % 3600 // 60, seconds % 60
+    local function plural(n) return n == 1 and '' or 's' end
+
+    if days > 0 then return locale('fines_amount_left', days, plural(days), hours, plural(hours)), seconds end
+    if hours > 0 then return locale('fines_hours_left', hours, plural(hours), minutes), seconds end
+    if minutes > 0 then return locale('fines_minutes_left', minutes, rest), seconds end
+    return locale('fines_seconds_left', rest, plural(rest)), seconds
 end
 
-local function formatTimeRemaining(dueTimestamp)
-    if not dueTimestamp or type(dueTimestamp) ~= 'number' or dueTimestamp <= 0 then
-        return locale('fines_unknown'), 0
-    end
-    
-    local now = GetCloudTimeAsInt()
-    local remaining = dueTimestamp - now
-    
-    if remaining <= 0 then
-        return locale('fines_overdue'), 0
-    end
-    
-    local days = math.floor(remaining / 86400)
-    local hours = math.floor((remaining % 86400) / 3600)
-    local minutes = math.floor((remaining % 3600) / 60)
-    local seconds = remaining % 60
-    
-    if days > 0 then
-        return locale('fines_amount_left', days, days == 1 and '' or 's', hours, hours == 1 and '' or 's'), remaining
-    elseif hours > 0 then
-        return locale('fines_hours_left', hours, hours == 1 and '' or 's', minutes), remaining
-    elseif minutes > 0 then
-        return locale('fines_minutes_left', minutes, seconds), remaining
-    else
-        return locale('fines_seconds_left', seconds, seconds == 1 and '' or 's'), remaining
-    end
+exports('hasUnpaidFines', function() return #fines > 0 end)
+exports('getTotalFinesAmount', total)
+exports('getPlayerFines', function() return fines end)
+
+local function pushToPage()
+    NUI.Message('playerFinesUpdated', { fines = fines, total = total() })
 end
 
-exports('hasUnpaidFines', hasUnpaidFines)
-exports('getTotalFinesAmount', getTotalFinesAmount)
-exports('getPlayerFines', function() return playerFines end)
+local function reload(after)
+    JRS.TriggerCallback('jrs_mdt:server:getPlayerFines', function(list)
+        fines = list or {}
+        if after then after() end
+    end)
+end
 
-RegisterNetEvent('jrs_mdt:client:updatePlayerFines', function(fines)
-    playerFines = fines or {}
-    
-    SendNUIMessage(json.encode({
-        action = 'playerFinesUpdated',
-        data = { fines = playerFines, total = getTotalFinesAmount() }
-    }))
-end)
-
-RegisterNetEvent('jrs_mdt:client:finePaid', function(data)
-    for i, fine in ipairs(playerFines) do
-        if fine.id == data.fineId then
-            table.remove(playerFines, i)
-            break
-        end
+local function drop(fineId)
+    for i, fine in ipairs(fines) do
+        if fine.id == fineId then table.remove(fines, i) break end
     end
-    
-    SendNUIMessage(json.encode({
-        action = 'playerFinesUpdated',
-        data = { fines = playerFines, total = getTotalFinesAmount() }
-    }))
+    pushToPage()
+end
+
+RegisterNetEvent('jrs_mdt:client:updatePlayerFines', function(list)
+    fines = list or {}
+    pushToPage()
 end)
 
 RegisterNetEvent('jrs_mdt:client:finePaymentResult', function(data)
-    if data.success then
-        MDTNotify({
-            title = locale('fines_title'),
-            description = data.message,
-            type = 'success'
-        })
-    else
-        MDTNotify({
-            title = locale('fines_title'),
-            description = data.message,
-            type = 'error'
-        })
-    end
+    MDTNotify({ title = locale('fines_title'), description = data.message, type = data.success and 'success' or 'error' })
 end)
 
-local function createFinesPaymentTargets()
-    if finesTargetCreated then return end
-    if not Config.Fines or not Config.Fines.enabled then return end
-    
-    local locations = Config.Fines.paymentLocations or {}
-    
-    for i, location in ipairs(locations) do
-        local coords = location.coords
-        local name = location.name or locale('system_court_clerk')
-        
-        local pedModel = GetHashKey('u_m_m_valsheriff_01')
-        
-        RequestModel(pedModel)
-        local timeout = 0
-        while not HasModelLoaded(pedModel) and timeout < 5000 do
-            Wait(100)
-            timeout = timeout + 100
-        end
-        
-        if not HasModelLoaded(pedModel) then
-            print('[jrs_mdt] Warning: Failed to load ped model for fines payment NPC at ' .. name)
-            goto continue
-        end
-        
-        local ped = CreatePed(pedModel, coords.x, coords.y, coords.z - 1.0, location.heading or 0.0, false, true, true, true)
-        SetModelAsNoLongerNeeded(pedModel)
-        SetRandomOutfitVariation(ped, true)
-        SetEntityAsMissionEntity(ped, true, true)
-        SetBlockingOfNonTemporaryEvents(ped, true)
-        FreezeEntityPosition(ped, true)
-        SetPedCanPlayAmbientAnims(ped, true)
-        SetPedCanRagdoll(ped, false)
-        
-        JRS.AddEntityTarget(ped, {
-            {
-                name = 'pay_fines_' .. i,
-                icon = 'fa-solid fa-money-bill',
-                label = locale('fines_pay_label'),
-                distance = 2.5,
-                canInteract = function()
-                    return hasUnpaidFines()
-                end,
-                onSelect = function()
-                    JRS.TriggerCallback('jrs_mdt:server:getPlayerFines', function(fines)
-                        playerFines = fines or {}
-                        
-                        if #playerFines == 0 then
-                            MDTNotify({
-                                title = locale('fines_title'),
-                                description = locale('notification_no_unpaid_fines'),
-                                type = 'inform'
-                            })
-                            return
-                        end
-                        
-                        local total = getTotalFinesAmount()
-                        local options = {}
-                        
-                        for _, fine in ipairs(playerFines) do
-                            local timeRemaining, _ = formatTimeRemaining(fine.due_timestamp)
-                            local statusLabel = fine.status == 'overdue' and locale('fines_fine_overdue') or ''
-                            
-                            table.insert(options, {
-                                title = locale('fines_fine_label'):format(fine.id) .. statusLabel,
-                                description = locale('fines_fine_detail', fine.total_amount, timeRemaining),
-                                icon = fine.status == 'overdue' and 'exclamation-triangle' or 'money-bill',
-                                onSelect = function()
-                                    local alert = MDTConfirm({
-                                        header = locale('fines_pay_header'),
-                                        content = locale('fines_pay_content', fine.id, fine.total_amount),
-                                        centered = true,
-                                        cancel = true,
-                                        labels = {
-                                            confirm = locale('fines_pay_confirm'),
-                                            cancel = locale('fines_cancel')
-                                        }
-                                    })
-                                    
-                                    if alert == 'confirm' then
-                                        local result = JRS.Await('jrs_mdt:server:payFine', fine.id)
-                                        if result and result.success then
-                                            JRS.TriggerCallback('jrs_mdt:server:getPlayerFines', function(newFines)
-                                                playerFines = newFines or {}
-                                            end)
-                                        end
-                                    end
-                                end
-                            })
-                        end
-                        
-                        table.insert(options, {
-                            title = locale('fines_pay_all_title'),
-                            description = locale('fines_pay_all_total', total),
-                            icon = 'money-check-dollar',
-                            onSelect = function()
-                                local alert = MDTConfirm({
-                                    header = locale('fines_pay_all_title'),
-                                    content = locale('fines_pay_all_content', #playerFines, total),
-                                    centered = true,
-                                    cancel = true,
-                                    labels = {
-                                        confirm = locale('fines_pay_all_confirm'),
-                                        cancel = locale('fines_cancel')
-                                    }
-                                })
-                                
-                                if alert == 'confirm' then
-                                    for _, fine in ipairs(playerFines) do
-                                        JRS.Await('jrs_mdt:server:payFine', fine.id)
-                                    end
-                                    
-                                    JRS.TriggerCallback('jrs_mdt:server:getPlayerFines', function(newFines)
-                                        playerFines = newFines or {}
-                                    end)
-                                end
-                            end
-                        })
-                        
-                        MDTRegisterContext({
-                            id = 'fines_payment_menu',
-                            title = locale('fines_unpaid_title', name),
-                            options = options
-                        })
-                        
-                        MDTShowContext('fines_payment_menu')
-                    end)
-                end
-            },
-            {
-                name = 'check_fines_' .. i,
-                icon = 'fa-solid fa-file-invoice-dollar',
-                label = locale('fines_check_label'),
-                distance = 2.5,
-                onSelect = function()
-                    JRS.TriggerCallback('jrs_mdt:server:getPlayerFines', function(fines)
-                        playerFines = fines or {}
-                        
-                        if #playerFines == 0 then
-                            MDTNotify({
-                                title = locale('fines_title'),
-                                description = locale('notification_no_unpaid_fines_clear'),
-                                type = 'success'
-                            })
-                        else
-                            local total = getTotalFinesAmount()
-                            MDTNotify({
-                                title = locale('fines_title'),
-                                description = locale('notification_unpaid_fines_count', #playerFines, total),
-                                type = 'warning'
-                            })
-                        end
-                    end)
-                end
-            }
-        })
-        
-        ::continue::
+-- an officer's page and the player's own list both learn that a fine was paid
+RegisterNetEvent('jrs_mdt:client:finePaid', function(data)
+    drop(data.fineId)
+    NUI.Message('finePaid', data)
+end)
+
+RegisterNetEvent('jrs_mdt:client:playerFinePaid', function(data) drop(data.fineId) end)
+RegisterNetEvent('jrs_mdt:client:fineStatusUpdated', function(data) NUI.Message('fineStatusUpdated', data) end)
+
+-- ------------------------------------------------------------------ the clerk
+
+local function confirmPay(header, content, yes)
+    return MDTConfirm({
+        header = header, content = content, centered = true, cancel = true,
+        labels = { confirm = yes, cancel = locale('fines_cancel') },
+    }) == 'confirm'
+end
+
+-- the menu with every open fine and a "pay all" entry
+local function showPayMenu(clerk)
+    if #fines == 0 then
+        return MDTNotify({ title = locale('fines_title'), description = locale('notification_no_unpaid_fines'), type = 'inform' })
     end
-    
-    finesTargetCreated = true
+
+    local options = {}
+    for _, fine in ipairs(fines) do
+        options[#options + 1] = {
+            title = locale('fines_fine_label'):format(fine.id) .. (fine.status == 'overdue' and locale('fines_fine_overdue') or ''),
+            description = locale('fines_fine_detail', fine.total_amount, (timeLeft(fine.due_timestamp))),
+            onSelect = function()
+                if not confirmPay(locale('fines_pay_header'), locale('fines_pay_content', fine.id, fine.total_amount), locale('fines_pay_confirm')) then return end
+                local result = JRS.Await('jrs_mdt:server:payFine', fine.id)
+                if result and result.success then reload() end
+            end,
+        }
+    end
+
+    options[#options + 1] = {
+        title = locale('fines_pay_all_title'),
+        description = locale('fines_pay_all_total', total()),
+        onSelect = function()
+            if not confirmPay(locale('fines_pay_all_title'), locale('fines_pay_all_content', #fines, total()), locale('fines_pay_all_confirm')) then return end
+            for _, fine in ipairs(fines) do JRS.Await('jrs_mdt:server:payFine', fine.id) end
+            reload()
+        end,
+    }
+
+    MDTRegisterContext({ id = 'fines_payment_menu', title = locale('fines_unpaid_title', clerk), options = options })
+    MDTShowContext('fines_payment_menu')
+end
+
+local function checkFines()
+    reload(function()
+        if #fines == 0 then
+            MDTNotify({ title = locale('fines_title'), description = locale('notification_no_unpaid_fines_clear'), type = 'success' })
+        else
+            MDTNotify({ title = locale('fines_title'), description = locale('notification_unpaid_fines_count', #fines, total()), type = 'warning' })
+        end
+    end)
+end
+
+local function spawnClerk(index, place)
+    RequestModel(CLERK_MODEL)
+    local waited = 0
+    while not HasModelLoaded(CLERK_MODEL) and waited < 5000 do Wait(100) waited = waited + 100 end
+
+    local name = place.name or locale('system_court_clerk')
+    if not HasModelLoaded(CLERK_MODEL) then
+        return print('[jrs_mdt] could not load the clerk ped for ' .. name)
+    end
+
+    local at = place.coords
+    local ped = CreatePed(CLERK_MODEL, at.x, at.y, at.z - 1.0, place.heading or 0.0, false, true, true, true)
+    SetModelAsNoLongerNeeded(CLERK_MODEL)
+    SetRandomOutfitVariation(ped, true)
+    SetEntityAsMissionEntity(ped, true, true)
+    SetBlockingOfNonTemporaryEvents(ped, true)
+    FreezeEntityPosition(ped, true)
+    SetPedCanPlayAmbientAnims(ped, true)
+    SetPedCanRagdoll(ped, false)
+
+    JRS.AddEntityTarget(ped, {
+        {
+            name = 'pay_fines_' .. index, icon = 'fa-solid fa-money-bill', label = locale('fines_pay_label'), distance = 2.5,
+            canInteract = function() return #fines > 0 end,
+            onSelect = function() reload(function() showPayMenu(name) end) end,
+        },
+        { name = 'check_fines_' .. index, icon = 'fa-solid fa-file-invoice-dollar', label = locale('fines_check_label'), distance = 2.5, onSelect = checkFines },
+    })
+end
+
+local function spawnClerks()
+    if clerksReady or not (Config.Fines and Config.Fines.enabled) then return end
+    for i, place in ipairs(Config.Fines.paymentLocations or {}) do spawnClerk(i, place) end
+    clerksReady = true
 end
 
 CreateThread(function()
     Wait(3000)
-    
-    JRS.TriggerCallback('jrs_mdt:server:getPlayerFines', function(fines)
-        playerFines = fines or {}
-    end)
-    
-    if Config.Fines and Config.Fines.enabled then
-        createFinesPaymentTargets()
-    end
+    reload()
+    spawnClerks()
 end)
 
 RegisterNetEvent('jrs:SelectedCharacter', function()
     Wait(2000)
-    
-    JRS.TriggerCallback('jrs_mdt:server:getPlayerFines', function(fines)
-        playerFines = fines or {}
-    end)
+    reload()
 end)
 
-RegisterNuiCallback('getPlayerFines', function(_, cb)
-    local fines = JRS.Await('jrs_mdt:server:getPlayerFines')
-    cb(fines or {})
-end)
+-- ------------------------------------------------------------------ the page
+
+RegisterNuiCallback('getPlayerFines', function(_, cb) cb(JRS.Await('jrs_mdt:server:getPlayerFines') or {}) end)
+RegisterNuiCallback('getUnpaidFinesCount', function(data, cb) cb(JRS.Await('jrs_mdt:server:getUnpaidFinesCount', data.citizenid) or 0) end)
+RegisterNuiCallback('getCitizenFines', function(data, cb) cb(JRS.Await('jrs_mdt:server:getCitizenFines', data.citizenid) or {}) end)
+RegisterNuiCallback('getAllUnpaidFines', function(_, cb) cb(JRS.Await('jrs_mdt:server:getAllUnpaidFines') or {}) end)
 
 RegisterNuiCallback('payFine', function(data, cb)
-    local result = JRS.Await('jrs_mdt:server:payFine', data.fineId)
-    cb(result or { success = false, message = locale('notification_unknown_error') })
-end)
-
-RegisterNuiCallback('getUnpaidFinesCount', function(data, cb)
-    local count = JRS.Await('jrs_mdt:server:getUnpaidFinesCount', data.citizenid)
-    cb(count or 0)
-end)
-
-RegisterNuiCallback('getCitizenFines', function(data, cb)
-    local fines = JRS.Await('jrs_mdt:server:getCitizenFines', data.citizenid)
-    cb(fines or {})
-end)
-
-RegisterNuiCallback('getAllUnpaidFines', function(_, cb)
-    local fines = JRS.Await('jrs_mdt:server:getAllUnpaidFines')
-    cb(fines or {})
+    cb(JRS.Await('jrs_mdt:server:payFine', data.fineId) or { success = false, message = locale('notification_unknown_error') })
 end)
 
 RegisterNuiCallback('markFinePaid', function(data, cb)
-    local result = JRS.Await('jrs_mdt:server:markFinePaid', data.fineId)
-    cb(result or { success = false, message = locale('notification_unknown_error') })
-end)
-
-RegisterNetEvent('jrs_mdt:client:finePaid', function(data)
-    SendNUIMessage(json.encode({ action = 'finePaid', data = data }))
-end)
-
-RegisterNetEvent('jrs_mdt:client:fineStatusUpdated', function(data)
-    SendNUIMessage(json.encode({ action = 'fineStatusUpdated', data = data }))
-end)
-
-RegisterNetEvent('jrs_mdt:client:playerFinePaid', function(data)
-    for i, fine in ipairs(playerFines) do
-        if fine.id == data.fineId then
-            table.remove(playerFines, i)
-            break
-        end
-    end
-    
-    SendNUIMessage(json.encode({
-        action = 'playerFinesUpdated',
-        data = { fines = playerFines, total = getTotalFinesAmount() }
-    }))
+    cb(JRS.Await('jrs_mdt:server:markFinePaid', data.fineId) or { success = false, message = locale('notification_unknown_error') })
 end)
