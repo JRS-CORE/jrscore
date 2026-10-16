@@ -93,23 +93,29 @@ local function printVersionReport()
 
     local outdated, ahead, unknown = 0, 0, 0
 
-    -- One line per resource, in the familiar "IS UP TO DATE!" style.
+    -- Only resources that are really out of date are listed. Config.VersionList = true
+    -- prints every resource (also up to date / ahead of / missing from versions.json).
+    local verbose = Config.VersionList == true
     for _, entry in ipairs(list) do
         local want = expected[entry.name]
         if want == nil then
             unknown = unknown + 1
-            print(('VERSION: ^3%s^7 ^2v%s^7 ^3IS NOT REGISTERED^7 (add it to versions.json)')
-                :format(entry.name, entry.version))
+            if verbose then
+                print(('VERSION: ^3%s^7 ^2v%s^7 ^3IS NOT REGISTERED^7 (add it to versions.json)')
+                    :format(entry.name, entry.version))
+            end
         elseif tostring(want) == entry.version then
-            print(('VERSION: ^3%s^7 ^2v%s^7 ^2IS UP TO DATE!^7'):format(entry.name, entry.version))
+            if verbose then print(('VERSION: ^3%s^7 ^2v%s^7 ^2IS UP TO DATE!^7'):format(entry.name, entry.version)) end
         elseif compareVersions(entry.version, want) > 0 then
             -- Installed is NEWER than the registry. That is an updated resource
             -- whose versions.json entry was not bumped, not an out-of-date one -
             -- calling it OUTDATED sent people looking for an update that does
             -- not exist.
             ahead = ahead + 1
-            print(('VERSION: ^3%s^7 ^2v%s^7 ^3IS NEWER THAN THE REGISTRY^7 (versions.json still says ^3v%s^7 - bump it)')
-                :format(entry.name, entry.version, tostring(want)))
+            if verbose then
+                print(('VERSION: ^3%s^7 ^2v%s^7 ^3IS NEWER THAN THE REGISTRY^7 (versions.json still says ^3v%s^7 - bump it)')
+                    :format(entry.name, entry.version, tostring(want)))
+            end
         else
             outdated = outdated + 1
             print(('VERSION: ^3%s^7 ^2v%s^7 ^1IS OUTDATED!^7 (latest ^2v%s^7)')
@@ -117,8 +123,12 @@ local function printVersionReport()
         end
     end
 
-    print(('^2[JRS] %s resources checked | %s outdated | %s ahead of registry | %s unregistered^7')
-        :format(#list, outdated, ahead, unknown))
+    if verbose then
+        print(('^2[JRS] %s resources checked | %s outdated | %s ahead of registry | %s unregistered^7')
+            :format(#list, outdated, ahead, unknown))
+    else
+        print(('^2[JRS] %s resources checked | %s outdated^7'):format(#list, outdated))
+    end
 end
 
 -- Any resource starting pushes the report back, so it always lands last.
