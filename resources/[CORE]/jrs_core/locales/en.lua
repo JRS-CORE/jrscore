@@ -35,7 +35,7 @@ Locales["en"] = {
     ['giveweapon_database_error'] = "The weapon could not be saved in the database.",
     ['giveweapon_inventory_not_started'] = "jrs_inventory must be started before using /giveweapon.",
     ['giveweapon_failed'] = "Unable to add the weapon: %s",
-    ['usage_givemoney'] = "Usage: /givemoney [id] [type] [amount] -- type: 0=money, 1=gold, 2=rol, 3=dirty money",
+    ['usage_givemoney'] = "Usage: /%s [id] [type] [amount] -- type: 0=money, 1=gold, 2=rol, 3=dirty money",
     ['usage_addxp'] = 'Usage: /addxp [id] [amount] [optional reason]',
     ['usage_removexp'] = 'Usage: /removexp [id] [amount] [optional reason]',
     ['usage_setxp'] = "Usage: /setxp [id] [amount]",
