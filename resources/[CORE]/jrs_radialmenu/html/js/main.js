@@ -1,38 +1,33 @@
+// jrs_radialmenu | page glue: talks to the game script and drives the wheel
 'use strict';
 
-const RESOURCE = typeof GetParentResourceName === 'function' ? GetParentResourceName() : 'jrs_radialmenu';
+const PARENT = typeof GetParentResourceName === 'function' ? GetParentResourceName() : 'jrs_radialmenu';
 
-function post(name, data) {
-    return fetch(`https://${RESOURCE}/${name}`, {
+const send = (name, body = {}) =>
+    fetch(`https://${PARENT}/${name}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=UTF-8' },
-        body: JSON.stringify(data || {}),
+        body: JSON.stringify(body),
     }).catch(() => {});
-}
 
-const menu = new RadialMenu({
+const wheel = new RadialMenu({
     parent: document.body,
     size: 375,
-    onClose: () => post('closeRadial'),
+    onClose: () => send('closeRadial'),
     onClick: (item) => {
-        if (item.items) return; // submenu, handled by RadialMenu
-        if (item.shouldClose !== false) menu.close();
-        post('selectItem', { itemData: { id: item.id, event: item.event } });
+        if (item.shouldClose !== false) wheel.close();
+        send('selectItem', { itemData: { id: item.id, event: item.event } });
     },
 });
 
-window.addEventListener('message', (event) => {
-    const data = event.data;
+window.addEventListener('message', ({ data }) => {
     if (!data || data.action !== 'ui') return;
-    if (data.radial) {
-        menu.setItems(Array.isArray(data.items) ? data.items : []);
-        menu.open();
-    } else {
-        menu.close();
-    }
+    if (!data.radial) return wheel.close();
+    wheel.setItems(Array.isArray(data.items) ? data.items : []);
+    wheel.open();
 });
 
-// hold-to-open: any key release closes the menu (keybind may be changed server side)
-document.addEventListener('keyup', (e) => {
-    if (e.key !== 'Escape' && e.key !== 'Backspace' && !/^[1-9]$/.test(e.key)) menu.close();
+// the wheel opens while a key is held: letting go of any other key closes it
+document.addEventListener('keyup', ({ key }) => {
+    if (key !== 'Escape' && key !== 'Backspace' && !/^[1-9]$/.test(key)) wheel.close();
 });

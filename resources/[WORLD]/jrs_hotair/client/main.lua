@@ -1,440 +1,356 @@
+-- jrs_hotair | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_hotair | client
+-- Hire a hot-air balloon at a dock, fly it with the keyboard (burner, drift, brake, altitude lock) and store it
+-- again. Friends can ride in the basket as passengers. Prompts are used for every interaction, a small NUI
+-- overlay shows the flight keys.
 
+local hired, hiredDock = nil, nil           -- the balloon this player hired, and the dock it came from
+local occupants = 0                         -- how many people sit in it
 
-local hiredBalloon = nil      -- owner's balloon entity
-local hiredDock = nil         -- dock index it was hired from
-local isUIOpen = false
-local activeDock = nil        -- dock index the open NUI was launched from
-local occupantCount = 0
-
-local passengerBalloon = nil  -- balloon entity this client is riding as passenger
-local passengerSeat = nil
-local passengerNetId = nil
+local riding, ridingSeat, ridingNet = nil, nil, nil     -- the balloon this player rides in as a passenger
 
 local dockPeds = {}
+local altitudeLock = false
+local hintShown = false
+local lastKeys
 
-local altitudeLocked = false
-local lastControlsPressed = nil -- last key-down state pushed to the flight HUD
+local PILOT_DICT <const> = 'script_story@gng2@ig@ig_2_balloon_control'
 
--- ============================================================================
--- FLIGHT CONTROLS HUD (left-of-screen NUI overlay, shown only while piloting)
--- ============================================================================
+-- ------------------------------------------------------------------ small helpers
 
--- Replaces the old uiprompt on-screen button legend. This is a plain
--- SendNUIMessage to the resource's own ui_page, so it needs no NUI focus
--- and no extra dependency.
-local flightHintShown = false
+local function notify(title, message) JRS.Notify(('%s: %s'):format(title, message), 5000) end
 
-local function ShowFlightHint()
-    flightHintShown = true
-    SendNUIMessage({ type = 'showFlightControls', altitudeLocked = altitudeLocked })
+local function groundBelow(x, y, z)
+    local found, ground = GetGroundZFor_3dCoord(x, y, z + 50.0, false)
+    return found and ground or z
 end
 
-local function RefreshFlightHint()
-    if not flightHintShown then return end
-    SendNUIMessage({ type = 'updateFlightControls', altitudeLocked = altitudeLocked })
+local function heightOf(entity)
+    local at = GetEntityCoords(entity)
+    local found, ground = GetGroundZFor_3dCoord(at.x, at.y, at.z, false)
+    return found and at.z - ground or 999.0
 end
 
-local function HideFlightHint()
-    if not flightHintShown then return end
-    flightHintShown = false
-    SendNUIMessage({ type = 'hideFlightControls' })
-    lastControlsPressed = nil
+local function speedOf(entity) return #(GetEntityVelocity(entity)) end
+
+local function owns() return hired ~= nil and DoesEntityExist(hired) end
+
+local function calm(entity)
+    return speedOf(entity) < Config.StoreMaxSpeed and heightOf(entity) < Config.StoreMaxHeightAGL
 end
 
--- Live key-down feedback for the HUD (turns a key badge green while held).
--- Only pushed to NUI when something actually changed, so this doesn't spam
--- a message every single tick.
-local function TablesEqual(a, b)
-    for k, v in pairs(a) do
-        if b[k] ~= v then return false end
-    end
-    return true
+local function landed(entity)
+    return speedOf(entity) < Config.BoardMaxSpeed and heightOf(entity) < Config.BoardMaxHeightAGL
 end
 
-local function PushControlsPressed(burnerHeld)
-    if not flightHintShown then return end
-    local pressed = {
-        SHIFT = burnerHeld,
-        W = IsControlPressed(0, `INPUT_VEH_MOVE_UP_ONLY`),
-        A = IsControlPressed(0, `INPUT_VEH_MOVE_LEFT_ONLY`),
-        D = IsControlPressed(0, `INPUT_VEH_MOVE_RIGHT_ONLY`),
-        S = IsControlPressed(0, `INPUT_VEH_MOVE_DOWN_ONLY`),
-        SPACE = IsControlPressed(0, `INPUT_JUMP`),
-        R = IsControlPressed(0, `INPUT_RELOAD`),
-    }
-    if not lastControlsPressed or not TablesEqual(pressed, lastControlsPressed) then
-        lastControlsPressed = pressed
-        SendNUIMessage({ type = 'flightControlsPressed', pressed = pressed })
-    end
+-- polls `ready()` up to `tries` times, `every` ms apart
+local function waitFor(ready, tries, every)
+    local n = 0
+    while not ready() and n < tries do Wait(every) n = n + 1 end
+    return ready()
 end
 
-local function GetCameraRelativeVectors()
-    local camRot = GetGameplayCamRot(2)
-    local camHeading = math.rad(camRot.z)
-    local forwardVector = vector3(-math.sin(camHeading), math.cos(camHeading), 0.0)
-    local rightVector = vector3(math.cos(camHeading), math.sin(camHeading), 0.0)
-    return forwardVector, rightVector
-end
-
--- ============================================================================
--- HELPERS
--- ============================================================================
-
-local function Notify(title, message, ntype)
-    JRS.Notify(('%s: %s'):format(title, message), 5000)
-end
-
-local function ResolveGroundZ(x, y, z)
-    local found, groundZ = GetGroundZFor_3dCoord(x, y, z + 50.0, false)
-    if found then
-        return groundZ
-    end
-    return z
-end
-
-local function HeightAboveGround(entity)
-    local coords = GetEntityCoords(entity)
-    local found, groundZ = GetGroundZFor_3dCoord(coords.x, coords.y, coords.z, false)
-    if not found then
-        return 999.0
-    end
-    return coords.z - groundZ
-end
-
-local function BalloonSpeed(entity)
-    return #(GetEntityVelocity(entity))
-end
-
-local function HasActiveBalloon()
-    return hiredBalloon ~= nil and DoesEntityExist(hiredBalloon)
-end
-
-local function IsBalloonCalm(entity)
-    return BalloonSpeed(entity) < Config.StoreMaxSpeed
-        and HeightAboveGround(entity) < Config.StoreMaxHeightAGL
-end
-
--- Busy-waits on an arbitrary "is it ready yet" check. Shared by every
--- "request X, wait for it to load" spot in this file so the polling pattern
--- only lives in one place.
-local function WaitUntil(checkFn, maxAttempts, intervalMs)
-    local attempts = 0
-    while not checkFn() and attempts < maxAttempts do
-        Wait(intervalMs)
-        attempts = attempts + 1
-    end
-    return checkFn()
-end
-
-local function EnsureModelLoaded(hash)
+local function loadModel(hash)
     if HasModelLoaded(hash) then return true end
     RequestModel(hash)
-    return WaitUntil(function() return HasModelLoaded(hash) end, 500, 10)
+    return waitFor(function() return HasModelLoaded(hash) end, 500, 10)
 end
 
--- True while the local player is in the driver seat of their own balloon
-local function IsPiloting()
-    if not HasActiveBalloon() then return false end
+local function piloting()
+    if not owns() then return false end
     local ped = PlayerPedId()
-    return IsPedInVehicle(ped, hiredBalloon, false)
-        and GetPedInVehicleSeat(hiredBalloon, -1) == ped
+    return IsPedInVehicle(ped, hired, false) and GetPedInVehicleSeat(hired, -1) == ped
 end
 
--- ============================================================================
--- NUI
--- ============================================================================
-
--- All strings the NUI page needs, forwarded from Lua's L() so the HTML/JS
--- never has to hardcode English. Sent once at startup and again on every
--- OpenBalloonUI call in case the page missed the first message.
-local function BuildUiStrings()
-    return {
-        panelTitle = L('ui.panel_title'),
-        panelSubtitle = L('ui.panel_subtitle'),
-        back = L('ui.back'),
-        close = L('ui.close'),
-        serviceStatus = L('ui.service_status'),
-        available = L('ui.available'),
-        inUse = L('ui.in_use'),
-        yourBalance = L('ui.your_balance'),
-        hireABalloon = L('ui.hire_a_balloon'),
-        scoutBalloon = L('ui.scout_balloon'),
-        scoutBalloonDesc = L('ui.scout_balloon_desc'),
-        controlsHint1 = L('ui.controls_hint_1'),
-        controlsHint2 = L('ui.controls_hint_2'),
-        controlsHint3 = L('ui.controls_hint_3'),
-        orderSummary = L('ui.order_summary'),
-        hireFeePrefix = L('ui.hire_fee_prefix'),
-        totalCost = L('ui.total_cost'),
-        activeBalloon = L('ui.active_balloon'),
-        noBalloonOut = L('ui.no_balloon_out'),
-        hire = L('ui.hire'),
-        store = L('ui.store'),
-        out = L('ui.out'),
-        noFunds = L('ui.no_funds'),
-        loadingTitle = L('ui.loading_title'),
-        preparingBalloon = L('ui.preparing_balloon'),
-        storingBalloon = L('ui.storing_balloon'),
-        affordable = L('ui.affordable'),
-        tooCostly = L('ui.too_costly'),
-        balloonOut = L('ui.balloon_out'),
-        aboardSuffix = L('ui.aboard_suffix'),
-        mooredOutOfPrefix = L('ui.moored_out_of_prefix'),
-        mooredOutOfSuffix = L('ui.moored_out_of_suffix'),
-        controlsPanelTitle = L('ui.controls_panel_title'),
-        locked = L('ui.locked'),
-        burnerAscend = L('ui.burner_ascend'),
-        driftForward = L('ui.drift_forward'),
-        driftLeft = L('ui.drift_left'),
-        driftRight = L('ui.drift_right'),
-        driftBackward = L('ui.drift_backward'),
-        altitudeLock = L('ui.altitude_lock'),
-        brake = L('ui.brake'),
-        currencySymbol = L('ui.currency_symbol'),
-        toastDefaultTitle = L('ui.toast_default_title'),
-        toastDefaultMessage = L('ui.toast_default_message'),
-        hireFailedTitle = L('title.hire_failed'),
-        unableToHire = L('error.unable_to_hire'),
-        noBalloonTitle = L('title.no_balloon'),
-        noBalloonOutMsg = L('error.no_balloon_out'),
-        cannotStoreTitle = L('title.cannot_store'),
-        unableToStore = L('error.unable_to_store'),
-        balloonHiredTitle = L('title.balloon_hired'),
-        balloonStoredTitle = L('title.balloon_stored'),
-        balloonStoredMsg = L('success.balloon_stored'),
-    }
+local function forgetBalloon()
+    hired, hiredDock, occupants, altitudeLock = nil, nil, 0, false
 end
 
-local function PushUiStrings()
-    SendNUIMessage({ type = 'setLocale', strings = BuildUiStrings(), rtl = Config.Language == 'ar' })
+-- ------------------------------------------------------------------ flight hint (NUI)
+
+local KEY_STATE <const> = {
+    SHIFT = 'INPUT_SPRINT', W = 'INPUT_VEH_MOVE_UP_ONLY', A = 'INPUT_VEH_MOVE_LEFT_ONLY', D = 'INPUT_VEH_MOVE_RIGHT_ONLY',
+    S = 'INPUT_VEH_MOVE_DOWN_ONLY', SPACE = 'INPUT_JUMP', R = 'INPUT_RELOAD',
+}
+
+local function showHint()
+    hintShown = true
+    SendNUIMessage({ type = 'showFlightControls', altitudeLocked = altitudeLock })
 end
 
-CreateThread(function()
-    PushUiStrings()
-end)
+local function refreshHint()
+    if hintShown then SendNUIMessage({ type = 'updateFlightControls', altitudeLocked = altitudeLock }) end
+end
 
-local function OpenBalloonUI(dockIndex)
-    local dock = Config.Docks[dockIndex]
-    if not dock then return end
-    local elements = {}
-    if HasActiveBalloon() then
-        elements[#elements + 1] = { label = L('target.store_balloon'), value = 'store', desc = L('ui.active_balloon') }
-    else
-        elements[#elements + 1] = { label = L('target.hire_balloon'), value = 'hire', desc = ('$%s'):format(Config.HirePrice) }
-    end
-    JRS.OpenMenu('jrs_hotair', dock.label, L('ui.panel_title'), elements, function(el, menu)
-        menu.close()
-        if el.value == 'store' then return StoreHiredBalloon() end
-        if HasActiveBalloon() then return Notify(L('title.hire_failed'), L('error.already_have_balloon'), 'error') end
-        local success, reason = JRS.Await('jrs_hotair:server:hireBalloon', dockIndex)
-        if not success then
-            return Notify(L('title.hire_failed'), reason or L('error.unable_to_hire'), 'error')
+local function hideHint()
+    if not hintShown then return end
+    hintShown, lastKeys = false, nil
+    SendNUIMessage({ type = 'hideFlightControls' })
+end
+
+-- sends the held keys, but only when they changed
+local function pushKeys(burner)
+    if not hintShown then return end
+    local held = {}
+    for label, control in pairs(KEY_STATE) do held[label] = IsControlPressed(0, joaat(control)) end
+    held.SHIFT = burner
+
+    local same = lastKeys ~= nil
+    if same then
+        for label, value in pairs(held) do
+            if lastKeys[label] ~= value then same = false break end
         end
-        SpawnHiredBalloon(dockIndex)
-    end)
+    end
+    if not same then
+        lastKeys = held
+        SendNUIMessage({ type = 'flightControlsPressed', pressed = held })
+    end
 end
 
-local function PushActiveState() end
+-- the page gets every text from Lua's L(), so it never hardcodes a language
+local UI_KEYS <const> = {
+    'panel_title', 'panel_subtitle', 'back', 'close', 'service_status', 'available', 'in_use', 'your_balance', 'hire_a_balloon',
+    'scout_balloon', 'scout_balloon_desc', 'controls_hint_1', 'controls_hint_2', 'controls_hint_3', 'order_summary', 'hire_fee_prefix',
+    'total_cost', 'active_balloon', 'no_balloon_out', 'hire', 'store', 'out', 'no_funds', 'loading_title', 'preparing_balloon',
+    'storing_balloon', 'affordable', 'too_costly', 'balloon_out', 'aboard_suffix', 'moored_out_of_prefix', 'moored_out_of_suffix',
+    'controls_panel_title', 'locked', 'burner_ascend', 'drift_forward', 'drift_left', 'drift_right', 'drift_backward', 'altitude_lock',
+    'brake', 'currency_symbol', 'toast_default_title', 'toast_default_message',
+}
+local UI_EXTRA <const> = {
+    hireFailedTitle = 'title.hire_failed', unableToHire = 'error.unable_to_hire', noBalloonTitle = 'title.no_balloon',
+    noBalloonOutMsg = 'error.no_balloon_out', cannotStoreTitle = 'title.cannot_store', unableToStore = 'error.unable_to_store',
+    balloonHiredTitle = 'title.balloon_hired', balloonStoredTitle = 'title.balloon_stored', balloonStoredMsg = 'success.balloon_stored',
+}
 
--- ============================================================================
--- HIRE / SPAWN / STORE
--- ============================================================================
+local function camel(snake)
+    return (snake:gsub('_(%w)', function(c) return c:upper() end))
+end
 
-function SpawnHiredBalloon(dockIndex)
+local function pushStrings()
+    local strings = {}
+    for _, key in ipairs(UI_KEYS) do strings[camel(key)] = L('ui.' .. key) end
+    for name, key in pairs(UI_EXTRA) do strings[name] = L(key) end
+    SendNUIMessage({ type = 'setLocale', strings = strings, rtl = Config.Language == 'ar' })
+end
+CreateThread(pushStrings)
+
+-- ------------------------------------------------------------------ hiring and storing
+
+function StoreHiredBalloon()
+    if not owns() then
+        SendNUIMessage({ type = 'storeFailed', reason = L('error.no_balloon_out') })
+        return notify(L('title.no_balloon'), L('error.no_balloon_out'))
+    end
+    if not calm(hired) then
+        SendNUIMessage({ type = 'storeFailed', reason = L('error.must_land_to_store') })
+        return notify(L('title.too_unsteady'), L('error.must_land_to_store'))
+    end
+
+    TriggerServerEvent('jrs_hotair:server:disembarkAll', NetworkGetNetworkIdFromEntity(hired))
+    DeleteEntity(hired)
+    forgetBalloon()
+    hideHint()
+    TriggerServerEvent('jrs_hotair:server:storedBalloon')
+    notify(L('title.balloon_stored'), L('success.balloon_stored'))
+    SendNUIMessage({ type = 'storeSuccess' })
+end
+
+local function spawnBalloon(dockIndex)
     local dock = Config.Docks[dockIndex]
     if not dock then return end
-    local model = GetHashKey(Config.Model)
-    if not EnsureModelLoaded(model) then
+
+    local function fail(reason)
         TriggerServerEvent('jrs_hotair:server:cancelHire')
-        Notify(L('title.hire_failed'), L('error.model_load_failed'), 'error')
-        return
+        notify(L('title.hire_failed'), L(reason))
     end
-    local gz = ResolveGroundZ(dock.spawnCoords.x, dock.spawnCoords.y, dock.spawnCoords.z)
-    local balloon = CreateVehicle(model, dock.spawnCoords.x, dock.spawnCoords.y, gz + 1.0, dock.spawnHeading, true, false, false, false)
-    if not DoesEntityExist(balloon) then
-        TriggerServerEvent('jrs_hotair:server:cancelHire')
-        Notify(L('title.hire_failed'), L('error.balloon_ready_failed'), 'error')
-        return
-    end
+
+    local model = joaat(Config.Model)
+    if not loadModel(model) then return fail('error.model_load_failed') end
+
+    local at = dock.spawnCoords
+    local balloon = CreateVehicle(model, at.x, at.y, groundBelow(at.x, at.y, at.z) + 1.0, dock.spawnHeading, true, false, false, false)
+    if not DoesEntityExist(balloon) then return fail('error.balloon_ready_failed') end
     SetModelAsNoLongerNeeded(model)
     SetEntityAsMissionEntity(balloon, true, true)
     SetVehicleOnGroundProperly(balloon)
     FreezeEntityPosition(balloon, false)
     NetworkRegisterEntityAsNetworked(balloon)
 
-    hiredBalloon = balloon
-    hiredDock = dockIndex
-    occupantCount = 0
+    hired, hiredDock, occupants = balloon, dockIndex, 0
 
     local netId = NetworkGetNetworkIdFromEntity(balloon)
     SetNetworkIdExistsOnAllMachines(netId, true)
     TriggerServerEvent('jrs_hotair:server:registerBalloon', netId)
-    RegisterBalloonTarget(balloon)
 
     local ped = PlayerPedId()
     TaskEnterVehicle(ped, balloon, -1, -1, 2.0, 1, 0)
-    local seated = WaitUntil(function() return IsPedInVehicle(ped, balloon, false) end, 500, 10)
-    if not seated then
+    if not waitFor(function() return IsPedInVehicle(ped, balloon, false) end, 500, 10) then
         TaskWarpPedIntoVehicle(ped, balloon, -1)
     end
 
-    local hiredMessage = L('success.balloon_hired_at', dock.label)
-    Notify(L('title.balloon_hired'), hiredMessage, 'success')
-    SendNUIMessage({ type = 'hireSuccess', dockLabel = dock.label, message = hiredMessage })
-    PushActiveState()
+    local message = L('success.balloon_hired_at', dock.label)
+    notify(L('title.balloon_hired'), message)
+    SendNUIMessage({ type = 'hireSuccess', dockLabel = dock.label, message = message })
 end
 
-function StoreHiredBalloon()
-    if not HasActiveBalloon() then
-        SendNUIMessage({ type = 'storeFailed', reason = L('error.no_balloon_out') })
-        Notify(L('title.no_balloon'), L('error.no_balloon_out'), 'error')
-        return
+local function dockMenu(dockIndex)
+    local dock = Config.Docks[dockIndex]
+    if not dock then return end
+
+    local row
+    if owns() then
+        row = { label = L('target.store_balloon'), value = 'store', desc = L('ui.active_balloon') }
+    else
+        row = { label = L('target.hire_balloon'), value = 'hire', desc = ('$%s'):format(Config.HirePrice) }
     end
-    if not IsBalloonCalm(hiredBalloon) then
-        SendNUIMessage({ type = 'storeFailed', reason = L('error.must_land_to_store') })
-        Notify(L('title.too_unsteady'), L('error.must_land_to_store'), 'error')
-        return
-    end
-    local netId = NetworkGetNetworkIdFromEntity(hiredBalloon)
-    TriggerServerEvent('jrs_hotair:server:disembarkAll', netId)
-    DeleteEntity(hiredBalloon)
-    hiredBalloon = nil
-    hiredDock = nil
-    occupantCount = 0
-    altitudeLocked = false
-    HideFlightHint()
-    TriggerServerEvent('jrs_hotair:server:storedBalloon')
-    Notify(L('title.balloon_stored'), L('success.balloon_stored'), 'success')
-    SendNUIMessage({ type = 'storeSuccess' })
-    PushActiveState()
+
+    JRS.OpenMenu('jrs_hotair', dock.label, L('ui.panel_title'), { row }, function(picked, menu)
+        menu.close()
+        if picked.value == 'store' then return StoreHiredBalloon() end
+        if owns() then return notify(L('title.hire_failed'), L('error.already_have_balloon')) end
+
+        local ok, reason = JRS.Await('jrs_hotair:server:hireBalloon', dockIndex)
+        if not ok then return notify(L('title.hire_failed'), reason or L('error.unable_to_hire')) end
+        spawnBalloon(dockIndex)
+    end)
 end
 
--- ============================================================================
--- the JRS interaction prompt
--- ============================================================================
+-- ------------------------------------------------------------------ passengers
 
-function RegisterBalloonTarget(balloon) end -- interaction is done with prompts (see bottom)
+local function sit(entity, netId, seat)
+    local offset = Config.PassengerOffsets[seat]
+    if not offset then return end
 
--- ============================================================================
--- PASSENGERS
--- ============================================================================
-
-function RequestPassengerSeat(entity)
-    if not DoesEntityExist(entity) then return end
-    if BalloonSpeed(entity) >= Config.BoardMaxSpeed
-        or HeightAboveGround(entity) >= Config.BoardMaxHeightAGL then
-        Notify(L('title.cannot_board'), L('error.balloon_must_be_landed_to_board'), 'error')
-        return
-    end
-    local netId = NetworkGetNetworkIdFromEntity(entity)
-    if not netId or netId == 0 then
-        Notify(L('title.cannot_board'), L('error.cannot_reach_balloon'), 'error')
-        return
-    end
-    JRS.TriggerCallback('jrs_hotair:server:requestSeat', function(granted, seat, reason)
-        if not granted then
-            Notify(L('title.cannot_board'), reason or L('error.no_seat_available'), 'error')
-            return
+    local balloon = entity
+    if not DoesEntityExist(balloon) then
+        balloon = NetworkGetEntityFromNetworkId(netId)
+        waitFor(function() return DoesEntityExist(balloon) end, 500, 10)
+        if not DoesEntityExist(balloon) then
+            TriggerServerEvent('jrs_hotair:server:vacateSeat', netId, seat)
+            return notify(L('title.cannot_board'), L('error.lost_sight_of_balloon'))
         end
-        AttachPassenger(entity, netId, seat)
+    end
+
+    local ped = PlayerPedId()
+    AttachEntityToEntity(ped, balloon, 0, offset.x, offset.y, offset.z, 0.0, 0.0, 0.0, false, false, false, false, 0, true)
+    SetPedCanRagdoll(ped, false)
+    SetPedConfigFlag(ped, 166, true)
+    riding, ridingSeat, ridingNet = balloon, seat, netId
+    notify(L('title.aboard'), L('success.aboard'))
+end
+
+local function board(entity)
+    if not DoesEntityExist(entity) then return end
+    if not landed(entity) then return notify(L('title.cannot_board'), L('error.balloon_must_be_landed_to_board')) end
+
+    local netId = NetworkGetNetworkIdFromEntity(entity)
+    if not netId or netId == 0 then return notify(L('title.cannot_board'), L('error.cannot_reach_balloon')) end
+
+    JRS.TriggerCallback('jrs_hotair:server:requestSeat', function(granted, seat, reason)
+        if not granted then return notify(L('title.cannot_board'), reason or L('error.no_seat_available')) end
+        sit(entity, netId, seat)
     end, netId)
 end
 
-function AttachPassenger(entity, netId, seat)
-    local offset = Config.PassengerOffsets[seat]
-    if not offset then return end
-    local target = entity
-    if not DoesEntityExist(target) then
-        target = NetworkGetEntityFromNetworkId(netId)
-        WaitUntil(function() return DoesEntityExist(target) end, 500, 10)
-        if not DoesEntityExist(target) then
-            TriggerServerEvent('jrs_hotair:server:vacateSeat', netId, seat)
-            Notify(L('title.cannot_board'), L('error.lost_sight_of_balloon'), 'error')
-            return
-        end
+local function climbOut(forced)
+    if not riding then return end
+    if not forced and not landed(riding) then
+        return notify(L('title.cannot_disembark'), L('error.must_wait_to_disembark'))
     end
-    local ped = PlayerPedId()
-    AttachEntityToEntity(ped, target, 0, offset.x, offset.y, offset.z, 0.0, 0.0, 0.0, false, false, false, false, 0, true)
-    SetPedCanRagdoll(ped, false)
-    SetPedConfigFlag(ped, 166, true)
-    passengerBalloon = target
-    passengerSeat = seat
-    passengerNetId = netId
-    Notify(L('title.aboard'), L('success.aboard'), 'success')
-end
 
-function LeavePassengerSeat(forced)
-    if passengerBalloon == nil then return end
     local ped = PlayerPedId()
-    if not forced then
-        if BalloonSpeed(passengerBalloon) >= Config.BoardMaxSpeed
-            or HeightAboveGround(passengerBalloon) >= Config.BoardMaxHeightAGL then
-            Notify(L('title.cannot_disembark'), L('error.must_wait_to_disembark'), 'error')
-            return
-        end
-    end
-    if passengerNetId and passengerSeat then
-        TriggerServerEvent('jrs_hotair:server:vacateSeat', passengerNetId, passengerSeat)
-    end
+    if ridingNet and ridingSeat then TriggerServerEvent('jrs_hotair:server:vacateSeat', ridingNet, ridingSeat) end
     DetachEntity(ped, true, true)
     SetPedCanRagdoll(ped, true)
-    -- place on the ground beside the basket
-    local coords = GetEntityCoords(passengerBalloon)
-    local drop = GetOffsetFromEntityInWorldCoords(passengerBalloon, 1.5, 0.0, 0.0)
-    local gz = ResolveGroundZ(drop.x, drop.y, coords.z)
-    SetEntityCoords(ped, drop.x, drop.y, gz + 0.5, false, false, false, false)
-    passengerBalloon = nil
-    passengerSeat = nil
-    passengerNetId = nil
+
+    local beside = GetOffsetFromEntityInWorldCoords(riding, 1.5, 0.0, 0.0)
+    SetEntityCoords(ped, beside.x, beside.y, groundBelow(beside.x, beside.y, GetEntityCoords(riding).z) + 0.5, false, false, false, false)
+    riding, ridingSeat, ridingNet = nil, nil, nil
 end
 
-RegisterNetEvent('jrs_hotair:client:forceDisembark', function()
-    LeavePassengerSeat(true)
-end)
+RegisterNetEvent('jrs_hotair:client:forceDisembark', function() climbOut(true) end)
+RegisterNetEvent('jrs_hotair:client:seatUpdate', function(count) occupants = count or 0 end)
 
-RegisterNetEvent('jrs_hotair:client:seatUpdate', function(count)
-    occupantCount = count or 0
-    PushActiveState()
-end)
+-- ------------------------------------------------------------------ flying
 
--- ============================================================================
--- FLIGHT
--- ============================================================================
+local function flyTick(balloon)
+    DisableControlAction(0, `INPUT_VEH_HORN`, true)          -- the horn key stores the balloon instead
 
-local wasPiloting = false
+    -- Shift fakes the throttle-up control so the balloon's own physics climb
+    local burner = IsControlPressed(0, `INPUT_SPRINT`)
+    if burner then SetControlNormal(0, `INPUT_VEH_FLY_THROTTLE_UP`, 1.0) end
 
-Citizen.CreateThread(function()
+    local push = IsControlPressed(0, `INPUT_VEH_TRAVERSAL`) and Config.BoostSpeed or Config.CruiseSpeed
+    local before = GetEntityVelocity(balloon)
+    local velocity = before
+
+    -- drift relative to the camera: velocity builds up, nothing is forced
+    local heading = math.rad(GetGameplayCamRot(2).z)
+    local forward = vector3(-math.sin(heading), math.cos(heading), 0.0)
+    local right = vector3(math.cos(heading), math.sin(heading), 0.0)
+    if IsControlPressed(0, `INPUT_VEH_MOVE_UP_ONLY`) then velocity = velocity + forward * push end
+    if IsControlPressed(0, `INPUT_VEH_MOVE_DOWN_ONLY`) then velocity = velocity - forward * push end
+    if IsControlPressed(0, `INPUT_VEH_MOVE_LEFT_ONLY`) then velocity = velocity - right * push end
+    if IsControlPressed(0, `INPUT_VEH_MOVE_RIGHT_ONLY`) then velocity = velocity + right * push end
+
+    -- brake (R): sideways speed bleeds towards zero
+    if IsControlPressed(0, `INPUT_RELOAD`) then
+        local function towardZero(v) return v > 0 and math.max(0, v - push) or math.min(0, v + push) end
+        velocity = vector3(towardZero(velocity.x), towardZero(velocity.y), velocity.z)
+    end
+
+    if IsControlJustPressed(0, `INPUT_JUMP`) then
+        altitudeLock = not altitudeLock
+        refreshHint()
+        if altitudeLock then notify(L('title.altitude_locked'), L('info.altitude_locked_desc'))
+        else notify(L('title.altitude_unlocked'), L('info.altitude_unlocked_desc')) end
+    end
+
+    if altitudeLock and not burner then
+        SetEntityVelocity(balloon, vector3(velocity.x, velocity.y, 0.0))
+    elseif velocity ~= before then
+        SetEntityVelocity(balloon, velocity)
+    end
+
+    -- ceiling above ground
+    local at = GetEntityCoords(balloon)
+    local _, ground = GetGroundZFor_3dCoord(at.x, at.y, at.z, false)
+    if ground and at.z > ground + Config.MaxAltitudeAGL then
+        SetEntityCoords(balloon, at.x, at.y, ground + Config.MaxAltitudeAGL, false, false, false, false)
+    end
+
+    if IsControlJustPressed(0, `INPUT_VEH_HORN`) then
+        if GetEntityHeightAboveGround(balloon) <= 0.5 then StoreHiredBalloon()
+        else notify(L('title.too_high'), L('error.must_land_before_storing')) end
+    end
+
+    pushKeys(burner)
+end
+
+CreateThread(function()
+    local was = false
     while true do
-        local piloting = IsPiloting()
-        if piloting ~= wasPiloting then
-            wasPiloting = piloting
-            if piloting then
-                ShowFlightHint()
-            else
-                altitudeLocked = false
-                HideFlightHint()
-            end
+        local now = piloting()
+        if now ~= was then
+            was = now
+            if now then showHint() else altitudeLock = false hideHint() end
         end
-        if piloting then
-            FlyBalloonTick(hiredBalloon)
+
+        if now then
+            flyTick(hired)
             Wait(0)
-        elseif HasActiveBalloon() then
-            -- unmanned: barely settle horizontal drift, never force motion
-            if BalloonSpeed(hiredBalloon) > 0.3 then
-                local v = GetEntityVelocity(hiredBalloon)
-                SetEntityVelocity(hiredBalloon, v.x * 0.995, v.y * 0.995, v.z)
+        elseif owns() then
+            -- nobody at the burner: the balloon only settles, it is never pushed
+            if speedOf(hired) > 0.3 then
+                local v = GetEntityVelocity(hired)
+                SetEntityVelocity(hired, v.x * 0.995, v.y * 0.995, v.z)
             end
-            -- wrecked: clean up + free the slot
-            if IsEntityDead(hiredBalloon, false) then
-                DeleteEntity(hiredBalloon)
-                hiredBalloon = nil
-                hiredDock = nil
-                occupantCount = 0
-                altitudeLocked = false
-                HideFlightHint()
+            if IsEntityDead(hired, false) then
+                DeleteEntity(hired)
+                forgetBalloon()
+                hideHint()
                 TriggerServerEvent('jrs_hotair:server:storedBalloon')
-                Notify(L('title.balloon_lost'), L('error.balloon_destroyed'), 'error')
-                PushActiveState()
+                notify(L('title.balloon_lost'), L('error.balloon_destroyed'))
             end
             Wait(100)
         else
@@ -443,139 +359,50 @@ Citizen.CreateThread(function()
     end
 end)
 
-function FlyBalloonTick(balloon)
-    -- no horn honk while piloting; horn key stores the balloon instead
-    DisableControlAction(0, `INPUT_VEH_HORN`, true)
-
-    -- burner (climb): Shift fakes the vehicle's native throttle-up control
-    -- each tick it's held, so the balloon's own ascend physics still drive
-    -- it up. Everything else in this tick reads `burnerHeld` rather than
-    -- re-querying the underlying throttle control directly.
-    local burnerHeld = IsControlPressed(0, `INPUT_SPRINT`)
-    if burnerHeld then
-        SetControlNormal(0, `INPUT_VEH_FLY_THROTTLE_UP`, 1.0)
-    end
-
-    local speed = IsControlPressed(0, `INPUT_VEH_TRAVERSAL`) and Config.BoostSpeed or Config.CruiseSpeed
-    local v1 = GetEntityVelocity(balloon)
-    local v2 = v1
-
-    -- camera-relative momentum drift (nothing forced, velocity accumulates)
-    local forwardVec, rightVec = GetCameraRelativeVectors()
-    if IsControlPressed(0, `INPUT_VEH_MOVE_UP_ONLY`) then
-        v2 = v2 + forwardVec * speed
-    end
-    if IsControlPressed(0, `INPUT_VEH_MOVE_DOWN_ONLY`) then
-        v2 = v2 - forwardVec * speed
-    end
-    if IsControlPressed(0, `INPUT_VEH_MOVE_LEFT_ONLY`) then
-        v2 = v2 - rightVec * speed
-    end
-    if IsControlPressed(0, `INPUT_VEH_MOVE_RIGHT_ONLY`) then
-        v2 = v2 + rightVec * speed
-    end
-
-    -- brake (R): bleed off horizontal velocity toward zero
-    if IsControlPressed(0, `INPUT_RELOAD`) then
-        v2 = vector3(
-            v2.x > 0 and math.max(0, v2.x - speed) or math.min(0, v2.x + speed),
-            v2.y > 0 and math.max(0, v2.y - speed) or math.min(0, v2.y + speed),
-            v2.z
-        )
-    end
-
-    -- altitude lock toggle (Space)
-    if IsControlJustPressed(0, `INPUT_JUMP`) then
-        altitudeLocked = not altitudeLocked
-        RefreshFlightHint()
-        Notify(
-            altitudeLocked and L('title.altitude_locked') or L('title.altitude_unlocked'),
-            altitudeLocked and L('info.altitude_locked_desc') or L('info.altitude_unlocked_desc'),
-            'info'
-        )
-    end
-
-    if altitudeLocked and not burnerHeld then
-        SetEntityVelocity(balloon, vector3(v2.x, v2.y, 0.0))
-    elseif v2 ~= v1 then
-        SetEntityVelocity(balloon, v2)
-    end
-
-    -- altitude ceiling safety (above ground)
-    local coords = GetEntityCoords(balloon)
-    local _, groundZ = GetGroundZFor_3dCoord(coords.x, coords.y, coords.z, false)
-    if groundZ and coords.z > (groundZ + Config.MaxAltitudeAGL) then
-        SetEntityCoords(balloon, coords.x, coords.y, groundZ + Config.MaxAltitudeAGL, false, false, false, false)
-    end
-
-    -- store via horn key once landed
-    if IsControlJustPressed(0, `INPUT_VEH_HORN`) then
-        if GetEntityHeightAboveGround(balloon) <= 0.5 then
-            StoreHiredBalloon()
-        else
-            Notify(L('title.too_high'), L('error.must_land_before_storing'), 'error')
-        end
-    end
-
-    PushControlsPressed(burnerHeld)
-end
-
--- burner rope-pull animation while piloting
-local pilotAnim = nil
-
-local function PlayPilotAnim(ped, name)
-    local dict = 'script_story@gng2@ig@ig_2_balloon_control'
-    if not DoesAnimDictExist(dict) then return end
-    if pilotAnim == name and IsEntityPlayingAnim(ped, dict, name, 3) then return end
-    RequestAnimDict(dict)
-    if not WaitUntil(function() return HasAnimDictLoaded(dict) end, 200, 10) then return end
-    TaskPlayAnim(ped, dict, name, 1.0, 1.0, -1, 17, 0.0, false, 0, false, '', false)
-    RemoveAnimDict(dict)
-    pilotAnim = name
-end
-
-Citizen.CreateThread(function()
+-- the pilot's hands: rope pull while the burner is on, idle otherwise
+CreateThread(function()
+    local playing
     while true do
         local ped = PlayerPedId()
-        local piloting = IsPiloting()
-        if piloting then
-            local burning = IsControlPressed(0, `INPUT_SPRINT`)
-            PlayPilotAnim(ped, burning and 'base_burner_pull_arthur' or 'idle_burner_line_arthur')
+        if piloting() then
+            local name = IsControlPressed(0, `INPUT_SPRINT`) and 'base_burner_pull_arthur' or 'idle_burner_line_arthur'
+            if DoesAnimDictExist(PILOT_DICT) and not (playing == name and IsEntityPlayingAnim(ped, PILOT_DICT, name, 3)) then
+                RequestAnimDict(PILOT_DICT)
+                if waitFor(function() return HasAnimDictLoaded(PILOT_DICT) end, 200, 10) then
+                    TaskPlayAnim(ped, PILOT_DICT, name, 1.0, 1.0, -1, 17, 0.0, false, 0, false, '', false)
+                    RemoveAnimDict(PILOT_DICT)
+                    playing = name
+                end
+            end
             Wait(500)
         else
-            if pilotAnim ~= nil then
-                StopAnimTask(ped, 'script_story@gng2@ig@ig_2_balloon_control', pilotAnim, 1.0)
-                pilotAnim = nil
-            end
+            if playing then StopAnimTask(ped, PILOT_DICT, playing, 1.0) playing = nil end
             Wait(2000)
         end
     end
 end)
 
--- lock the exit key while airborne, free it near the ground
-Citizen.CreateThread(function()
+-- no leaving the basket in the air
+CreateThread(function()
     while true do
-        Citizen.Wait(0)
-        if HasActiveBalloon() and IsPedInVehicle(PlayerPedId(), hiredBalloon, false) then
-            if GetEntityHeightAboveGround(hiredBalloon) > 0.5 then
-                DisableControlAction(0, `INPUT_VEH_EXIT`, true)
-            end
+        if owns() and IsPedInVehicle(PlayerPedId(), hired, false) then
+            Wait(0)
+            if GetEntityHeightAboveGround(hired) > 0.5 then DisableControlAction(0, `INPUT_VEH_EXIT`, true) end
         else
-            Citizen.Wait(500)
+            Wait(500)
         end
     end
 end)
 
--- no ragdoll for occupants
-Citizen.CreateThread(function()
+-- whoever sits in the balloon cannot ragdoll out of it
+CreateThread(function()
     while true do
-        if HasActiveBalloon() then
-            local maxPax = GetVehicleMaxNumberOfPassengers(hiredBalloon)
-            for seat = -1, maxPax do
-                local occupant = GetPedInVehicleSeat(hiredBalloon, seat)
-                if occupant ~= 0 and IsPedAPlayer(occupant) then
-                    SetPedCanRagdoll(occupant, false)
-                    SetPedConfigFlag(occupant, 166, true)
+        if owns() then
+            for seat = -1, GetVehicleMaxNumberOfPassengers(hired) do
+                local who = GetPedInVehicleSeat(hired, seat)
+                if who ~= 0 and IsPedAPlayer(who) then
+                    SetPedCanRagdoll(who, false)
+                    SetPedConfigFlag(who, 166, true)
                 end
             end
             Wait(2000)
@@ -585,88 +412,61 @@ Citizen.CreateThread(function()
     end
 end)
 
--- ============================================================================
--- DOCKS
--- ============================================================================
+-- ------------------------------------------------------------------ docks
 
-Citizen.CreateThread(function()
+CreateThread(function()
     for i, dock in ipairs(Config.Docks) do
-        local hash = GetHashKey(dock.npcModel)
-        if EnsureModelLoaded(hash) then
-            local gz = ResolveGroundZ(dock.npcCoords.x, dock.npcCoords.y, dock.npcCoords.z)
-            local ped = CreatePed(hash, dock.npcCoords.x, dock.npcCoords.y, gz, dock.npcCoords.w, false, false, false, false)
+        local model = joaat(dock.npcModel)
+        if loadModel(model) then
+            local at = dock.npcCoords
+            local z = groundBelow(at.x, at.y, at.z)
+            local ped = CreatePed(model, at.x, at.y, z, at.w, false, false, false, false)
             Citizen.InvokeNative(0x283978A15512B2FE, ped, true)
             SetEntityInvincible(ped, true)
             SetBlockingOfNonTemporaryEvents(ped, true)
             FreezeEntityPosition(ped, true)
             SetPedCanBeTargetted(ped, false)
-            SetModelAsNoLongerNeeded(hash)
+            SetModelAsNoLongerNeeded(model)
             dockPeds[i] = ped
 
-            local blip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, dock.npcCoords.x, dock.npcCoords.y, gz)
+            local blip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, at.x, at.y, z)
             SetBlipSprite(blip, dock.blip.sprite, 1)
             SetBlipScale(blip, dock.blip.scale)
             Citizen.InvokeNative(0x9CB1A1623062F402, blip, dock.blip.name)
-
         else
-            print(string.format('^1[jrs_hotair]^0 Dock NPC model failed to load: %s', dock.npcModel))
+            print(('^1[jrs_hotair]^0 Dock NPC model failed to load: %s'):format(dock.npcModel))
         end
     end
 end)
-
--- ============================================================================
--- COMMANDS / MISC
--- ============================================================================
 
 RegisterCommand('hotair', function()
-    local ped = PlayerPedId()
-    local coords = GetEntityCoords(ped)
-    local nearest, nearestDist = nil, nil
+    local here = GetEntityCoords(PlayerPedId())
+    local best, bestAway
     for i, dock in ipairs(Config.Docks) do
-        local d = #(coords - vector3(dock.npcCoords.x, dock.npcCoords.y, dock.npcCoords.z))
-        if not nearestDist or d < nearestDist then
-            nearest, nearestDist = i, d
-        end
+        local away = #(here - dock.npcCoords.xyz)
+        if not bestAway or away < bestAway then best, bestAway = i, away end
     end
-    if nearest and nearestDist < 50.0 then
-        OpenBalloonUI(nearest)
-    else
-        Notify(L('title.balloon_hire'), L('info.visit_dock'), 'info')
-    end
+    if best and bestAway < 50.0 then dockMenu(best) else notify(L('title.balloon_hire'), L('info.visit_dock')) end
 end, false)
 
-
-local function CleanUp()
-    HideFlightHint()
-    if HasActiveBalloon() then
-        DeleteEntity(hiredBalloon)
-        hiredBalloon = nil
-    end
-    if passengerBalloon ~= nil then
+AddEventHandler('onResourceStop', function(resource)
+    if resource ~= GetCurrentResourceName() then return end
+    hideHint()
+    if owns() then DeleteEntity(hired) hired = nil end
+    if riding then
         DetachEntity(PlayerPedId(), true, true)
-        passengerBalloon = nil
-        passengerSeat = nil
-        passengerNetId = nil
+        riding, ridingSeat, ridingNet = nil, nil, nil
     end
     for _, ped in pairs(dockPeds) do
-        if DoesEntityExist(ped) then
-            DeletePed(ped)
-        end
+        if DoesEntityExist(ped) then DeletePed(ped) end
     end
     dockPeds = {}
-end
-
-AddEventHandler('onResourceStop', function(resourceName)
-    if resourceName == GetCurrentResourceName() then
-        CleanUp()
-    end
 end)
 
--- ============================================================================
--- PROMPTS (no third-eye targeting)
--- ============================================================================
+-- ------------------------------------------------------------------ prompts
+
 CreateThread(function()
-    local model = GetHashKey(Config.Model)
+    local model = joaat(Config.Model)
     local prompts = JRS.Prompts()
     local pHire = prompts:add(0x760A9C6F, LE('target.hire_balloon'))
     local pPilot = prompts:add(0x760A9C6F, LE('target.pilot_balloon'))
@@ -674,61 +474,58 @@ CreateThread(function()
     local pStore = prompts:add(0xD9D0E1C0, LE('target.store_balloon'), 1500)
     local pBoard = prompts:add(0x760A9C6F, LE('target.board_balloon'))
     local pLeave = prompts:add(0x760A9C6F, LE('target.disembark'))
-    local all = { pHire, pPilot, pStorage, pStore, pBoard, pLeave }
+    local every = { pHire, pPilot, pStorage, pStore, pBoard, pLeave }
+
+    local function pressed(prompt, shown, action)
+        if shown[prompt] and prompts:done(prompt) then
+            action(shown[prompt])
+            Wait(500)
+            return true
+        end
+    end
 
     while true do
         local wait = 500
         local ped = PlayerPedId()
-        local pos = GetEntityCoords(ped)
-        local show, title = {}, nil
+        local here = GetEntityCoords(ped)
+        local onFoot = not IsPedInAnyVehicle(ped, false)
+        local shown, title = {}, nil
 
-        -- dock NPCs
-        for i, dock in ipairs(Config.Docks) do
-            if #(pos - dock.npcCoords.xyz) < 3.0 and not IsPedInAnyVehicle(ped, false) then
-                show[pHire], title = i, dock.label
+        if onFoot then
+            for i, dock in ipairs(Config.Docks) do
+                if #(here - dock.npcCoords.xyz) < 3.0 then shown[pHire], title = i, dock.label end
             end
         end
 
-        -- own balloon
-        if not title and HasActiveBalloon() and not IsPedInAnyVehicle(ped, false)
-            and #(pos - GetEntityCoords(hiredBalloon)) < Config.TargetDistance then
+        if not title and onFoot and owns() and #(here - GetEntityCoords(hired)) < Config.TargetDistance then
             title = LE('title.balloon_hire')
-            show[pStorage] = true
-            if IsBalloonCalm(hiredBalloon) then show[pPilot], show[pStore] = true, true end
+            shown[pStorage] = true
+            if calm(hired) then shown[pPilot], shown[pStore] = true, true end
         end
 
-        -- passenger / other balloons
         if not title then
-            if passengerBalloon ~= nil and DoesEntityExist(passengerBalloon) then
-                show[pLeave], title = true, LE('title.aboard')
-            elseif not IsPedInAnyVehicle(ped, false) then
-                local other = GetClosestVehicle(pos.x, pos.y, pos.z, Config.TargetDistance, model, 70)
-                if other ~= 0 and other ~= hiredBalloon and BalloonSpeed(other) < Config.BoardMaxSpeed
-                    and HeightAboveGround(other) < Config.BoardMaxHeightAGL then
-                    show[pBoard], title = other, LE('title.balloon_hire')
-                end
+            if riding and DoesEntityExist(riding) then
+                shown[pLeave], title = true, LE('title.aboard')
+            elseif onFoot then
+                local other = GetClosestVehicle(here.x, here.y, here.z, Config.TargetDistance, model, 70)
+                if other ~= 0 and other ~= hired and landed(other) then shown[pBoard], title = other, LE('title.balloon_hire') end
             end
         end
 
         if title then
             wait = 0
-            for _, p in ipairs(all) do prompts:visible(p, show[p] ~= nil) end
+            for _, p in ipairs(every) do prompts:visible(p, shown[p] ~= nil) end
             prompts:show(title)
-            if show[pHire] and prompts:done(pHire) then
-                OpenBalloonUI(show[pHire]); Wait(500)
-            elseif show[pPilot] and prompts:done(pPilot) then
-                TaskEnterVehicle(ped, hiredBalloon, -1, -1, 2.0, 1, 0); Wait(500)
-            elseif show[pStorage] and prompts:done(pStorage) then
-                local ok, reason = JRS.Await('jrs_hotair:server:openStorage')
-                if not ok then Notify(L('title.cannot_open_storage'), reason or L('error.unable_to_open_storage'), 'error') end
-                Wait(500)
-            elseif show[pStore] and prompts:done(pStore) then
-                StoreHiredBalloon(); Wait(500)
-            elseif show[pBoard] and prompts:done(pBoard) then
-                RequestPassengerSeat(show[pBoard]); Wait(500)
-            elseif show[pLeave] and prompts:done(pLeave) then
-                LeavePassengerSeat(false); Wait(500)
-            end
+
+            local _ = pressed(pHire, shown, dockMenu)
+                or pressed(pPilot, shown, function() TaskEnterVehicle(ped, hired, -1, -1, 2.0, 1, 0) end)
+                or pressed(pStorage, shown, function()
+                    local ok, reason = JRS.Await('jrs_hotair:server:openStorage')
+                    if not ok then notify(L('title.cannot_open_storage'), reason or L('error.unable_to_open_storage')) end
+                end)
+                or pressed(pStore, shown, StoreHiredBalloon)
+                or pressed(pBoard, shown, board)
+                or pressed(pLeave, shown, function() climbOut(false) end)
         end
         Wait(wait)
     end

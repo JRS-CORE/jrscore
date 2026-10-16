@@ -1,517 +1,455 @@
-BathingPed = nil
-local currentAnimScene = nil
-local currentCam = nil
-local currentTown = nil
+-- jrs_bathing | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_bathing | client
+-- Bath houses: walk to the tub, pay, and the game's bathing animation scene plays. A regular bath is scrubbed
+-- by holding a key; the deluxe bath adds a maid who does the scrubbing. The server only handles money and
+-- who is in which room.
 
----@deprecated use state isBathingActive
-exports('IsBathingActive', function()
-    return LocalPlayer.state.isBathingActive
+BathingPed = nil                    -- the maid of a deluxe bath
+
+local scene, camera, town           -- the running anim scene, the bath camera, the town the player is in
+local me = PlayerPedId
+
+local ANIM_SCENE_CREATE, ANIM_SCENE_READY, ANIM_SCENE_PLAYING, ANIM_SCENE_DELETE = 0x1FCA98E33C1437B3, 0x477122B8D05E7968, 0x25557E324489393C, 0x84EEDB2C6E650000
+local ANIM_SCENE_PHASE, ANIM_SCENE_DONE = 0x3FBC3F51BF12DFBF, 0xD8254CB2C586412B
+local SET_BATH_MUSIC = nil
+
+local CLEAN_SIGNALS <const> = { 'Cleanliness_Right_Arm', 'Cleanliness_Left_Arm', 'Cleanliness_Left_Leg', 'Cleanliness_Right_Leg', 'Cleanliness_Head' }
+
+exports('IsBathingActive', function() return LocalPlayer.state.isBathingActive end)
+
+RegisterNetEvent('jrs_bathing:client:ToggleInvincibility', function(on)
+    LocalPlayer.state.invincible = on
 end)
 
-RegisterNetEvent('jrs_bathing:client:ToggleInvincibility')
-AddEventHandler('jrs_bathing:client:ToggleInvincibility', function(state)
-    LocalPlayer.state.invincible = state
-end)
+-- ------------------------------------------------------------------ streaming
 
-Citizen.CreateThread(function()
-    LocalPlayer.state.isBathingActive = false
-    CreateBlips()
-    CloseBathDoors()
-    if RegisterPrompts() then
-        local bath = nil
+local DICTS <const> = { 'MINI_GAMES@BATHING@REGULAR@ARTHUR', 'MINI_GAMES@BATHING@REGULAR@RAG', 'MINI_GAMES@BATHING@DELUXE@ARTHUR', 'MINI_GAMES@BATHING@DELUXE@MAID' }
+local NETWORKS <const> = { 'Script_Mini_Game_Bathing_Regular', 'Script_Mini_Game_Bathing_Deluxe' }
 
-        while true do
-            bath = GetClosestConsumer()
-            if bath and not LocalPlayer.state.isBathingActive then
-                if not PromptsEnabled then TogglePrompts({ "START_BATHING" }, true) end
-                if PromptsEnabled then
-                    if IsPromptCompleted("START_BATHING") then
-                        currentTown = bath
-                        Action("START_BATHING")
-                    end
-                end
-            else
-                if PromptsEnabled then TogglePrompts({ "START_BATHING" }, false) end
-                Wait(250)
-            end
-            Wait(100)
-        end
-    end
-end)
-
-GetClosestConsumer = function()
-    local playerCoords = GetEntityCoords(PlayerPedId())
-
-    for townName,data in pairs(Config.BathingZones) do
-        if #(playerCoords - data.consumer) < 1.0 then
-            return townName
-        end
-    end
-    return nil
+function LoadModel(model)
+    while not HasModelLoaded(model) do RequestModel(model) Wait(10) end
 end
 
-RegisterNetEvent('jrs_bathing:client:StartBath')
-AddEventHandler('jrs_bathing:client:StartBath', function(town)
-    LocalPlayer.state.isBathingActive = true
-    currentTown = town
-    if Config.BathingZones[town] then
-        SetCurrentPedWeapon(PlayerPedId(), `WEAPON_UNARMED`, true, 0, true, true)
-        Citizen.InvokeNative(0x4820A6939D7CEF28, PlayerPedId(), true)
-        HolsterPedWeapons(PlayerPedId(), false, false, false, true)
-
-        LoadAllStreamings()
-
-        LoadModel(`P_CS_RAG02X`)
-        local rag = CreateObject(`P_CS_RAG02X`, GetEntityCoords(PlayerPedId()), false, false, false, false, true)
-        table.insert(Config.CreatedEntries, { type = "PED", handle = rag })
-        SetModelAsNoLongerNeeded(`P_CS_RAG02X`)
-
-        SetPedCanLegIk(PlayerPedId(), false)
-        SetPedLegIkMode(PlayerPedId(), 0)
-        ClearPedTasksImmediately(PlayerPedId(), true, true)
-
-        currentAnimScene = Citizen.InvokeNative(0x1FCA98E33C1437B3, Config.BathingZones[town].dict, 0, "s_regular_intro", false, true)
-        SetAnimSceneEntity(currentAnimScene, "ARTHUR", PlayerPedId(), 0)
-        SetAnimSceneEntity(currentAnimScene, "Door", GetEntityByDoorhash(Config.BathingZones[town].door, 0), 0)
-
-        LoadAnimScene(currentAnimScene)
-        while not Citizen.InvokeNative(0x477122B8D05E7968, currentAnimScene, 1, 0) do Wait(10) end
-
-        TriggerMusicEvent("MG_BATHING_START")
-        StartAnimScene(currentAnimScene)
-
-        while Citizen.InvokeNative(0x3FBC3F51BF12DFBF, currentAnimScene, Citizen.ResultAsFloat()) <= 0.3 do Wait(0) end
-
-        UndressCharacter()
-
-        while not Citizen.InvokeNative(0xD8254CB2C586412B, currentAnimScene, true) do Wait(0) end
-
-        currentCam = CreateCam("DEFAULT_SCRIPTED_CAMERA", 1)
-        table.insert(Config.CreatedEntries, { type = "CAM", handle = currentCam })
-
-        RequestLetterBoxNow(true, true)
-        SetCamCoord(currentCam, GetFinalRenderedCamCoord(), 0.0, 0.4, 0.5)
-        SetCamRot(currentCam, GetFinalRenderedCamRot(1), 1)
-        SetCamFov(currentCam, GetFinalRenderedCamFov())
-        RenderScriptCams(true, true, 0, true, false, 0)
-
-        TogglePrompts({ "STOP_BATHING", "REQUEST_DELUXE_BATHING", "SCRUB" }, true)
-
-        TriggerEvent("jrs_bathing:TASK_MOVE_NETWORK_BY_NAME_WITH_INIT_PARAMS", { PlayerPedId(), "Script_Mini_Game_Bathing_Regular", `CLIPSET@MINI_GAMES@BATHING@REGULAR@ARTHUR`, `DEFAULT`, "BATHING" })
-        TriggerEvent("jrs_bathing:TASK_MOVE_NETWORK_BY_NAME_WITH_INIT_PARAMS", { rag, "Script_Mini_Game_Bathing_Regular", `CLIPSET@MINI_GAMES@BATHING@REGULAR@RAG`, `DEFAULT`, "BATHING" })
-
-        ForceEntityAiAndAnimationUpdate(rag, true);
-        Citizen.InvokeNative(0x55546004A244302A, PlayerPedId())
-
-        local holdTime, bathMode = 0, 1
-        while DoesCamExist(currentCam) do
-            while not IsTaskMoveNetworkReadyForTransition(PlayerPedId()) do Wait(100) end
-
-            if IsPromptEnabled("SCRUB") and bathMode == #Config.BathingModes+1 then TogglePrompts({ "SCRUB" }, false) end
-            if IsControlPressed(0, `INPUT_CONTEXT_X`) and IsPromptEnabled("SCRUB") then
-                if IsPromptEnabled("REQUEST_DELUXE_BATHING") then TogglePrompts({ "REQUEST_DELUXE_BATHING" }, false) end
-
-                while GetTaskMoveNetworkState(PlayerPedId()) ~= "Scrub_Idle" do
-                    RequestTaskMoveNetworkStateTransition(PlayerPedId(), "Scrub_Idle");
-                    RequestTaskMoveNetworkStateTransition((DoesEntityExist(BathingPed) and BathingPed) or rag, "Scrub_Idle");
-                    Wait(200)
-                end
-
-                while IsControlPressed(0, `INPUT_CONTEXT_X`) do
-                    if IsPromptCompleted("SCRUB") then
-                        FullyCleanPed(PlayerPedId())
-                        if DoesEntityExist(BathingPed) and not Config.BathingModes[bathMode].deluxe then
-                            bathMode = bathMode + 1
-                        end
-
-                        holdTime = holdTime + (Config.BathingModes[bathMode].hold_power or 0.05)
-
-                        if GetTaskMoveNetworkState(PlayerPedId()) ~= Config.BathingModes[bathMode].transition then
-                            SetCurrentCleaniest(rag, 0.0)
-
-                            RequestTaskMoveNetworkStateTransition(PlayerPedId(), Config.BathingModes[bathMode].transition);
-                            RequestTaskMoveNetworkStateTransition((DoesEntityExist(BathingPed) and BathingPed) or rag, Config.BathingModes[bathMode].transition);
-                        end
-
-                        SetTaskMoveNetworkSignalFloat(PlayerPedId(), "scrub_freq", Config.BathingModes[bathMode].scrub_freq);
-                        SetTaskMoveNetworkSignalFloat((DoesEntityExist(BathingPed) and BathingPed) or rag, "scrub_freq", Config.BathingModes[bathMode].scrub_freq);
-
-                        SetCurrentCleaniest(rag, holdTime)
-
-                        if holdTime >= 1.0 then
-                            holdTime = 0.0
-
-                            if bathMode+1 > #Config.BathingModes then
-
-                                TogglePrompts({ "REQUEST_DELUXE_BATHING", "SCRUB" }, false)
-
-                                FullyCleanPed(PlayerPedId())
-
-                                bathMode = #Config.BathingModes+1
-                                if DoesEntityExist(BathingPed) then
-                                    Wait(750) ExitPremiumBath(true)
-                                end
-                            else bathMode = bathMode+1 end
-
-                            break
-                        end
-                    end
-                    Wait(100)
-                end
-                while not IsTaskMoveNetworkReadyForTransition(PlayerPedId()) do Wait(10) end
-
-                local resetTo = (((bathMode == #Config.BathingModes+1) or DoesEntityExist(BathingPed)) and "Bathing" or "Scrub_Idle")
-                while GetTaskMoveNetworkState(PlayerPedId()) ~= resetTo do
-                    SetCurrentCleaniest(rag, 1.0)
-
-                    while GetTaskMoveNetworkState(PlayerPedId()) ~= "Scrub_Idle" do
-                        RequestTaskMoveNetworkStateTransition(PlayerPedId(), "Scrub_Idle");
-                        RequestTaskMoveNetworkStateTransition((DoesEntityExist(BathingPed) and BathingPed) or rag, "Scrub_Idle");
-                        Wait(200)
-                    end
-
-                    if resetTo ~= "Scrub_Idle" and (DoesEntityExist(BathingPed) and not IsControlPressed(0, `INPUT_CONTEXT_X`) or not DoesEntityExist(BathingPed)) then
-                        RequestTaskMoveNetworkStateTransition(PlayerPedId(), "Bathing");
-                        RequestTaskMoveNetworkStateTransition((DoesEntityExist(BathingPed) and BathingPed) or rag, "Bathing");
-                    elseif resetTo ~= "Scrub_Idle" and DoesEntityExist(BathingPed) and IsControlPressed(0, `INPUT_CONTEXT_X`) then
-                        resetTo = "Scrub_Idle"
-                    end
-                    Wait(500)
-                end
-            end
-
-            if IsPromptCompleted("REQUEST_DELUXE_BATHING") then
-                Action("REQUEST_DELUXE_BATHING")
-            end
-
-            if IsPromptCompleted("STOP_BATHING") then
-                Action("STOP_BATHING")
-            end
-            Wait(10)
-        end
+local function streamIn()
+    for _, dict in ipairs(DICTS) do
+        RequestAnimDict(dict)
+        RequestClipSet('CLIPSET@' .. dict)
     end
-end)
-
-ExitBathing = function()
-    local town, cam = currentTown, currentCam
-    if DoesEntityExist(BathingPed) then
-        ExitPremiumBath()
-        return
-    end
-
-    if currentAnimScene and Citizen.InvokeNative(0x25557E324489393C, currentAnimScene) then
-        Citizen.InvokeNative(0x84EEDB2C6E650000, currentAnimScene)
-    end
-
-    local outroScene = Citizen.InvokeNative(0x1FCA98E33C1437B3, Config.BathingZones[town].dict, 0, "s_regular_outro", false, true)
-    SetAnimSceneEntity(outroScene, "ARTHUR", PlayerPedId(), 0)
-    SetAnimSceneEntity(outroScene, "Door", GetEntityByDoorhash(Config.BathingZones[town].door, 0), 0)
-
-    LoadAnimScene(outroScene)
-    while not Citizen.InvokeNative(0x477122B8D05E7968, outroScene, 1, 0) do Wait(10) end
-    StartAnimScene(outroScene)
-
-    if DoesCamExist(cam) then
-        RenderScriptCams(false, false, 0, true, false, 0)
-        DestroyCam(cam)
-        currentCam = nil
-    end
-
-    while Citizen.InvokeNative(0x3FBC3F51BF12DFBF, outroScene, Citizen.ResultAsFloat()) <= 0.35 do Wait(1) end
-
-    while not Citizen.InvokeNative(0xD8254CB2C586412B, outroScene, true) do Wait(10) end
-
-    if Citizen.InvokeNative(0x25557E324489393C, outroScene) then
-        Citizen.InvokeNative(0x84EEDB2C6E650000, outroScene)
-    end
-
-    FullyCleanPed(PlayerPedId())
-    DressCharacter()
-    UnloadAllStreamings()
-    RequestLetterBoxNow(false, false)
-    TriggerMusicEvent("MG_BATHING_STOP")
-    Citizen.InvokeNative(0x704C908E9C405136, PlayerPedId())
-    TriggerServerEvent("jrs_bathing:server:setBathAsFree", town)
-
-    SetPedCanLegIk(PlayerPedId(), true)
-    SetPedLegIkMode(PlayerPedId(), 2)
-    LocalPlayer.state.isBathingActive = false
+    for _, name in ipairs(NETWORKS) do Citizen.InvokeNative(0x2B6529C54D29037A, name) end
 end
 
-RegisterNetEvent('jrs_bathing:client:StartDeluxeBath')
-AddEventHandler('jrs_bathing:client:StartDeluxeBath', function(town)
-    if not currentAnimScene or not Citizen.InvokeNative(0x25557E324489393C, currentAnimScene) then return end
-    Citizen.InvokeNative(0x84EEDB2C6E650000, currentAnimScene)
+local function streamOut()
+    for _, dict in ipairs(DICTS) do
+        RemoveAnimDict(dict)
+        RemoveClipSet('CLIPSET@' .. dict)
+    end
+    for _, name in ipairs(NETWORKS) do Citizen.InvokeNative(0x57A197AD83F66BBF, name) end
+end
 
-    currentAnimScene = Citizen.InvokeNative(0x1FCA98E33C1437B3, Config.BathingZones[town].dict, 0, "s_deluxe_intro", false, true)
-    SetAnimSceneEntity(currentAnimScene, "ARTHUR", PlayerPedId(), 0)
-    SetAnimSceneEntity(currentAnimScene, "Door", GetEntityByDoorhash(Config.BathingZones[town].door, 0), 0)
+-- ------------------------------------------------------------------ prompts
 
-    local model = IsPedMale(PlayerPedId()) and Config.BathingZones[town].lady or Config.BathingZones[town].guy
-    LoadModel(model)
-    BathingPed = CreatePed(model, GetEntityCoords(PlayerPedId())-vector3(0.0, 0.0, -5.0), 0.0, false, false, true, true)
-    table.insert(Config.CreatedEntries, { type = "PED", handle = BathingPed })
-    Citizen.InvokeNative(0x283978A15512B2FE, BathingPed, true)
-    SetAnimSceneEntity(currentAnimScene, "Female", BathingPed, 0)
-    SetModelAsNoLongerNeeded(model)
+local prompts = {}                  -- id -> prompt handle
+local promptsOn = false
 
-    LoadAnimScene(currentAnimScene)
-    while not Citizen.InvokeNative(0x477122B8D05E7968, currentAnimScene, 1, 0) do Wait(10) end
-    PlaySoundFrontend("BATHING_DOOR_KNOCK_MASTER", 0, true, 0)
+local function setPrompt(prompt, state)
+    Citizen.InvokeNative(0x8A0FB4D03A630D21, prompt, state)
+    Citizen.InvokeNative(0x71215ACCFDE075EE, prompt, state)
+end
+
+-- ids = list of prompt ids, or nil for all of them
+function TogglePrompts(ids, state)
+    if ids == 'ALL' or ids == nil then
+        for _, prompt in pairs(prompts) do setPrompt(prompt, state) end
+    else
+        for _, id in ipairs(ids) do
+            if prompts[id] then setPrompt(prompts[id], state) end
+        end
+    end
+    promptsOn = state
+end
+
+local function promptDone(id) return prompts[id] and Citizen.InvokeNative(0xE0F65F0640EF0617, prompts[id]) or false end
+local function promptActive(id) return prompts[id] and PromptIsEnabled(prompts[id]) or false end
+
+local function createPrompts()
+    for _, def in ipairs(Config.Prompts) do
+        local prompt = Citizen.InvokeNative(0x04F97DE45A519419, Citizen.ResultAsInteger())
+        Citizen.InvokeNative(0x5DD02A8318420DD7, prompt, CreateVarString(10, 'LITERAL_STRING', def.label))
+        Citizen.InvokeNative(0xB5352B7494A08258, prompt, def.control or 0xDFF812F9)
+        Citizen.InvokeNative(0x94073D5CA3F16B7B, prompt, def.time or 1000)
+        Citizen.InvokeNative(0xF7AA2696A22AD8B9, prompt)
+        setPrompt(prompt, false)
+        table.insert(Config.CreatedEntries, { type = 'PROMPT', handle = prompt })
+        prompts[def.id] = prompt
+    end
+end
+
+-- ------------------------------------------------------------------ anim scenes
+
+local function newScene(zone, name, withMaid)
+    local s = Citizen.InvokeNative(ANIM_SCENE_CREATE, zone.dict, 0, name, false, true)
+    SetAnimSceneEntity(s, 'ARTHUR', me(), 0)
+    if withMaid then SetAnimSceneEntity(s, 'Female', BathingPed, 0) end
+    SetAnimSceneEntity(s, 'Door', GetEntityByDoorhash(zone.door, 0), 0)
+    return s
+end
+
+local function loadScene(s)
+    LoadAnimScene(s)
+    while not Citizen.InvokeNative(ANIM_SCENE_READY, s, 1, 0) do Wait(10) end
+end
+
+local function endScene(s)
+    if s and Citizen.InvokeNative(ANIM_SCENE_PLAYING, s) then Citizen.InvokeNative(ANIM_SCENE_DELETE, s) end
+end
+
+local function waitSceneEnd(s)
+    while not Citizen.InvokeNative(ANIM_SCENE_DONE, s, true) do Wait(10) end
+end
+
+local function waitScenePhase(s, phase)
+    while Citizen.InvokeNative(ANIM_SCENE_PHASE, s, Citizen.ResultAsFloat()) <= phase do Wait(0) end
+end
+
+-- ------------------------------------------------------------------ cleaning
+
+-- the dirt, blood and damage marks on a ped; every way out of a bath ends with this
+function FullyCleanPed(ped)
+    if not DoesEntityExist(ped) then return end
+    ClearPedEnvDirt(ped)
+    ClearPedBloodDamage(ped)
+    SetPedDirtCleaned(ped, 0.0, -1, 1, 1)
+    ClearPedDamageDecalByZone(ped, 10, 'ALL')
+    Citizen.InvokeNative(0x7F5D88333EE8A86F, ped, 1)
+end
+
+-- how clean the body looks, on the player, the rag and (deluxe) the maid
+local function showCleanliness(rag, value)
+    local who = { me(), rag }
+    if DoesEntityExist(BathingPed) then who[#who + 1] = BathingPed end
+    for _, ped in ipairs(who) do
+        for _, signal in ipairs(CLEAN_SIGNALS) do SetTaskMoveNetworkSignalFloat(ped, signal, value) end
+    end
+end
+
+local function partner(rag)
+    return DoesEntityExist(BathingPed) and BathingPed or rag
+end
+
+local function moveBoth(rag, stateName)
+    RequestTaskMoveNetworkStateTransition(me(), stateName)
+    RequestTaskMoveNetworkStateTransition(partner(rag), stateName)
+end
+
+local function undress()
+    SetPedAllWeaponsVisibility(me(), false)
+    if GetResourceState('jrs_clothing') == 'started' then
+        exports.jrs_clothing:RemoveAllClothesExceptEssentials(me())
+    end
+end
+
+local function redress()
+    local ped = me()
+    local health = GetEntityHealth(ped)
+    local stamina = Citizen.InvokeNative(0x775A1CA7893AA8B5, ped, Citizen.ResultAsFloat()) / Citizen.InvokeNative(0xCB42AFE2B613EE55, ped, Citizen.ResultAsFloat()) * 100
+    TriggerEvent('jrs_clothes:reloadCurrentClothes')
     Wait(1000)
-    StartAnimScene(currentAnimScene)
+    Citizen.InvokeNative(0x9C720776DAA43E7E, ped, 0.0)
+    Citizen.InvokeNative(0x44CB6447D2571AA0, ped, -1.0)
+    SetPedAllWeaponsVisibility(ped, true)
+    SetEntityHealth(ped, health)
+    Citizen.InvokeNative(0xC3D4B754C0E86B9E, ped, stamina)
+end
 
+-- ------------------------------------------------------------------ leaving
+
+local function leaveDeluxe(hideScrub)
+    local zone = Config.BathingZones[town]
+    local outro = Citizen.InvokeNative(ANIM_SCENE_CREATE, zone.dict, 0, 's_deluxe_outro', false, true)
+    SetAnimSceneEntity(outro, 'ARTHUR', me(), 0)
+    SetAnimSceneEntity(outro, 'Female', BathingPed, 0)
+    SetAnimSceneEntity(outro, 'Door', Citizen.InvokeNative(0xF7424890E4A094C0, zone.door, 0), 0)
+
+    loadScene(outro)
+    StartAnimScene(outro)
     RenderScriptCams(false, false, 0, true, false, 0)
+    waitSceneEnd(outro)
+    endScene(outro)
 
-    while not Citizen.InvokeNative(0xD8254CB2C586412B, currentAnimScene, true) do Wait(10) end
+    local regular = Config.BathingModes
+    TriggerEvent('jrs_bathing:TASK_MOVE_NETWORK_BY_NAME_WITH_INIT_PARAMS', { me(), 'Script_Mini_Game_Bathing_Regular', `CLIPSET@MINI_GAMES@BATHING@REGULAR@ARTHUR`, `DEFAULT`, 'BATHING' })
+    TriggerEvent('jrs_bathing:TASK_MOVE_NETWORK_BY_NAME_WITH_INIT_PARAMS', { BathingPed, 'Script_Mini_Game_Bathing_Deluxe', `CLIPSET@MINI_GAMES@BATHING@REGULAR@MAID`, `DEFAULT`, 'BATHING' })
 
-    if Citizen.InvokeNative(0x25557E324489393C, currentAnimScene) then
-        Citizen.InvokeNative(0x84EEDB2C6E650000, currentAnimScene)
-    end
-
-    TriggerEvent("jrs_bathing:TASK_MOVE_NETWORK_BY_NAME_WITH_INIT_PARAMS", { PlayerPedId(), "Script_Mini_Game_Bathing_Deluxe", `CLIPSET@MINI_GAMES@BATHING@DELUXE@ARTHUR`, `DEFAULT`, "BATHING" })
-    TriggerEvent("jrs_bathing:TASK_MOVE_NETWORK_BY_NAME_WITH_INIT_PARAMS", { BathingPed, "Script_Mini_Game_Bathing_Deluxe", `CLIPSET@MINI_GAMES@BATHING@DELUXE@MAID`, `DEFAULT`, "BATHING" })
-
-    TogglePrompts({ "STOP_BATHING", "SCRUB" }, true)
-
-    RenderScriptCams(true, true, 0, true, false, 0)
-end)
-
-RegisterNetEvent('jrs_bathing:client:HideDeluxePrompt')
-AddEventHandler('jrs_bathing:client:HideDeluxePrompt', function()
-    TogglePrompts({ "REQUEST_DELUXE_BATHING" }, false)
-    TogglePrompts({ "STOP_BATHING", "SCRUB" }, true)
-end)
-
-ExitPremiumBath = function(disableScrub)
-    local town, cam = currentTown, currentCam
-    local outroScene = Citizen.InvokeNative(0x1FCA98E33C1437B3, Config.BathingZones[town].dict, 0, "s_deluxe_outro", false, true)
-    SetAnimSceneEntity(outroScene, "ARTHUR", PlayerPedId(), 0)
-    SetAnimSceneEntity(outroScene, "Female", BathingPed, 0)
-    SetAnimSceneEntity(outroScene, "Door", Citizen.InvokeNative(0xF7424890E4A094C0, Config.BathingZones[town].door, 0), 0)
-
-    LoadAnimScene(outroScene)
-    while not Citizen.InvokeNative(0x477122B8D05E7968, outroScene, 1, 0) do Wait(10) end
-    StartAnimScene(outroScene)
-
-    RenderScriptCams(false, false, 0, true, false, 0)
-
-    while not Citizen.InvokeNative(0xD8254CB2C586412B, outroScene, true) do Wait(10) end
-
-    if Citizen.InvokeNative(0x25557E324489393C, outroScene) then
-        Citizen.InvokeNative(0x84EEDB2C6E650000, outroScene)
-    end
-
-    TriggerEvent("jrs_bathing:TASK_MOVE_NETWORK_BY_NAME_WITH_INIT_PARAMS", { PlayerPedId(), "Script_Mini_Game_Bathing_Regular", `CLIPSET@MINI_GAMES@BATHING@REGULAR@ARTHUR`, `DEFAULT`, "BATHING" })
-    TriggerEvent("jrs_bathing:TASK_MOVE_NETWORK_BY_NAME_WITH_INIT_PARAMS", { BathingPed, "Script_Mini_Game_Bathing_Deluxe", `CLIPSET@MINI_GAMES@BATHING@REGULAR@MAID`, `DEFAULT`, "BATHING" })
-
-    TogglePrompts({ "STOP_BATHING", "SCRUB" }, true)
-    if IsPromptEnabled("SCRUB") and disableScrub then TogglePrompts({ "SCRUB" }, false) end
+    TogglePrompts({ 'STOP_BATHING', 'SCRUB' }, true)
+    if hideScrub and promptActive('SCRUB') then TogglePrompts({ 'SCRUB' }, false) end
 
     RenderScriptCams(true, true, 0, true, false, 0)
     DeletePed(BathingPed)
     BathingPed = nil
 end
 
-LoadModel = function(model)
-    while not HasModelLoaded(model) do RequestModel(model) Wait(10) end
-end
+local function leaveBath()
+    if DoesEntityExist(BathingPed) then return leaveDeluxe() end
 
-LoadAllStreamings = function()
-    RequestAnimDict("MINI_GAMES@BATHING@REGULAR@ARTHUR");
-    RequestAnimDict("MINI_GAMES@BATHING@REGULAR@RAG");
-    RequestAnimDict("MINI_GAMES@BATHING@DELUXE@ARTHUR");
-    RequestAnimDict("MINI_GAMES@BATHING@DELUXE@MAID");
+    local zone, cam = Config.BathingZones[town], camera
+    endScene(scene)
 
-    RequestClipSet("CLIPSET@MINI_GAMES@BATHING@REGULAR@ARTHUR");
-    RequestClipSet("CLIPSET@MINI_GAMES@BATHING@REGULAR@RAG");
-    RequestClipSet("CLIPSET@MINI_GAMES@BATHING@DELUXE@ARTHUR");
-    RequestClipSet("CLIPSET@MINI_GAMES@BATHING@DELUXE@MAID");
+    local outro = newScene(zone, 's_regular_outro')
+    loadScene(outro)
+    StartAnimScene(outro)
 
-    Citizen.InvokeNative(0x2B6529C54D29037A, "Script_Mini_Game_Bathing_Regular");
-    Citizen.InvokeNative(0x2B6529C54D29037A, "Script_Mini_Game_Bathing_Deluxe");
-end
-
-UnloadAllStreamings = function()
-    RemoveAnimDict("MINI_GAMES@BATHING@REGULAR@ARTHUR");
-    RemoveAnimDict("MINI_GAMES@BATHING@REGULAR@RAG");
-    RemoveAnimDict("MINI_GAMES@BATHING@DELUXE@ARTHUR");
-    RemoveAnimDict("MINI_GAMES@BATHING@DELUXE@MAID");
-
-    RemoveClipSet("CLIPSET@MINI_GAMES@BATHING@REGULAR@ARTHUR");
-    RemoveClipSet("CLIPSET@MINI_GAMES@BATHING@REGULAR@RAG");
-    RemoveClipSet("CLIPSET@MINI_GAMES@BATHING@DELUXE@ARTHUR");
-    RemoveClipSet("CLIPSET@MINI_GAMES@BATHING@DELUXE@MAID");
-
-    Citizen.InvokeNative(0x57A197AD83F66BBF, "Script_Mini_Game_Bathing_Regular");
-    Citizen.InvokeNative(0x57A197AD83F66BBF, "Script_Mini_Game_Bathing_Deluxe");
-end
-
-function UndressCharacter()
-    SetPedAllWeaponsVisibility(PlayerPedId(), false)
-    -- jrs_clothing owns the outfit: its own undress (visual only, nothing is saved)
-    if GetResourceState('jrs_clothing') == 'started' then
-        exports.jrs_clothing:RemoveAllClothesExceptEssentials(PlayerPedId())
-    end
-end
-
-DressCharacter = function()
-    local ped = PlayerPedId()
-    local currentHealth = GetEntityHealth(ped)
-    local maxStamina = Citizen.InvokeNative(0xCB42AFE2B613EE55, ped, Citizen.ResultAsFloat())
-    local currentStamina = Citizen.InvokeNative(0x775A1CA7893AA8B5, ped, Citizen.ResultAsFloat()) / maxStamina * 100
-    -- jrs_clothing reloads the saved outfit from the database
-    TriggerEvent('jrs_clothes:reloadCurrentClothes')
-    Wait(1000)
-    Citizen.InvokeNative(0x9C720776DAA43E7E, ped, 0.0)
-    Citizen.InvokeNative(0x44CB6447D2571AA0, ped, -1.0)
-    SetPedAllWeaponsVisibility(ped, true)
-    SetEntityHealth(ped, currentHealth)
-    Citizen.InvokeNative(0xC3D4B754C0E86B9E, ped, currentStamina)
-end
-
-SetCurrentCleaniest = function(rag, value)
-    SetTaskMoveNetworkSignalFloat(PlayerPedId(), "Cleanliness_Right_Arm", value);
-    SetTaskMoveNetworkSignalFloat(PlayerPedId(), "Cleanliness_Left_Arm", value);
-    SetTaskMoveNetworkSignalFloat(PlayerPedId(), "Cleanliness_Left_Leg", value);
-    SetTaskMoveNetworkSignalFloat(PlayerPedId(), "Cleanliness_Right_Leg", value);
-    SetTaskMoveNetworkSignalFloat(PlayerPedId(), "Cleanliness_Head", value);
-
-    SetTaskMoveNetworkSignalFloat(rag, "Cleanliness_Right_Arm", value);
-    SetTaskMoveNetworkSignalFloat(rag, "Cleanliness_Left_Arm", value);
-    SetTaskMoveNetworkSignalFloat(rag, "Cleanliness_Left_Leg", value);
-    SetTaskMoveNetworkSignalFloat(rag, "Cleanliness_Right_Leg", value);
-    SetTaskMoveNetworkSignalFloat(rag, "Cleanliness_Head", value);
-
-    if DoesEntityExist(BathingPed) then
-        SetTaskMoveNetworkSignalFloat(BathingPed, "Cleanliness_Right_Arm", value);
-        SetTaskMoveNetworkSignalFloat(BathingPed, "Cleanliness_Left_Arm", value);
-        SetTaskMoveNetworkSignalFloat(BathingPed, "Cleanliness_Left_Leg", value);
-        SetTaskMoveNetworkSignalFloat(BathingPed, "Cleanliness_Right_Leg", value);
-        SetTaskMoveNetworkSignalFloat(BathingPed, "Cleanliness_Head", value);
-    end
-end
-
--- Fully resets environmental dirt, blood damage and damage decals on a ped.
--- Centralised so every "bath finished" path (full scrub, or leaving early) guarantees a clean ped.
-FullyCleanPed = function(ped)
-    if not DoesEntityExist(ped) then return end
-    ClearPedEnvDirt(ped)
-    ClearPedBloodDamage(ped)
-    SetPedDirtCleaned(ped, 0.0, -1, 1, 1)
-    ClearPedDamageDecalByZone(ped, 10, "ALL")
-    Citizen.InvokeNative(0x7F5D88333EE8A86F, ped, 1)
-end
-
-Action = function(name)
-    TogglePrompts("ALL", false)
-
-    if (name == "START_BATHING") then
-        TriggerServerEvent("jrs_bathing:server:canEnterBath", currentTown)
-    elseif (name == "REQUEST_DELUXE_BATHING") then
-        TriggerServerEvent("jrs_bathing:server:canEnterDeluxeBath", currentTown)
-    elseif (name == "STOP_BATHING") then
-        ExitBathing()
-    end
-    Wait(500)
-end
-
--- prompts
-RegisterPrompts = function()
-    local newTable = {}
-
-    for i=1, #Config.Prompts do
-        local prompt = Citizen.InvokeNative(0x04F97DE45A519419, Citizen.ResultAsInteger())
-        Citizen.InvokeNative(0x5DD02A8318420DD7, prompt, CreateVarString(10, "LITERAL_STRING", Config.Prompts[i].label))
-        Citizen.InvokeNative(0xB5352B7494A08258, prompt, Config.Prompts[i].control or 0xDFF812F9)
-        Citizen.InvokeNative(0x94073D5CA3F16B7B, prompt, Config.Prompts[i].time or 1000)
-
-        Citizen.InvokeNative(0xF7AA2696A22AD8B9, prompt)
-
-        Citizen.InvokeNative(0x8A0FB4D03A630D21, prompt, false)
-        Citizen.InvokeNative(0x71215ACCFDE075EE, prompt, false)
-
-        table.insert(Config.CreatedEntries, { type = "PROMPT", handle = prompt })
-        newTable[Config.Prompts[i].id] = prompt
+    if DoesCamExist(cam) then
+        RenderScriptCams(false, false, 0, true, false, 0)
+        DestroyCam(cam)
+        camera = nil
     end
 
-    Config.Prompts = newTable
-    return true
+    waitScenePhase(outro, 0.35)
+    waitSceneEnd(outro)
+    endScene(outro)
+
+    FullyCleanPed(me())
+    redress()
+    streamOut()
+    RequestLetterBoxNow(false, false)
+    TriggerMusicEvent('MG_BATHING_STOP')
+    Citizen.InvokeNative(0x704C908E9C405136, me())
+    TriggerServerEvent('jrs_bathing:server:setBathAsFree', town)
+
+    SetPedCanLegIk(me(), true)
+    SetPedLegIkMode(me(), 2)
+    LocalPlayer.state.isBathingActive = false
 end
 
-TogglePrompts = function(data, state)
-    if data == "ALL" then
-        for _, prompt in pairs(Config.Prompts) do
-            Citizen.InvokeNative(0x8A0FB4D03A630D21, prompt, state)
-            Citizen.InvokeNative(0x71215ACCFDE075EE, prompt, state)
-        end
-    else
-        for _, name in ipairs(data) do
-            local prompt = Config.Prompts[name]
-            if prompt then
-                Citizen.InvokeNative(0x8A0FB4D03A630D21, prompt, state)
-                Citizen.InvokeNative(0x71215ACCFDE075EE, prompt, state)
+-- ------------------------------------------------------------------ the scrubbing loop
+
+local SCRUB_KEY <const> = `INPUT_CONTEXT_X`
+
+local function scrub(rag, level)
+    -- level = { mode, hold }, returns the new level
+    local modes = Config.BathingModes
+    while GetTaskMoveNetworkState(me()) ~= 'Scrub_Idle' do
+        moveBoth(rag, 'Scrub_Idle')
+        Wait(200)
+    end
+
+    while IsControlPressed(0, SCRUB_KEY) do
+        if promptDone('SCRUB') then
+            FullyCleanPed(me())
+            if DoesEntityExist(BathingPed) and not modes[level.mode].deluxe then level.mode = level.mode + 1 end
+
+            local mode = modes[level.mode]
+            level.hold = level.hold + (mode.hold_power or 0.05)
+
+            if GetTaskMoveNetworkState(me()) ~= mode.transition then
+                showCleanliness(rag, 0.0)
+                moveBoth(rag, mode.transition)
+            end
+            SetTaskMoveNetworkSignalFloat(me(), 'scrub_freq', mode.scrub_freq)
+            SetTaskMoveNetworkSignalFloat(partner(rag), 'scrub_freq', mode.scrub_freq)
+            showCleanliness(rag, level.hold)
+
+            if level.hold >= 1.0 then
+                level.hold = 0.0
+                if level.mode + 1 > #modes then
+                    TogglePrompts({ 'REQUEST_DELUXE_BATHING', 'SCRUB' }, false)
+                    FullyCleanPed(me())
+                    level.mode = #modes + 1
+                    if DoesEntityExist(BathingPed) then Wait(750) leaveDeluxe(true) end
+                else
+                    level.mode = level.mode + 1
+                end
+                break
             end
         end
+        Wait(100)
     end
-    PromptsEnabled = state
+
+    while not IsTaskMoveNetworkReadyForTransition(me()) do Wait(10) end
+
+    local target = ((level.mode == #modes + 1) or DoesEntityExist(BathingPed)) and 'Bathing' or 'Scrub_Idle'
+    while GetTaskMoveNetworkState(me()) ~= target do
+        showCleanliness(rag, 1.0)
+        while GetTaskMoveNetworkState(me()) ~= 'Scrub_Idle' do
+            moveBoth(rag, 'Scrub_Idle')
+            Wait(200)
+        end
+
+        if target ~= 'Scrub_Idle' then
+            local keyHeld = IsControlPressed(0, SCRUB_KEY)
+            if not DoesEntityExist(BathingPed) or not keyHeld then moveBoth(rag, 'Bathing') else target = 'Scrub_Idle' end
+        end
+        Wait(500)
+    end
+    return level
 end
 
-IsPromptCompleted = function(name)
-    if Config.Prompts[name] then
-        return Citizen.InvokeNative(0xE0F65F0640EF0617, Config.Prompts[name])
-    end
-    return false
-end
+-- ------------------------------------------------------------------ starting a bath
 
-IsPromptEnabled = function(name)
-    if Config.Prompts[name] then
-        return PromptIsEnabled(Config.Prompts[name])
-    end
-    return false
-end
+RegisterNetEvent('jrs_bathing:client:StartBath', function(where)
+    LocalPlayer.state.isBathingActive = true
+    town = where
+    local zone = Config.BathingZones[where]
+    if not zone then return end
 
--- blips
-CreateBlips = function()
-    for townName, data in pairs(Config.BathingZones) do
+    local ped = me()
+    SetCurrentPedWeapon(ped, `WEAPON_UNARMED`, true, 0, true, true)
+    Citizen.InvokeNative(0x4820A6939D7CEF28, ped, true)
+    HolsterPedWeapons(ped, false, false, false, true)
+    streamIn()
+
+    LoadModel(`P_CS_RAG02X`)
+    local rag = CreateObject(`P_CS_RAG02X`, GetEntityCoords(ped), false, false, false, false, true)
+    table.insert(Config.CreatedEntries, { type = 'PED', handle = rag })
+    SetModelAsNoLongerNeeded(`P_CS_RAG02X`)
+
+    SetPedCanLegIk(ped, false)
+    SetPedLegIkMode(ped, 0)
+    ClearPedTasksImmediately(ped, true, true)
+
+    scene = newScene(zone, 's_regular_intro')
+    loadScene(scene)
+    TriggerMusicEvent('MG_BATHING_START')
+    StartAnimScene(scene)
+    waitScenePhase(scene, 0.3)
+
+    undress()
+    waitSceneEnd(scene)
+
+    camera = CreateCam('DEFAULT_SCRIPTED_CAMERA', 1)
+    table.insert(Config.CreatedEntries, { type = 'CAM', handle = camera })
+    RequestLetterBoxNow(true, true)
+    SetCamCoord(camera, GetFinalRenderedCamCoord(), 0.0, 0.4, 0.5)
+    SetCamRot(camera, GetFinalRenderedCamRot(1), 1)
+    SetCamFov(camera, GetFinalRenderedCamFov())
+    RenderScriptCams(true, true, 0, true, false, 0)
+
+    TogglePrompts({ 'STOP_BATHING', 'REQUEST_DELUXE_BATHING', 'SCRUB' }, true)
+
+    TriggerEvent('jrs_bathing:TASK_MOVE_NETWORK_BY_NAME_WITH_INIT_PARAMS', { ped, 'Script_Mini_Game_Bathing_Regular', `CLIPSET@MINI_GAMES@BATHING@REGULAR@ARTHUR`, `DEFAULT`, 'BATHING' })
+    TriggerEvent('jrs_bathing:TASK_MOVE_NETWORK_BY_NAME_WITH_INIT_PARAMS', { rag, 'Script_Mini_Game_Bathing_Regular', `CLIPSET@MINI_GAMES@BATHING@REGULAR@RAG`, `DEFAULT`, 'BATHING' })
+    ForceEntityAiAndAnimationUpdate(rag, true)
+    Citizen.InvokeNative(0x55546004A244302A, ped)
+
+    local level = { mode = 1, hold = 0 }
+    while DoesCamExist(camera) do
+        while not IsTaskMoveNetworkReadyForTransition(me()) do Wait(100) end
+
+        if promptActive('SCRUB') and level.mode == #Config.BathingModes + 1 then TogglePrompts({ 'SCRUB' }, false) end
+
+        if IsControlPressed(0, SCRUB_KEY) and promptActive('SCRUB') then
+            if promptActive('REQUEST_DELUXE_BATHING') then TogglePrompts({ 'REQUEST_DELUXE_BATHING' }, false) end
+            level = scrub(rag, level)
+        end
+
+        if promptDone('REQUEST_DELUXE_BATHING') then TriggerEvent('jrs_bathing:ask', 'REQUEST_DELUXE_BATHING') end
+        if promptDone('STOP_BATHING') then TriggerEvent('jrs_bathing:ask', 'STOP_BATHING') end
         Wait(10)
-        local blip = Citizen.InvokeNative(0x554D9D53F696D002, 0xB04092F8, data.consumer)
-        Citizen.InvokeNative(0x9CB1A1623062F402, blip, CreateVarString(10, "blip_bath_house"))
-        SetBlipSprite(blip, `blip_bath_house`)
+    end
+end)
 
-        table.insert(Config.CreatedEntries, { type = "BLIP", handle = blip })
+RegisterNetEvent('jrs_bathing:client:StartDeluxeBath', function(where)
+    if not scene or not Citizen.InvokeNative(ANIM_SCENE_PLAYING, scene) then return end
+    Citizen.InvokeNative(ANIM_SCENE_DELETE, scene)
+
+    local zone = Config.BathingZones[where]
+    local model = IsPedMale(me()) and zone.lady or zone.guy
+    LoadModel(model)
+    BathingPed = CreatePed(model, GetEntityCoords(me()) - vector3(0.0, 0.0, -5.0), 0.0, false, false, true, true)
+    table.insert(Config.CreatedEntries, { type = 'PED', handle = BathingPed })
+    Citizen.InvokeNative(0x283978A15512B2FE, BathingPed, true)
+    SetModelAsNoLongerNeeded(model)
+
+    scene = newScene(zone, 's_deluxe_intro', true)
+    loadScene(scene)
+    PlaySoundFrontend('BATHING_DOOR_KNOCK_MASTER', 0, true, 0)
+    Wait(1000)
+    StartAnimScene(scene)
+    RenderScriptCams(false, false, 0, true, false, 0)
+    waitSceneEnd(scene)
+    endScene(scene)
+
+    TriggerEvent('jrs_bathing:TASK_MOVE_NETWORK_BY_NAME_WITH_INIT_PARAMS', { me(), 'Script_Mini_Game_Bathing_Deluxe', `CLIPSET@MINI_GAMES@BATHING@DELUXE@ARTHUR`, `DEFAULT`, 'BATHING' })
+    TriggerEvent('jrs_bathing:TASK_MOVE_NETWORK_BY_NAME_WITH_INIT_PARAMS', { BathingPed, 'Script_Mini_Game_Bathing_Deluxe', `CLIPSET@MINI_GAMES@BATHING@DELUXE@MAID`, `DEFAULT`, 'BATHING' })
+
+    TogglePrompts({ 'STOP_BATHING', 'SCRUB' }, true)
+    RenderScriptCams(true, true, 0, true, false, 0)
+end)
+
+RegisterNetEvent('jrs_bathing:client:HideDeluxePrompt', function()
+    TogglePrompts({ 'REQUEST_DELUXE_BATHING' }, false)
+    TogglePrompts({ 'STOP_BATHING', 'SCRUB' }, true)
+end)
+
+-- a prompt press that has to be answered by the server (money, room) or ends the bath
+AddEventHandler('jrs_bathing:ask', function(what)
+    TogglePrompts('ALL', false)
+    if what == 'START_BATHING' then TriggerServerEvent('jrs_bathing:server:canEnterBath', town)
+    elseif what == 'REQUEST_DELUXE_BATHING' then TriggerServerEvent('jrs_bathing:server:canEnterDeluxeBath', town)
+    elseif what == 'STOP_BATHING' then leaveBath() end
+    Wait(500)
+end)
+
+-- ------------------------------------------------------------------ world: blips, doors, entering
+
+local function nearestTub()
+    local here = GetEntityCoords(me())
+    for name, zone in pairs(Config.BathingZones) do
+        if #(here - zone.consumer) < 1.0 then return name end
     end
 end
 
--- doors
-CloseBathDoors = function()
-    for townName,data in pairs(Config.BathingZones) do
-        if data.door then
-            if not IsDoorRegisteredWithSystem(data.door) then
-                Citizen.InvokeNative(0xD99229FE93B46286, data.door, 1, 1, 0, 0, 0, 0)
-                DoorSystemSetDoorState(data.door, 1)     
-            end
+CreateThread(function()
+    LocalPlayer.state.isBathingActive = false
+
+    for _, zone in pairs(Config.BathingZones) do
+        Wait(10)
+        local blip = Citizen.InvokeNative(0x554D9D53F696D002, 0xB04092F8, zone.consumer)
+        Citizen.InvokeNative(0x9CB1A1623062F402, blip, CreateVarString(10, 'blip_bath_house'))
+        SetBlipSprite(blip, `blip_bath_house`)
+        table.insert(Config.CreatedEntries, { type = 'BLIP', handle = blip })
+    end
+
+    for _, zone in pairs(Config.BathingZones) do
+        if zone.door and not IsDoorRegisteredWithSystem(zone.door) then
+            Citizen.InvokeNative(0xD99229FE93B46286, zone.door, 1, 1, 0, 0, 0, 0)
+            DoorSystemSetDoorState(zone.door, 1)
         end
     end
-end
+
+    createPrompts()
+
+    while true do
+        local tub = nearestTub()
+        if tub and not LocalPlayer.state.isBathingActive then
+            if not promptsOn then TogglePrompts({ 'START_BATHING' }, true) end
+            if promptDone('START_BATHING') then
+                town = tub
+                TriggerEvent('jrs_bathing:ask', 'START_BATHING')
+            end
+        else
+            if promptsOn then TogglePrompts({ 'START_BATHING' }, false) end
+            Wait(250)
+        end
+        Wait(100)
+    end
+end)
 
 AddEventHandler('onResourceStop', function(resource)
-    if resource == GetCurrentResourceName() then
-        LocalPlayer.state.isBathingActive = false
+    if resource ~= GetCurrentResourceName() then return end
+    LocalPlayer.state.isBathingActive = false
 
-        for i=1, #Config.CreatedEntries do
-            local entry = Config.CreatedEntries[i]
-            if entry.type == "PED" then
-                if DoesEntityExist(entry.handle) then DeleteEntity(entry.handle) end
-            elseif entry.type == "BLIP" then
-                RemoveBlip(entry.handle)
-            elseif entry.type == "PROMPT" then
-                Citizen.InvokeNative(0x00EDE88D4D13CF59, entry.handle)
-            elseif entry.type == "CAM" then
-                if DoesCamExist(entry.handle) then RenderScriptCams(false, false, 0, false, false, false) DestroyCam(entry.handle) end
-            end
+    for _, entry in ipairs(Config.CreatedEntries) do
+        if entry.type == 'PED' then
+            if DoesEntityExist(entry.handle) then DeleteEntity(entry.handle) end
+        elseif entry.type == 'BLIP' then
+            RemoveBlip(entry.handle)
+        elseif entry.type == 'PROMPT' then
+            Citizen.InvokeNative(0x00EDE88D4D13CF59, entry.handle)
+        elseif entry.type == 'CAM' and DoesCamExist(entry.handle) then
+            RenderScriptCams(false, false, 0, false, false, false)
+            DestroyCam(entry.handle)
         end
-
-        Config.CreatedEntries = {}
     end
+    Config.CreatedEntries = {}
 end)

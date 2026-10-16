@@ -1,158 +1,152 @@
-local inRadialMenu = false
-local nextOptionId = 0
-local DynamicMenuItems = {}
-local MenuItems = {}   -- live tree (keeps action/canOpen functions) used for lookups
-local myJob, jobCheckedAt = nil, 0
+-- jrs_radialmenu | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_radialmenu | client
+-- A radial menu built from Config.MenuItems, a job section (law / medic) and options other resources add
+-- with the AddOption export. Items may carry functions; only plain data goes to the page, and what the page
+-- reports back is looked up in our own tree again, never trusted.
 
----------------------------------------------------------------------
--- helpers
----------------------------------------------------------------------
-local function isVisible(item)
+local open = false
+local lastId = 0
+local added = {}                    -- options from other resources
+local tree = {}                     -- the tree of the last menu we built (keeps the functions)
+local job, jobAsked = nil, 0
+
+-- ------------------------------------------------------------------ building the tree
+
+local function allowed(item)
     if not item.canOpen then return true end
     local ok, result = pcall(item.canOpen)
     return ok and result and true or false
 end
 
--- filtered copy of the tree (canOpen honoured, titles translated)
-local function filterItems(items)
+-- the visible part of a list, titles translated; a submenu without visible items disappears
+local function visible(list)
     local out = {}
-    for _, item in ipairs(items) do
-        if type(item) == 'table' and isVisible(item) then
+    for _, item in ipairs(list) do
+        if type(item) == 'table' and allowed(item) then
             local copy = {}
-            for k, v in pairs(item) do copy[k] = v end
+            for key, value in pairs(item) do copy[key] = value end
             copy.title = L(item.title or '')
+
+            local keep = true
             if item.items then
-                copy.items = filterItems(item.items)
-                if #copy.items == 0 then copy = nil end
+                copy.items = visible(item.items)
+                keep = #copy.items > 0
             end
-            if copy then out[#out + 1] = copy end
+            if keep then out[#out + 1] = copy end
         end
     end
     return out
 end
 
--- strips functions so the tree can be sent to the NUI
-local function toNui(items)
+-- the same tree without functions, for the page
+local function plain(list)
     local out = {}
-    for i, item in ipairs(items) do
+    for i, item in ipairs(list) do
         local copy = {}
-        for k, v in pairs(item) do
-            if type(v) ~= 'function' and k ~= 'items' then copy[k] = v end
+        for key, value in pairs(item) do
+            if type(value) ~= 'function' and key ~= 'items' then copy[key] = value end
         end
-        if item.items then copy.items = toNui(item.items) end
+        if item.items then copy.items = plain(item.items) end
         out[i] = copy
     end
     return out
 end
 
-local function findItem(items, id, event)
-    for _, v in ipairs(items) do
-        if v.items then
-            local found = findItem(v.items, id, event)
+local function lookup(list, id, event)
+    for _, item in ipairs(list) do
+        if item.items then
+            local found = lookup(item.items, id, event)
             if found then return found end
-        elseif v.id == id and (v.action or v.event == event) then
-            return v
+        elseif item.id == id and (item.action or item.event == event) then
+            return item
         end
     end
 end
 
----------------------------------------------------------------------
--- dynamic options (exports, same as before)
----------------------------------------------------------------------
-local function AddOption(data, id)
+local function jobSection()
+    if GetGameTimer() > jobAsked then
+        jobAsked = GetGameTimer() + 30000
+        job = JRS.Await('jrs_radialmenu:job')
+    end
+    if job and Config.LawJobs[job] then return Config.JobInteractions.law end
+    if job and Config.MedicJobs[job] then return Config.JobInteractions.medic end
+end
+
+local function build()
+    local list = { table.unpack(Config.MenuItems) }
+    local work = jobSection()
+    if work and #work > 0 then
+        list[#list + 1] = { id = 'work', title = 'menu_work', icon = 'briefcase', items = work }
+    end
+    for _, item in pairs(added) do list[#list + 1] = item end
+    tree = visible(list)
+end
+
+exports('AddOption', function(data, id)
     if type(data) ~= 'table' then return end
     if not id then
-        nextOptionId = nextOptionId + 1
-        id = nextOptionId
+        lastId = lastId + 1
+        id = lastId
     end
-    DynamicMenuItems[id] = data
+    added[id] = data
     return id
-end
+end)
 
-local function RemoveOption(id)
-    if id then DynamicMenuItems[id] = nil end
-end
+exports('RemoveOption', function(id)
+    if id then added[id] = nil end
+end)
 
-local function jobItems()
-    if GetGameTimer() > jobCheckedAt then
-        jobCheckedAt = GetGameTimer() + 30000
-        myJob = JRS.Await('jrs_radialmenu:job')
-    end
-    if myJob and Config.LawJobs[myJob] then return Config.JobInteractions.law end
-    if myJob and Config.MedicJobs[myJob] then return Config.JobInteractions.medic end
-end
+-- ------------------------------------------------------------------ opening and closing
 
-local function BuildMenu()
-    local all = {}
-    for _, v in ipairs(Config.MenuItems) do all[#all + 1] = v end
-    local work = jobItems()
-    if work and #work > 0 then
-        all[#all + 1] = { id = 'work', title = 'menu_work', icon = 'briefcase', items = work }
-    end
-    for _, v in pairs(DynamicMenuItems) do all[#all + 1] = v end
-    MenuItems = filterItems(all)
-end
-
----------------------------------------------------------------------
--- open / close
----------------------------------------------------------------------
-local function canUseMenu()
+local function usable()
     local ped = PlayerPedId()
     return not IsEntityDead(ped) and not IsPedCuffed(ped) and not IsPauseMenuActive()
         and LocalPlayer.state.jrs_robbery_cuffed ~= true
 end
 
-local function setRadialState(open)
-    if open then
-        BuildMenu()
+local function show(on)
+    if on then
+        build()
         TriggerEvent('jrs_radialmenu:client:onRadialmenuOpen')
-        SendNUIMessage({ action = 'ui', radial = true, items = toNui(MenuItems) })
+        SendNUIMessage({ action = 'ui', radial = true, items = plain(tree) })
         SetCursorLocation(0.5, 0.5)
     else
         TriggerEvent('jrs_radialmenu:client:onRadialmenuClose')
     end
-    SetNuiFocus(open, open)
-    inRadialMenu = open
+    SetNuiFocus(on, on)
+    open = on
 end
 
 CreateThread(function()
-    local activated = Config.HoldToOpen and IsControlJustPressed or IsControlJustReleased
+    local pressed = Config.HoldToOpen and IsControlJustPressed or IsControlJustReleased
     while true do
         Wait(0)
-        if not inRadialMenu and activated(0, Config.Key) and canUseMenu() then
-            setRadialState(true)
-        end
+        if not open and pressed(0, Config.Key) and usable() then show(true) end
     end
 end)
 
-AddEventHandler('onResourceStop', function(res)
-    if res == GetCurrentResourceName() and inRadialMenu then SetNuiFocus(false, false) end
+AddEventHandler('onResourceStop', function(resource)
+    if resource == GetCurrentResourceName() and open then SetNuiFocus(false, false) end
 end)
 
----------------------------------------------------------------------
--- NUI callbacks
----------------------------------------------------------------------
-RegisterNUICallback('closeRadial', function(_, cb)
-    if inRadialMenu then setRadialState(false) end
-    cb('ok')
+RegisterNUICallback('closeRadial', function(_, done)
+    if open then show(false) end
+    done('ok')
 end)
 
-RegisterNUICallback('selectItem', function(inData, cb)
-    cb('ok')
-    if not canUseMenu() or type(inData) ~= 'table' or type(inData.itemData) ~= 'table' then return end
-    -- only run items that exist in our own tree; never trust NUI payloads
-    local item = findItem(MenuItems, inData.itemData.id, inData.itemData.event)
+local runners = {
+    client  = function(item) TriggerEvent(item.event, item) end,
+    server  = function(item) TriggerServerEvent(item.event, item) end,
+    command = function(item) ExecuteCommand(item.event) end,
+}
+
+RegisterNUICallback('selectItem', function(body, done)
+    done('ok')
+    local picked = type(body) == 'table' and type(body.itemData) == 'table' and body.itemData
+    if not picked or not usable() then return end
+
+    local item = lookup(tree, picked.id, picked.event)
     if not item then return end
-    if item.action then
-        item.action(item)
-    elseif item.type == 'client' then
-        TriggerEvent(item.event, item)
-    elseif item.type == 'server' then
-        TriggerServerEvent(item.event, item)
-    elseif item.type == 'command' then
-        ExecuteCommand(item.event)
-    end
+    if item.action then item.action(item)
+    elseif runners[item.type] then runners[item.type](item) end
 end)
-
-exports('AddOption', AddOption)
-exports('RemoveOption', RemoveOption)

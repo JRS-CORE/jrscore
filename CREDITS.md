@@ -29,22 +29,18 @@ JRS Core API and extended by the JRS TEAM (2026). The projects are credited here
 in force. The JRS TEAM is rewriting these scripts from scratch one by one; a script leaves the table below when
 its rewrite is finished.
 
-**Still based on third-party work: 14 scripts.  Rewritten so far: 46.**
+**Still based on third-party work: 10 scripts.  Rewritten so far: 50.**
 
 | Script | Based on |
 |---|---|
-| `jrs_bathing` | [RSG Framework](https://github.com/Rexshack-RedM) |
 | `jrs_canoe` | [TPZ-CORE](https://github.com/TPZ-CORE) |
 | `jrs_chat` | [RSG Framework](https://github.com/Rexshack-RedM) |
 | `jrs_goldclaim` | [RSG Framework](https://github.com/Rexshack-RedM) |
-| `jrs_hotair` | [RSG Framework](https://github.com/Rexshack-RedM) |
 | `jrs_huntingpets` | [RSG Framework](https://github.com/Rexshack-RedM) |
 | `jrs_mdt` | [RSG Framework](https://github.com/Rexshack-RedM) |
 | `jrs_metabolism` | [RSG Framework](https://github.com/Rexshack-RedM) |
 | `jrs_passports` | [TPZ-CORE](https://github.com/TPZ-CORE) |
-| `jrs_radialmenu` | [RSG Framework](https://github.com/Rexshack-RedM) |
 | `jrs_railroad` | [RSG Framework](https://github.com/Rexshack-RedM) |
-| `jrs_samples` | [RSG Framework](https://github.com/Rexshack-RedM) |
 | `jrs_track` | [RSG Framework](https://github.com/Rexshack-RedM) |
 | `jrs_usable_items` | [TPZ-CORE](https://github.com/TPZ-CORE) |
 

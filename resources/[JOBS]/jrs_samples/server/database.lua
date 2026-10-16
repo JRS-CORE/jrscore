@@ -1,3 +1,4 @@
+-- jrs_samples | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 --------------------------------------------------------------------------------------------
 -- JRS SAMPLES — Server: automatic database setup
 -- Creates the jrs_samples table (and any missing indexes) on resource start.

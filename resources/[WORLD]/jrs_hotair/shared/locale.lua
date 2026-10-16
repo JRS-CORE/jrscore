@@ -1,3 +1,4 @@
+-- jrs_hotair | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 Locales = {
     en = {
         ['error.already_have_balloon'] = 'You already have a balloon out. Store it first.',
