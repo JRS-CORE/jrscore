@@ -5,8 +5,6 @@
 #  Paste the RAW link of this file, e.g.
 #  https://raw.githubusercontent.com/JRS-CORE/jrscore/main/recipe/jrscore.yaml
 #
-#  Before publishing: replace NQ3Z below with the
-#  GitHub account/organisation that hosts the jrscore repository.
 ##############################################################
 $engine: 3
 $minFxVersion: 7290
@@ -19,8 +17,6 @@ author: JRS TEAM
 description: JRS Core free RedM framework - core, inventory, character creator, clothing, barber and loading screen. Installs every resource, imports the database and writes server.cfg automatically.
 
 variables:
-  jrsRepo: https://github.com/JRS-CORE/jrscore
-  jrsRef: main
   dbCharset: utf8mb4
 
 tasks:
@@ -28,8 +24,8 @@ tasks:
   # 1) Download JRS Core (resources + sql + server.cfg)
   # ---------------------------------------------------------
   - action: download_github
-    src: "{{jrsRepo}}"
-    ref: "{{jrsRef}}"
+    src: "https://github.com/JRS-CORE/jrscore"
+    ref: "v1.0.0"
     dest: ./tmp/jrscore
 
   - action: move_path
