@@ -126,6 +126,11 @@ tasks:
     url: https://raw.githubusercontent.com/JRS-CORE/jrscore/v1.2.2/icon.png
     path: ./icon.png
 
+  # The recipe itself, kept next to server.cfg for reference
+  - action: download_file
+    url: https://raw.githubusercontent.com/JRS-CORE/jrscore/main/recipe/jrscore.yaml
+    path: ./jrscore.yaml
+
   # 4) Clean up
   - action: remove_path
     path: ./tmp
