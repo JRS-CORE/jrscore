@@ -3,7 +3,7 @@ local function notifyCommandSource(source, message, duration, isError, icon)
     duration = tonumber(duration) or 5000
 
     if tonumber(source) == 0 then
-        local prefix = isError and "[jrs_core][ERROR] " or "[jrs_core] "
+        local prefix = isError and "[jrs_core][ERROR] " or "[jhrs_core] "
         print(prefix .. message)
         return
     end
@@ -651,7 +651,7 @@ RegisterCommand(Config.Commands.givemoney, function(source, args)
     local amount = tonumber(args[3])
 
     if not targetId or currencyType == nil or not amount or amount <= 0 or currencyType < 0 or currencyType > 3 then
-        notifyCommandSource(source, _Up(source, 'usage_givemoney'), 5000, true)
+        notifyCommandSource(source, _Up(source, 'usage_givemoney', Config.Commands.givemoney), 5000, true)
         return
     end
 
