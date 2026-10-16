@@ -7,6 +7,11 @@ local lastSuppressed = nil
 -- closed (false) until the server actually confirms it.
 local canExportDefaults = false
 
+-- /hud (Config.Hud.PlayerCommand): the player's own switch for the compact HUD,
+-- remembered on their PC. The developer's switch is Config.Hud.enabled.
+local HUD_HIDDEN_KVP = 'jrs_core:compact_hud_hidden'
+local playerHudHidden = GetResourceKvpString(HUD_HIDDEN_KVP) == '1'
+
 -- Suppression is owned by client/hud_gate.lua: it merges the blockers scripts
 -- register when their UI opens with the automatic UI detection (NUI focus,
 -- menu state-bag flags, pause menu, map, death) and drives the jrs_metabolism
@@ -306,12 +311,31 @@ local function shouldSuppressHud()
         return not isCharacterReady() or isPlayerDead()
     end
     return not Config.Hud.enabled
+        or playerHudHidden
         or not isCharacterReady()
         or isPlayerDead()
         or IsPauseMenuActive()
         or (hasExternalHudBlocker() and not isChatOpenForHud())
 end
 
+-- Player command: hide or show the compact HUD.
+do
+    local hudCommand = Config.Hud and Config.Hud.PlayerCommand
+    if type(hudCommand) == 'string' and hudCommand ~= '' then
+        RegisterCommand(hudCommand, function()
+            if not Config.Hud.enabled then
+                TriggerEvent('jrsCore:notify', 'HUD', 'The HUD is turned off on this server.', 'placeholder', 3500)
+                return
+            end
+            playerHudHidden = not playerHudHidden
+            SetResourceKvp(HUD_HIDDEN_KVP, playerHudHidden and '1' or '0')
+            setHudSuppressed(shouldSuppressHud(), true)
+            TriggerEvent('jrsCore:notify', 'HUD',
+                playerHudHidden and ('HUD hidden. Type /' .. hudCommand .. ' to show it again.') or 'HUD shown.',
+                'placeholder', 3500)
+        end, false)
+    end
+end
 -- React the moment the gate flips instead of waiting for the next poll, so the
 -- HUD is already gone the instant a script UI opens.
 AddEventHandler('jrs_hud:gateChanged', function()
