@@ -5152,6 +5152,11 @@ const JRS_INVENTORY_SLOT_DROP = {
         return $(draggable).is(".item") && !this.classList.contains("inventory-pinned");
     },
 
+    // Greedy: without it the #tableData panel droppable also receives the same
+    // drop, so a storage stack dropped on a slot was transferred twice (two
+    // amount prompts, and the server logged the second as a replay).
+    greedy: true,
+
     tolerance: "pointer",
 
     hoverClass: "drag-hover",
