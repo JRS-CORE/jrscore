@@ -2075,6 +2075,20 @@ $(document).keydown(function(e) {
         }
         return;
     }
+    // Drop-to-ground amount box: Enter drops, Esc cancels, and the bag's own
+    // keys (B closes, E uses) stay quiet while typing.
+    var groundWin = document.getElementById("groundAmountWindow");
+    if (groundWin && groundWin.style.display === "block") {
+        if (e.keyCode === pressenter) {
+            e.preventDefault();
+            confirmGroundDrop();
+        } else if (e.keyCode === close) {
+            e.preventDefault();
+            e.stopPropagation();
+            cancelGroundDrop();
+        }
+        return;
+    }
     if (e.keyCode === close && givePlayerSelectorActive) {
         e.preventDefault();
         e.stopPropagation();
@@ -5642,11 +5656,24 @@ function makeGroundDraggableAndDroppable() {
 // }
 
 
+// The drag's stop handler clears clicked_id / clicked_type as soon as the item
+// is released, which happens before the player confirms the amount. Keep the
+// selection made at drop time and restore it when the amount is confirmed.
+var pendingGroundDrop = null;
+
 function showGroundAmount(maxCount) {
     const max = Math.max(1, Math.floor(Number(maxCount) || 1));
     const windowEl = document.getElementById("groundAmountWindow");
     const input = document.getElementById("groundAmountInput");
     if (!windowEl || !input) return;
+
+    pendingGroundDrop = {
+        id: clicked_id,
+        type: clicked_type,
+        meta: clicked_meta,
+        name: typeof clicked_name !== "undefined" ? clicked_name : "",
+        invIndex: dragged_item_inv
+    };
 
     input.min = "1";
     input.max = String(max);
@@ -5665,12 +5692,21 @@ function confirmGroundDrop() {
     let count = Math.floor(Number(input && input.value) || 1);
     count = Math.max(1, Math.min(count, max));
     if (windowEl) windowEl.style.setProperty("display", "none", "important");
+    if (pendingGroundDrop) {
+        clicked_id = pendingGroundDrop.id;
+        clicked_type = pendingGroundDrop.type;
+        clicked_meta = pendingGroundDrop.meta;
+        if (typeof clicked_name !== "undefined") clicked_name = pendingGroundDrop.name;
+        dragged_item_inv = pendingGroundDrop.invIndex;
+        pendingGroundDrop = null;
+    }
     DropItem(count);
 }
 
 function cancelGroundDrop() {
     const windowEl = document.getElementById("groundAmountWindow");
     if (windowEl) windowEl.style.setProperty("display", "none", "important");
+    pendingGroundDrop = null;
 }
 
 // ============================================================================
