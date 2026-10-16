@@ -12,15 +12,6 @@ local function rule(char)
     print('^5' .. string.rep(char or '=', WIDTH) .. '^7')
 end
 
-local LOGO = [=[
-        _   _____     _____    _____    ____    _____    ______
-       | | |  __ \   / ____|  / ____|  / __ \  |  __ \  |  ____|
-       | | | |__) | | (___   | |      | |  | | | |__) | | |__
-   _   | | |  _  /   \___ \  | |      | |  | | |  _  /  |  __|
-  | |__| | | | \ \   ____) | | |____  | |__| | | | \ \  | |____
-   \____/  |_|  \_\ |_____/   \_____|  \____/  |_|  \_\ |______|
-]=]
-
 local function countJrsResources()
     local started, total = 0, 0
     for i = 0, GetNumResources() - 1 do
@@ -33,24 +24,17 @@ local function countJrsResources()
     return started, total
 end
 
+-- jrs_core already prints the JRS logo, so this stays one short status block.
 local function printBanner()
     local pack = GetResourceMetadata(RESOURCE, 'jrscore_pack', 0) or '?'
     local started, total = countJrsResources()
     print('')
-    rule('=')
-    for line in LOGO:gmatch('[^\n]+') do print('^5' .. line .. '^7') end
-    print('')
-    print('^7  FREE RedM ROLEPLAY FRAMEWORK')
     rule('-')
-    print(('^7  Version     : ^2%s^7'):format(pack))
-    print(('^7  Resources   : ^2%d^7 / %d jrs_* started'):format(started, total))
-    print(('^7  GitHub      : ^5github.com/%s^7'):format(Config.Repo))
-    print(('^7  Updates     : first check in %ds, then every %sh  (^3%s^7 to check now)'):format(
-        Config.StartDelaySec, Config.IntervalHours > 0 and tostring(Config.IntervalHours) or '-', Config.Command))
-    rule('=')
+    print(('^7  JRS Core ^2v%s^7  |  %d / %d jrs_* resources started'):format(pack, started, total))
+    print(('^7  github.com/%s  |  ^3%s^7 = check for updates now'):format(Config.Repo, Config.Command))
+    rule('-')
     print('')
 end
-
 -- HTTP GET that can be awaited from a thread.
 local function httpGet(url)
     local p = promise.new()
