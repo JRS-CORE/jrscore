@@ -19,6 +19,10 @@ Config.Onesync = true
 
 Config.Info_print = false
 
+-- Console version report at boot: false = only resources that are out of date,
+-- true = one line for every resource.
+Config.VersionList = false
+
 -- Require an issued jrs_idcard for every new job assignment (including admins).
 -- Unemployed remains available for firing/quitting. Existing jobs are not removed.
 Config.JobIdentity = { Required = false } -- true needs jrs_idcard
