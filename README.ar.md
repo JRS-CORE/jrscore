@@ -70,8 +70,11 @@ JRS Core باقة سيرفر RedM كاملة مبنية على كور واحد. 
 | `jrs_loadingscreen/web/config_main.js` | اسم السيرفر، الروابط، الفيديو والموسيقى |
 | `jrs_loadingscreen/web/config_staff.js` | الطاقم، القوانين، الأخبار |
 
-## الدعم
+## المتاجر
 
+- **JRS SOTR:** [jrs-sotr.tebex.io](https://jrs-sotr.tebex.io/)
+- **Gum Scripts:** [gum-scripts.tebex.io](https://gum-scripts.tebex.io/)
+## الدعم
 - **الشرح الكامل:** [docs.jrs-core.com](https://docs.jrs-core.com)
 - **المجتمع والدعم:** [discord.gg/jrscore](https://discord.gg/jrscore)
 - **المشاكل والاقتراحات:** [افتح Issue](../../issues/new/choose)
