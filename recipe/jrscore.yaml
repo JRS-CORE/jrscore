@@ -1,57 +1,96 @@
-##############################################################
-#  JRS Core - Free Edition  |  txAdmin recipe
+#########################################################################
+#  JRS Core  |  txAdmin recipe
 #
-#  txAdmin > Setup > "Popular Template" / "Remote URL Template"
-#  Paste the RAW link of this file, e.g.
+#  txAdmin > Setup > Remote URL Template, paste the RAW link of this file:
 #  https://raw.githubusercontent.com/JRS-CORE/jrscore/main/recipe/jrscore.yaml
-#
-##############################################################
+#########################################################################
 $engine: 3
 $minFxVersion: 7290
 $onesync: on
 $steamRequired: false
 
 name: JRS Core
-version: 1.0.0
+version: 1.2.1
 author: JRS TEAM
-description: JRS Core free RedM framework - core, inventory, character creator, clothing, barber and loading screen. Installs every resource, imports the database and writes server.cfg automatically.
-
-variables:
-  dbCharset: utf8mb4
+description: RedM roleplay framework - core, inventory, character creator, clothing, barber, jobs and economy. Installs every resource, imports the database and writes server.cfg.
 
 tasks:
-  # ---------------------------------------------------------
-  # 1) Download JRS Core (resources + sql + server.cfg)
-  # ---------------------------------------------------------
-  - action: download_github
-    src: "https://github.com/JRS-CORE/jrscore"
-    ref: "v1.2.0"
-    dest: ./tmp/jrscore
+  # 1) Database
+  - action: download_file
+    url: https://raw.githubusercontent.com/JRS-CORE/jrscore/v1.2.1/sql/jrscore.sql
+    path: ./tmp/sql/jrscore.sql
 
-  - action: move_path
-    src: ./tmp/jrscore/resources
-    dest: ./resources
+  - action: download_file
+    url: https://raw.githubusercontent.com/JRS-CORE/jrscore/v1.2.1/sql/jrscore_addons.sql
+    path: ./tmp/sql/jrscore_addons.sql
 
-  - action: move_path
-    src: ./tmp/jrscore/server.cfg
-    dest: ./server.cfg
+  - action: download_file
+    url: https://raw.githubusercontent.com/JRS-CORE/jrscore/v1.2.1/sql/jrscore_scripts.sql
+    path: ./tmp/sql/jrscore_scripts.sql
 
-  # ---------------------------------------------------------
-  # 2) Database: create + import every JRS table and the item list
-  # ---------------------------------------------------------
   - action: connect_database
 
   - action: query_database
-    file: ./tmp/jrscore/sql/jrscore.sql
+    file: ./tmp/sql/jrscore.sql
 
   - action: query_database
-    file: ./tmp/jrscore/sql/jrscore_addons.sql
+    file: ./tmp/sql/jrscore_addons.sql
 
   - action: query_database
-    file: ./tmp/jrscore/sql/jrscore_scripts.sql
+    file: ./tmp/sql/jrscore_scripts.sql
 
-  # ---------------------------------------------------------
-  # 3) Clean up
-  # ---------------------------------------------------------
+  # 2) Resources (6 small parts, each has its own download timeout)
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.1/jrscore-resources-1.zip
+    path: ./tmp/parts/part1.zip
+  - action: unzip
+    src: ./tmp/parts/part1.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.1/jrscore-resources-2.zip
+    path: ./tmp/parts/part2.zip
+  - action: unzip
+    src: ./tmp/parts/part2.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.1/jrscore-resources-3.zip
+    path: ./tmp/parts/part3.zip
+  - action: unzip
+    src: ./tmp/parts/part3.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.1/jrscore-resources-4.zip
+    path: ./tmp/parts/part4.zip
+  - action: unzip
+    src: ./tmp/parts/part4.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.1/jrscore-resources-5.zip
+    path: ./tmp/parts/part5.zip
+  - action: unzip
+    src: ./tmp/parts/part5.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.1/jrscore-resources-6.zip
+    path: ./tmp/parts/part6.zip
+  - action: unzip
+    src: ./tmp/parts/part6.zip
+    dest: ./
+
+  # 3) Server config and icon
+  - action: download_file
+    url: https://raw.githubusercontent.com/JRS-CORE/jrscore/v1.2.1/server.cfg
+    path: ./server.cfg
+
+  - action: download_file
+    url: https://raw.githubusercontent.com/JRS-CORE/jrscore/v1.2.1/icon.png
+    path: ./icon.png
+
+  # 4) Clean up
   - action: remove_path
     path: ./tmp
