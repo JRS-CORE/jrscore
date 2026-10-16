@@ -29,13 +29,12 @@ JRS Core API and extended by the JRS TEAM (2026). The projects are credited here
 in force. The JRS TEAM is rewriting these scripts from scratch one by one; a script leaves the table below when
 its rewrite is finished.
 
-**Still based on third-party work: 4 scripts.  Rewritten so far: 56.**
+**Still based on third-party work: 3 scripts.  Rewritten so far: 57.**
 
 | Script | Based on |
 |---|---|
 | `jrs_huntingpets` | [RSG Framework](https://github.com/Rexshack-RedM) |
 | `jrs_mdt` | [RSG Framework](https://github.com/Rexshack-RedM) |
-| `jrs_metabolism` | [RSG Framework](https://github.com/Rexshack-RedM) |
 | `jrs_railroad` | [RSG Framework](https://github.com/Rexshack-RedM) |
 
 Bundled third-party libraries keep their own licence files inside their folders. Game data tables (weapon, ammo, prop and ped lists, map coordinates), translation strings and a few small libraries (for example WarMenu in `jrs_weapons`) are carried over unchanged from the projects they came from, because they describe the game and not program logic; they remain under their original GPL terms.
