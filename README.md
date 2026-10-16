@@ -125,8 +125,11 @@ local count = exports.jrs_inventory:getItemCount(source, 'water')
 The full API reference, guides and one page per script are on **[docs.jrs-core.com](https://docs.jrs-core.com)**.
 More examples: `resources/[CORE]/jrs_core/api_usage_examples.lua`.
 
-## Support
+## Stores
 
+- **JRS SOTR:** [jrs-sotr.tebex.io](https://jrs-sotr.tebex.io/)
+- **Gum Scripts:** [gum-scripts.tebex.io](https://gum-scripts.tebex.io/)
+## Support
 - **Documentation:** [docs.jrs-core.com](https://docs.jrs-core.com)
 - **Community and support:** [discord.gg/jrscore](https://discord.gg/jrscore)
 - **Bugs and ideas:** [open an issue](../../issues/new/choose)
