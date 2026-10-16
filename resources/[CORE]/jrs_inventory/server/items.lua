@@ -98,9 +98,22 @@ local function createUniqueItemId()
     return candidate
 end
 
+-- Compares two stacks of the same item after applying the item's default
+-- metadata to both. A stack created by a path that skipped the defaults (or
+-- before they were configured) must still match a freshly added copy, e.g. an
+-- item picked up from the ground, instead of staying a separate stack.
+local function metadataMatches(itemName, first, second)
+    if metadataEqual(first or {}, second or {}) then return true end
+    if type(JRSInventoryNormalizeMetadata) ~= "function" then return false end
+    return metadataEqual(
+        JRSInventoryNormalizeMetadata(first, itemName, true),
+        JRSInventoryNormalizeMetadata(second, itemName, true)
+    )
+end
+
 local function findMatchingStack(playerId, itemName, metadata)
     for index, item in pairs(inv_table[tonumber(playerId)] or {}) do
-        if item.item == itemName and metadataEqual(item.metaData or {}, metadata or {}) then
+        if item.item == itemName and metadataMatches(itemName, item.metaData, metadata) then
             return index
         end
     end
@@ -511,7 +524,7 @@ AddEventHandler('jrs_inventory:mergeStacks', function(sourceItemId, targetItemId
     end
 
     if tostring(sourceItem.item) ~= tostring(targetItem.item)
-        or not metadataEqual(sourceItem.metaData or {}, targetItem.metaData or {}) then
+        or not metadataMatches(tostring(sourceItem.item), sourceItem.metaData, targetItem.metaData) then
         finish()
         notifyInventory(src, _Up(src, 'stack_merge_mismatch'))
         return
