@@ -35,7 +35,7 @@ Locales["ar"] = {
     ['giveweapon_database_error'] = "تعذّر حفظ السلاح في قاعدة البيانات.",
     ['giveweapon_inventory_not_started'] = "يجب تشغيل jrs_inventory قبل استخدام /giveweapon.",
     ['giveweapon_failed'] = "تعذّرت إضافة السلاح: %s",
-    ['usage_givemoney'] = "الاستخدام: /givemoney [id] [type] [amount] -- النوع: 0=نقود، 1=ذهب، 2=رول، 3=أموال قذرة",
+    ['usage_givemoney'] = "الاستخدام: /%s [id] [type] [amount] -- النوع: 0=نقود، 1=ذهب، 2=رول، 3=أموال قذرة",
     ['usage_addxp'] = 'الاستخدام: /addxp [id] [amount] [سبب اختياري]',
     ['usage_removexp'] = 'الاستخدام: /removexp [id] [amount] [سبب اختياري]',
     ['usage_setxp'] = "الاستخدام: /setxp [id] [amount]",
