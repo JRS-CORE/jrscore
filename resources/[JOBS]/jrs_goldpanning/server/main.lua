@@ -1,3 +1,4 @@
+-- jrs_goldpanning | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 local panning = {}   -- source -> os.time() the pan started
 
 JRS.Usable(Config.PanItem, function(src)

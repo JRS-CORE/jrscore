@@ -1,3 +1,4 @@
+-- jrs_stables | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 -- ==========================================================================
 --  JRS CORE  |  jrs_stables  |  config/wagons.lua
 --  Wagon catalogue. Add a wagon by adding one line to a category below.

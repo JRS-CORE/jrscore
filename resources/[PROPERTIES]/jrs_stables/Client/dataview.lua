@@ -1,3 +1,4 @@
+-- jrs_stables | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 local _strblob = string.blob or function(length)
     return string.rep('\0', math.max(40 + 1, length))
 end

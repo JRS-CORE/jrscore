@@ -1,3 +1,4 @@
+-- jrs_guarma | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 local sailing = false
 
 -- world state for Guarma (minimap, water, horizon) or the mainland

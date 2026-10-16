@@ -1,3 +1,4 @@
+-- jrs_metabolism | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 function NativeApplyDamageToPed(ped, damage)
     if not DoesEntityExist(ped) or IsEntityDead(ped) then return end
     local current = GetEntityHealth(ped)

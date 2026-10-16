@@ -1,3 +1,4 @@
+-- jrs_canteen | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 Locales = {
     en = {
         empty        = 'Your canteen is empty - refill it in a river or lake.',

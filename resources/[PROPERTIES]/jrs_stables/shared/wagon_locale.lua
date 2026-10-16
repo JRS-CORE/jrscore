@@ -1,3 +1,4 @@
+-- jrs_stables | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 -- Follow the language selected by jrs_character and published by jrs_core.
 local uiEnglish = Translations
 local uiArabic = {

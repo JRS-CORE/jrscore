@@ -1,3 +1,4 @@
+-- jrs_teleports | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 local function allowed(jobs)
     if not jobs or #jobs == 0 then return true end
     local me = JRS.Me()

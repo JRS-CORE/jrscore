@@ -1,3 +1,4 @@
+-- jrs_robbery | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 local HANDS_DICT = 'script_proc@robberies@homestead@lonnies_shack@deception'
 local HANDS_ANIM = 'hands_up_loop'
 

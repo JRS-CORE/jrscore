@@ -1,3 +1,4 @@
+-- jrs_basemenu | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 Locales = {
     en = {
         subtitle  = '%s  |  ID %s',

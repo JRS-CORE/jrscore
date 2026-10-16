@@ -1,3 +1,4 @@
+-- jrs_metabolism | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 JRSMetabolism = { sessions = {}, loading = {}, saveQueues = {}, ready = false }
 PlayersStatus = {}
 function JRSMetabolism.number(value, default, minimum, maximum)

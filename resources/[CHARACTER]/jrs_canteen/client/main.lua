@@ -1,3 +1,4 @@
+-- jrs_canteen | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 local Core = exports.jrs_core:GetCore()
 local progressbar = exports.jrs_progressbar:initiate()
 local busy = false

@@ -1,3 +1,4 @@
+-- jrs_playerinfo | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 local MenuData = exports.jrs_core:GetMenuData()
 
 TriggerEvent('chat:addSuggestion', '/' .. Config.Command, L('cmd_help'))

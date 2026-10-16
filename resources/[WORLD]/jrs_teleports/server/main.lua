@@ -1,1 +1,2 @@
+-- jrs_teleports | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 -- jrs_kit registers the character lookup (JRS.Me) used by the job check on the client.

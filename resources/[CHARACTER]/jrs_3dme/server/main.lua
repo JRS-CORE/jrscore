@@ -1,3 +1,4 @@
+-- jrs_3dme | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 RegisterNetEvent('jrs_3dme:server:display', function(text)
     local src = source
     if type(text) ~= 'string' or not JRS.Char(src) then return end

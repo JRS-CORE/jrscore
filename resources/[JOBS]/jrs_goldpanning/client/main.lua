@@ -1,3 +1,4 @@
+-- jrs_goldpanning | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 local busy = false
 local PAN = `p_cs_miningpan01x`
 

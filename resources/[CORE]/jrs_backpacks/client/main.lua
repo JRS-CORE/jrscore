@@ -1,3 +1,4 @@
+-- jrs_backpacks | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 local worn, wornItem = nil, nil
 
 local function removeProp()

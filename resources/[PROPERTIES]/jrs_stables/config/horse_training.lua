@@ -1,3 +1,4 @@
+-- jrs_stables | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 -- JRS horse abilities: scores are out of 10, horse level is 1 to 4.
 -- Values are applied to the horse in-game, not just displayed in the menu.
 Config.HorseTraining = {

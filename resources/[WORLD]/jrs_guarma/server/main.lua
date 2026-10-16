@@ -1,3 +1,4 @@
+-- jrs_guarma | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 -- The server picks the price from the config: the client only says which port and which option.
 JRS.Callback('jrs_guarma:pay', function(src, portId, index)
     local port = Config.Ports[portId]

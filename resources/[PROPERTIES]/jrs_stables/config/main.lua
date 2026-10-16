@@ -1,3 +1,4 @@
+-- jrs_stables | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 -- ==========================================================================
 --  JRS CORE  |  jrs_stables  |  config/main.lua
 --  stables - buy, name and call horses, tack shop, saddlebags, brushing and feeding

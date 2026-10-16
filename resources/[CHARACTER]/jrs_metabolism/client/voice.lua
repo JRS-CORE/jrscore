@@ -1,3 +1,4 @@
+-- jrs_metabolism | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 local talking, muted, range = false, false, 3.0
 local function update()
     SendNUIMessage({action = 'voice', talking = talking, muted = muted, range = range})

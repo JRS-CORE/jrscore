@@ -2,7 +2,7 @@ fx_version "cerulean"
 game "common"
 
 name "httpmanager"
-author "jrs team"
+author 'JRS TEAM'
 description "HTTP handler library"
 
 server_scripts {

@@ -1,3 +1,4 @@
+-- jrs_stables | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 -- The wagon family reuses the existing stable Vue menu and its mouse controls.
 local Core = exports.jrs_core:GetCore()
 local Settings = Config.Wagons

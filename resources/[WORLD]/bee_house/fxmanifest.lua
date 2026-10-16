@@ -1,5 +1,5 @@
 version '1.1'
-author 'jrs'
+author 'JRS TEAM'
 description 'objects: Bee apiary'
 fx_version "adamant"
 games {"rdr3"}

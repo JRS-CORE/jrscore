@@ -1,3 +1,4 @@
+-- jrs_metabolism | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 gNeedsIsActived, isShowingHud = false, false
 status = { hunger = 0, thirst = 0, health = {core = 100, normal = 200}, stamina = {core = 100, normal = 1} }
 horseStatus = {}

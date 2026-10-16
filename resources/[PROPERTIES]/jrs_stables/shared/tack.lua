@@ -1,3 +1,4 @@
+-- jrs_stables | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 -- Saved tack stays an array for the stable UI, even when legacy JSON has holes.
 StableTack = {
     order = {'Saddlecloths','Saddles','Stirrups','SaddleBags','SaddleHorns','Bedrolls',

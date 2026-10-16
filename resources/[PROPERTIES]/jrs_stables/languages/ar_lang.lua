@@ -1,3 +1,4 @@
+-- jrs_stables | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 Locales.ar_lang = {
     shopPrompt='فتح الإسطبل', callPrompt='استدعاء الخيل', returnPrompt='إرجاع الخيل', sellPrompt='بيع',
     keepPrompt='تسجيل: $', tradePrompt='إعطاء الخيل', drinkPrompt='شرب', restPrompt='راحة', sleepPrompt='نوم',

@@ -1,3 +1,4 @@
+-- jrs_3dme | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 local messages = {}   -- serverId -> { { id, text, untilAt } }
 
 RegisterCommand(Config.Command, function(_, args)

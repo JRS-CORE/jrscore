@@ -1,3 +1,4 @@
+-- jrs_water_actions | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 local enabled, busy, fishing = true, false, false
 
 -- other scripts (fishing) can hide the prompts while they run

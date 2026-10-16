@@ -1,3 +1,4 @@
+-- jrs_stables | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 
 -- Dataview dependency and lua 5.4 is required.
 -- Implements pressing Q to show animal information.
