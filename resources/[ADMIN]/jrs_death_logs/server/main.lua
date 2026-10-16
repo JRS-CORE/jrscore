@@ -1,3 +1,4 @@
+-- jrs_death_logs | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 -- Discord webhook (server side only, never sent to clients). Empty = console log only.
 local WEBHOOK = GetConvar('jrs_death_logs_webhook', '')
 

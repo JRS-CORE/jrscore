@@ -1,69 +1,40 @@
+-- jrs_search | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_search | client helpers: the hold-to-search prompt and finding nearby players
 
-local Prompts     = GetRandomIntInRange(0, 0xffffff)
-local PromptsList = nil
+local group = GetRandomIntInRange(0, 0xffffff)
+local searchPrompt
 
---[[-------------------------------------------------------
- Handlers
-]]---------------------------------------------------------
-
-AddEventHandler("onResourceStop", function(resourceName)
-    if resourceName ~= GetCurrentResourceName() then
-        return
-    end
-
-    Citizen.InvokeNative(0x00EDE88D4D13CF59, Prompts) -- UiPromptDelete
-end)
-
---[[-------------------------------------------------------
- Prompts
-]]---------------------------------------------------------
-
-RegisterActionPrompt = function()
-
-    local str      = Config.PromptKey.label
-    local keyPress = Config.PromptKey.key
-
-    local dPrompt = PromptRegisterBegin()
-    PromptSetControlAction(dPrompt, keyPress)
-    str = CreateVarString(10, 'LITERAL_STRING', str)
-    PromptSetText(dPrompt, str)
-    PromptSetEnabled(dPrompt, 1)
-    PromptSetVisible(dPrompt, 1)
-    PromptSetStandardMode(dPrompt, 1)
-    PromptSetHoldMode(dPrompt, 1000)
-    PromptSetGroup(dPrompt, Prompts)
-    Citizen.InvokeNative(0xC5F428EE08FA7F2C, dPrompt, true)
-    PromptRegisterEnd(dPrompt)
-
-    PromptsList = dPrompt
+function RegisterActionPrompt()
+    searchPrompt = PromptRegisterBegin()
+    PromptSetControlAction(searchPrompt, Config.PromptKey.key)
+    PromptSetText(searchPrompt, CreateVarString(10, 'LITERAL_STRING', Config.PromptKey.label))
+    PromptSetEnabled(searchPrompt, 1)
+    PromptSetVisible(searchPrompt, 1)
+    PromptSetStandardMode(searchPrompt, 1)
+    PromptSetHoldMode(searchPrompt, 1000)
+    PromptSetGroup(searchPrompt, group)
+    Citizen.InvokeNative(0xC5F428EE08FA7F2C, searchPrompt, true)
+    PromptRegisterEnd(searchPrompt)
 end
 
 function GetPromptData()
-    return Prompts, PromptsList
+    return group, searchPrompt
 end
 
---[[-------------------------------------------------------
- Other
-]]---------------------------------------------------------
-
-GetNearestPlayers = function(distance)
-	local closestDistance = distance
-	local playerPed = PlayerPedId()
-	local coords = GetEntityCoords(playerPed, true, true)
-	local closestPlayers = {}
-
-	for _, player in pairs(GetActivePlayers()) do
-		local target = GetPlayerPed(player)
-
-		if target ~= playerPed then
-			local targetCoords = GetEntityCoords(target, true, true)
-			local distance = #(targetCoords - coords)
-
-			if distance < closestDistance then
-				table.insert(closestPlayers, player)
-			end
-		end
-	end
-	return closestPlayers
-
+-- every other player closer than `radius`
+function GetNearestPlayers(radius)
+    local me = PlayerPedId()
+    local here = GetEntityCoords(me, true, true)
+    local near = {}
+    for _, player in ipairs(GetActivePlayers()) do
+        local ped = GetPlayerPed(player)
+        if ped ~= me and #(GetEntityCoords(ped, true, true) - here) < radius then
+            near[#near + 1] = player
+        end
+    end
+    return near
 end
+
+AddEventHandler('onResourceStop', function(resource)
+    if resource == GetCurrentResourceName() then Citizen.InvokeNative(0x00EDE88D4D13CF59, group) end
+end)

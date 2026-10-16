@@ -154,8 +154,8 @@ are in [CREDITS.md](CREDITS.md).
 
 | | Contribution |
 |---|---|
-| [**NQ3Z**](https://github.com/NQ3Z) (Jehad Abdulwahab) | Repository owner and maintainer |
-| [**jrsmatrex**](https://github.com/jrsmatrex) | `jrs_zombies`, `jrs_zombies_notify`, `bee_house` |
+| [**NQ3Z**](https://github.com/NQ3Z) (Jehad Abdulwahab) | Contributor |
+| [**jrsmatrex**](https://github.com/jrsmatrex) | Contributor: `jrs_zombies`, `jrs_zombies_notify`, `bee_house` |
 | [**gummyantifi**](https://github.com/gummyantifi) (Gummik) | Contributor |
 | [**JRS-CORE**](https://github.com/JRS-CORE) | All JRS Core repositories, one per script |
 

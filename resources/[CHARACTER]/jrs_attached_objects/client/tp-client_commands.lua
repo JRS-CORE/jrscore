@@ -1,11 +1,6 @@
----------------------------------------------------------------
---[[ Commands ]]--
----------------------------------------------------------------
+-- jrs_attached_objects | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_attached_objects | client commands
 
--- We add the command to the chat suggestion for didplaying it properly.
-TriggerEvent("chat:addSuggestion", "/" .. Config.DeleteAllAttached.Command, Config.DeleteAllAttached.Description)
-
--- Removing all the usable wearable props
-RegisterCommand(Config.DeleteAllAttached.Command, function(source, args)     
-    ClearAllPlayerPedAttachedProps()
-end)
+local cmd = Config.DeleteAllAttached
+TriggerEvent('chat:addSuggestion', '/' .. cmd.Command, cmd.Description)
+RegisterCommand(cmd.Command, function() ClearAllPlayerPedAttachedProps() end, false)

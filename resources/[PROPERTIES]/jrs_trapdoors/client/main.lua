@@ -1,206 +1,179 @@
-local ANIM_DICT = 'mech_cover@env@doors@unlocked@generic@base@push_return@bow@left@no_lean'
+-- jrs_trapdoors | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_trapdoors | client
+-- Trapdoor props slide between a closed and an open pose. Open/closed state and who owns a passcode
+-- come from the server through GlobalState; this file animates the prop and offers the menu.
 
--- runtime state per door id: { entity, open, progress, animToken, animating, owner }
-local doors = {}
-local modelToIds = {}
+local PUSH_DICT <const> = 'mech_cover@env@doors@unlocked@generic@base@push_return@bow@left@no_lean'
+
+local door = {}                  -- id -> { prop, open, t (0 closed .. 1 open), run, moving, owner }
+local myCharId
 
 for id, cfg in pairs(Config.Trapdoors) do
     local open = GlobalState['trapdoor:' .. id] == true
-    doors[id] = {
-        entity = 0, open = open, progress = open and 1.0 or 0.0, animToken = 0, animating = false,
-        owner = GlobalState['trapdoorCode:' .. id] or false, -- owner citizenid when a passcode is set
-    }
-    local hash = joaat(cfg.model)
-    modelToIds[hash] = modelToIds[hash] or {}
-    modelToIds[hash][#modelToIds[hash] + 1] = id
+    door[id] = { prop = 0, open = open, t = open and 1.0 or 0.0, run = 0, moving = false, owner = GlobalState['trapdoorCode:' .. id] or false }
 end
 
----------------------------------------------------------------------
--- helpers
----------------------------------------------------------------------
-local function lerp(a, b, t) return a + (b - a) * t end
+-- ------------------------------------------------------------------ pose
 
-local function lerpAngle(a, b, t)
-    local delta = (b - a + 180.0) % 360.0 - 180.0
-    return a + delta * t
+local function mix(a, b, t) return a + (b - a) * t end
+
+-- shortest way round between two angles
+local function mixAngle(a, b, t)
+    return a + ((b - a + 180.0) % 360.0 - 180.0) * t
 end
 
-local function findEntity(cfg)
-    local p = cfg.closedPosition
-    local ent = GetClosestObjectOfType(p.x, p.y, p.z, 3.0, joaat(cfg.model), false, false, false)
-    return DoesEntityExist(ent) and ent or 0
+-- the pose only ever comes from the config and `t`; reading the rotation back from the prop twists it
+-- when it is pitched at -90 degrees (gimbal lock)
+local function pose(prop, cfg, t)
+    local from, to, rf, rt = cfg.closedPosition, cfg.openPosition, cfg.closedRotation, cfg.openRotation
+    SetEntityCoordsNoOffset(prop, mix(from.x, to.x, t), mix(from.y, to.y, t), mix(from.z, to.z, t), false, false, false)
+    SetEntityRotation(prop, mixAngle(rf.x, rt.x, t), mixAngle(rf.y, rt.y, t), mixAngle(rf.z, rt.z, t), 2, true)
 end
 
--- pose is always derived from config + progress (0 = closed, 1 = open).
--- Never read rotation back from the entity: at -90 pitch GetEntityRotation
--- returns gimbal-locked angles, which made the door twist when closing.
-local function applyPose(ent, cfg, p)
-    local a, b = cfg.closedPosition, cfg.openPosition
-    local ra, rb = cfg.closedRotation, cfg.openRotation
-    SetEntityCoordsNoOffset(ent, lerp(a.x, b.x, p), lerp(a.y, b.y, p), lerp(a.z, b.z, p), false, false, false)
-    SetEntityRotation(ent, lerpAngle(ra.x, rb.x, p), lerpAngle(ra.y, rb.y, p), lerpAngle(ra.z, rb.z, p), 2, true)
+local function snap(id)
+    local d = door[id]
+    d.t = d.open and 1.0 or 0.0
+    if d.prop ~= 0 then pose(d.prop, Config.Trapdoors[id], d.t) end
 end
 
-local function placeInstant(id)
-    local d = doors[id]
-    d.progress = d.open and 1.0 or 0.0
-    if d.entity ~= 0 then applyPose(d.entity, Config.Trapdoors[id], d.progress) end
-end
+local function slide(id)
+    local d, cfg = door[id], Config.Trapdoors[id]
+    local prop = d.prop
+    if prop == 0 or not DoesEntityExist(prop) then return end
 
-local function animate(id)
-    local d, cfg = doors[id], Config.Trapdoors[id]
-    local ent = d.entity
-    if ent == 0 or not DoesEntityExist(ent) then return end
-
-    d.animToken = d.animToken + 1
-    local token = d.animToken
-    d.animating = true
-
-    local from = d.progress
-    local to = d.open and 1.0 or 0.0
-    local duration = math.max(Config.MoveDuration * math.abs(to - from), 1)
-    local startTime = GetGameTimer()
+    d.run = d.run + 1
+    local mine, from, goal = d.run, d.t, d.open and 1.0 or 0.0
+    local span = math.max(Config.MoveDuration * math.abs(goal - from), 1)
+    local began = GetGameTimer()
+    d.moving = true
 
     CreateThread(function()
-        while true do
-            if d.animToken ~= token or not DoesEntityExist(ent) then return end
-            local t = math.min((GetGameTimer() - startTime) / duration, 1.0)
-            local e = t * t * (3.0 - 2.0 * t) -- smoothstep
-            d.progress = lerp(from, to, e)
-            applyPose(ent, cfg, d.progress)
-            if t >= 1.0 then break end
+        local k = 0.0
+        repeat
+            if d.run ~= mine or not DoesEntityExist(prop) then return end
+            k = math.min((GetGameTimer() - began) / span, 1.0)
+            d.t = mix(from, goal, k * k * (3.0 - 2.0 * k))
+            pose(prop, cfg, d.t)
             Wait(0)
-        end
-        d.animating = false
+        until k >= 1.0
+        d.moving = false
     end)
 end
 
--- resolve which configured door a targeted entity belongs to
-local function idFromEntity(entity)
-    local ids = modelToIds[GetEntityModel(entity)]
-    if not ids then return end
-    for i = 1, #ids do
-        if doors[ids[i]].entity == entity then return ids[i] end
-    end
-    -- entity not cached yet (just streamed in) - match by proximity
-    local coords = GetEntityCoords(entity)
-    for i = 1, #ids do
-        if #(coords - Config.Trapdoors[ids[i]].closedPosition) < 3.0 then return ids[i] end
-    end
-end
+-- ------------------------------------------------------------------ keeping props and state in step
 
----------------------------------------------------------------------
--- state sync (server -> clients via GlobalState)
----------------------------------------------------------------------
 for id in pairs(Config.Trapdoors) do
     AddStateBagChangeHandler('trapdoor:' .. id, 'global', function(_, _, value)
-        local d = doors[id]
-        d.open = value == true
-        if d.entity ~= 0 then animate(id) end
+        door[id].open = value == true
+        if door[id].prop ~= 0 then slide(id) end
     end)
     AddStateBagChangeHandler('trapdoorCode:' .. id, 'global', function(_, _, value)
-        doors[id].owner = value or false
+        door[id].owner = value or false
     end)
 end
 
--- keep entity handles fresh as props stream in/out and snap them to the synced state
+local function propOf(cfg)
+    local at = cfg.closedPosition
+    local found = GetClosestObjectOfType(at.x, at.y, at.z, 3.0, joaat(cfg.model), false, false, false)
+    return DoesEntityExist(found) and found or 0
+end
+
 CreateThread(function()
     while true do
-        local pCoords = GetEntityCoords(PlayerPedId())
+        local here = GetEntityCoords(PlayerPedId())
         for id, cfg in pairs(Config.Trapdoors) do
-            local d = doors[id]
-            if #(pCoords - cfg.closedPosition) <= Config.StreamDistance then
-                local ent = findEntity(cfg)
-                if ent ~= d.entity then
-                    d.entity = ent
-                    if ent ~= 0 then placeInstant(id) end
+            local d = door[id]
+            if #(here - cfg.closedPosition) <= Config.StreamDistance then
+                local prop = propOf(cfg)
+                if prop ~= d.prop then
+                    d.prop = prop
+                    if prop ~= 0 then snap(id) end
                 end
-            elseif d.entity ~= 0 then
-                d.entity = 0
+            else
+                d.prop = 0
             end
         end
         Wait(1000)
     end
 end)
 
----------------------------------------------------------------------
--- interaction: prompt -> JRS menu -> JRS inputs (no the JRS interaction prompt, no NUI)
----------------------------------------------------------------------
-local myId = nil
+-- ------------------------------------------------------------------ using a door
 
-local function playPushAnim()
-    if JRS.LoadDict(ANIM_DICT) then
-        TaskPlayAnim(PlayerPedId(), ANIM_DICT, 'open', 8.0, -8.0, -1, 0, 0, false, false, false)
-        RemoveAnimDict(ANIM_DICT)
+local function push()
+    if JRS.LoadDict(PUSH_DICT) then
+        TaskPlayAnim(PlayerPedId(), PUSH_DICT, 'open', 8.0, -8.0, -1, 0, 0, false, false, false)
+        RemoveAnimDict(PUSH_DICT)
     end
 end
 
 local function askCode(title)
-    local code = JRS.Input(title, '0000', false)
-    return code and code:gsub('%s', '') or nil
+    local typed = JRS.Input(title, '0000', false)
+    return typed and typed:gsub('%s', '') or nil
 end
 
-local function result(res)
-    if res and res.msg then JRS.Notify(res.msg) end
-    return res and res.ok
+-- shows the server's message, true when the action worked
+local function succeeded(reply)
+    if reply and reply.msg then JRS.Notify(reply.msg) end
+    return reply and reply.ok
 end
 
-local function openDoor(id)
-    local code = nil
-    if doors[id].owner then
+local function tryOpen(id)
+    local code
+    if door[id].owner then
         code = askCode(L('enter_code'))
         if not code then return end
     end
-    if result(JRS.Await('jrs_trapdoors:open', id, code)) then playPushAnim() end
+    if succeeded(JRS.Await('jrs_trapdoors:open', id, code)) then push() end
 end
 
-local function openMenu(id)
-    local d = doors[id]
-    myId = myId or JRS.Await('jrs_trapdoors:myId')
-    local elements = {}
-    if d.open then
-        elements[#elements + 1] = { label = L('close'), value = 'close', desc = '' }
-    else
-        elements[#elements + 1] = { label = L('open'), value = 'open', desc = '' }
-    end
+local function changeCode(id)
+    local current = askCode(L('current_code'))
+    if not current then return end
+    local fresh = askCode(L('new_code'))
+    if fresh then succeeded(JRS.Await('jrs_trapdoors:changeCode', id, current, fresh)) end
+end
+
+local actions = {
+    open  = tryOpen,
+    close = function(id) push(); TriggerServerEvent('jrs_trapdoors:server:close', id) end,
+    set   = function(id)
+        local code = askCode(L('new_code'))
+        if code then succeeded(JRS.Await('jrs_trapdoors:setCode', id, code)) end
+    end,
+    change = changeCode,
+}
+
+local function menu(id)
+    local d = door[id]
+    myCharId = myCharId or JRS.Await('jrs_trapdoors:myId')
+
+    local rows = { { label = L(d.open and 'close' or 'open'), value = d.open and 'close' or 'open', desc = '' } }
     if not d.owner then
-        elements[#elements + 1] = { label = L('set_code'), value = 'set', desc = '' }
-    elseif myId and d.owner == myId then
-        elements[#elements + 1] = { label = L('change_code'), value = 'change', desc = '' }
+        rows[#rows + 1] = { label = L('set_code'), value = 'set', desc = '' }
+    elseif myCharId and d.owner == myCharId then
+        rows[#rows + 1] = { label = L('change_code'), value = 'change', desc = '' }
     end
 
-    JRS.OpenMenu('jrs_trapdoors', L(Config.Trapdoors[id].label or id), L('menu_sub'), elements, function(el, menu)
-        menu.close()
-        if doors[id].animating then return JRS.Notify(L('busy')) end
-        if el.value == 'open' then
-            openDoor(id)
-        elseif el.value == 'close' then
-            playPushAnim()
-            TriggerServerEvent('jrs_trapdoors:server:close', id)
-        elseif el.value == 'set' then
-            local code = askCode(L('new_code'))
-            if code then result(JRS.Await('jrs_trapdoors:setCode', id, code)) end
-        elseif el.value == 'change' then
-            local current = askCode(L('current_code'))
-            if not current then return end
-            local new = askCode(L('new_code'))
-            if new then result(JRS.Await('jrs_trapdoors:changeCode', id, current, new)) end
-        end
+    JRS.OpenMenu('jrs_trapdoors', L(Config.Trapdoors[id].label or id), L('menu_sub'), rows, function(row, m)
+        m.close()
+        if door[id].moving then return JRS.Notify(L('busy')) end
+        local act = actions[row.value]
+        if act then act(id) end
     end)
 end
 
 CreateThread(function()
     local prompts = JRS.Prompts()
-    local usePrompt = prompts:add(0x760A9C6F, LE('menu_sub'))
+    local use = prompts:add(0x760A9C6F, LE('menu_sub'))
     while true do
         local wait = 750
-        local pos = GetEntityCoords(PlayerPedId())
+        local here = GetEntityCoords(PlayerPedId())
         for id, cfg in pairs(Config.Trapdoors) do
-            local d = doors[id]
-            if d.entity ~= 0 and not d.animating and #(pos - cfg.closedPosition) <= (cfg.interactDistance or 2.0) then
+            local d = door[id]
+            if d.prop ~= 0 and not d.moving and #(here - cfg.closedPosition) <= (cfg.interactDistance or 2.0) then
                 wait = 0
                 prompts:show(LE(cfg.label or id))
-                if prompts:done(usePrompt) then openMenu(id) end
+                if prompts:done(use) then menu(id) end
                 break
             end
         end
@@ -208,11 +181,10 @@ CreateThread(function()
     end
 end)
 
-AddEventHandler('onResourceStop', function(res)
-    if res ~= GetCurrentResourceName() then return end
-    for id, d in pairs(doors) do
-        d.animToken = d.animToken + 1
-        d.open = false
-        placeInstant(id)
+AddEventHandler('onResourceStop', function(resource)
+    if resource ~= GetCurrentResourceName() then return end
+    for id, d in pairs(door) do
+        d.run, d.open = d.run + 1, false
+        snap(id)
     end
 end)
