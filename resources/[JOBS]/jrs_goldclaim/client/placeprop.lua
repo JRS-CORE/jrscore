@@ -1,32 +1,33 @@
-local PromptGroup = GetRandomIntInRange(0, 0xffffff)
-local Prompts = {}
+-- jrs_goldclaim | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_goldclaim | client: placing a gold rocker. A see-through copy floats in front of the player;
+-- arrow keys turn it, holding the place key confirms, holding the cancel key stops.
+
+local group = GetRandomIntInRange(0, 0xffffff)
+local prompts = {}
 local placing = false
 
-local KEY_CANCEL       = 0xF84FA74F -- right mouse
-local KEY_PLACE        = 0x07CE1E61 -- left mouse
-local KEY_ROTATE_LEFT  = 0xA65EBAB4 -- left arrow
-local KEY_ROTATE_RIGHT = 0xDEB34313 -- right arrow
+local KEY = { cancel = 0xF84FA74F, place = 0x07CE1E61, left = 0xA65EBAB4, right = 0xDEB34313 }
 
-local function RegisterPrompt(key, text, holdMode)
+local function makePrompt(key, text, hold)
     local prompt = PromptRegisterBegin()
     PromptSetControlAction(prompt, key)
     PromptSetText(prompt, CreateVarString(10, 'LITERAL_STRING', text))
     PromptSetEnabled(prompt, true)
     PromptSetVisible(prompt, true)
-    if holdMode then PromptSetHoldMode(prompt, true) else PromptSetStandardMode(prompt, true) end
-    PromptSetGroup(prompt, PromptGroup)
+    if hold then PromptSetHoldMode(prompt, true) else PromptSetStandardMode(prompt, true) end
+    PromptSetGroup(prompt, group)
     PromptRegisterEnd(prompt)
     return prompt
 end
 
 CreateThread(function()
-    Prompts.cancel      = RegisterPrompt(KEY_CANCEL, L('prompt_cancel'), true)
-    Prompts.place       = RegisterPrompt(KEY_PLACE, L('prompt_place'), true)
-    Prompts.rotateLeft  = RegisterPrompt(KEY_ROTATE_LEFT, L('prompt_rotate_left'), false)
-    Prompts.rotateRight = RegisterPrompt(KEY_ROTATE_RIGHT, L('prompt_rotate_right'), false)
+    prompts.cancel = makePrompt(KEY.cancel, L('prompt_cancel'), true)
+    prompts.place = makePrompt(KEY.place, L('prompt_place'), true)
+    prompts.left = makePrompt(KEY.left, L('prompt_rotate_left'), false)
+    prompts.right = makePrompt(KEY.right, L('prompt_rotate_right'), false)
 end)
 
-local function PropPlacer()
+local function startPlacing()
     if placing or IsBusy() then return end
     local model = Config.GoldRocker
     if not LoadModel(model) then return end
@@ -35,44 +36,44 @@ local function PropPlacer()
     local ped = PlayerPedId()
     SetCurrentPedWeapon(ped, `WEAPON_UNARMED`, true)
 
-    -- attach offsets are in the ped's local space, so "in front" is simply +Y
-    local offsetX, offsetY = 0.0, Config.ForwardDistance
-    local pos = GetEntityCoords(ped)
+    -- attach offsets are in the ped's own space, so "in front" is +Y
+    local ahead = Config.ForwardDistance
+    local at = GetEntityCoords(ped)
 
-    -- visible ghost + invisible anchor used to read the final world position
-    local ghost  = CreateObject(model, pos.x, pos.y, pos.z, false, false, false)
-    local anchor = CreateObject(model, pos.x, pos.y, pos.z, false, false, false)
+    -- `ghost` is what the player sees, the invisible `anchor` is read for the final position
+    local ghost = CreateObject(model, at.x, at.y, at.z, false, false, false)
+    local anchor = CreateObject(model, at.x, at.y, at.z, false, false, false)
     SetEntityAlpha(ghost, 180, false)
     SetEntityAlpha(anchor, 0, false)
     SetEntityCollision(ghost, false, false)
     SetEntityCollision(anchor, false, false)
-    AttachEntityToEntity(anchor, ped, 0, offsetX, offsetY, 0.5, 0.0, 0.0, 0.0, true, false, false, false, 0, false)
+    AttachEntityToEntity(anchor, ped, 0, 0.0, ahead, 0.5, 0.0, 0.0, 0.0, true, false, false, false, 0, false)
 
-    local groupName = CreateVarString(10, 'LITERAL_STRING', L('prompt_group'))
-    local heading = 0.0
+    local title = CreateVarString(10, 'LITERAL_STRING', L('prompt_group'))
+    local turn = 0.0
+
+    local function stop()
+        DeleteEntity(anchor)
+        DeleteEntity(ghost)
+        placing = false
+    end
 
     while true do
         Wait(0)
-        PromptSetActiveGroupThisFrame(PromptGroup, groupName)
+        PromptSetActiveGroupThisFrame(group, title)
 
-        if IsControlPressed(0, KEY_ROTATE_LEFT) then heading = heading - 1.0 end
-        if IsControlPressed(0, KEY_ROTATE_RIGHT) then heading = heading + 1.0 end
-        AttachEntityToEntity(ghost, ped, 0, offsetX, offsetY, -0.8, 0.0, 0.0, heading, true, false, false, false, 0, false)
+        if IsControlPressed(0, KEY.left) then turn = turn - 1.0 end
+        if IsControlPressed(0, KEY.right) then turn = turn + 1.0 end
+        AttachEntityToEntity(ghost, ped, 0, 0.0, ahead, -0.8, 0.0, 0.0, turn, true, false, false, false, 0, false)
 
-        if PromptHasHoldModeCompleted(Prompts.place) then
-            local finalPos = GetEntityCoords(anchor)
-            local finalHeading = GetEntityHeading(ghost)
-            DeleteEntity(anchor)
-            DeleteEntity(ghost)
-            placing = false
-            TriggerEvent('jrs_goldclaim:rocker:client:placeNewProp', finalPos, finalHeading)
+        if PromptHasHoldModeCompleted(prompts.place) then
+            local spot, facing = GetEntityCoords(anchor), GetEntityHeading(ghost)
+            stop()
+            TriggerEvent('jrs_goldclaim:rocker:client:placeNewProp', spot, facing)
             break
         end
-
-        if PromptHasHoldModeCompleted(Prompts.cancel) or IsEntityDead(ped) then
-            DeleteEntity(anchor)
-            DeleteEntity(ghost)
-            placing = false
+        if PromptHasHoldModeCompleted(prompts.cancel) or IsEntityDead(ped) then
+            stop()
             break
         end
     end
@@ -80,9 +81,9 @@ local function PropPlacer()
     SetModelAsNoLongerNeeded(model)
 end
 
-RegisterNetEvent('jrs_goldclaim:rocker:client:createprop', PropPlacer)
+RegisterNetEvent('jrs_goldclaim:rocker:client:createprop', startPlacing)
 
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
-    for _, prompt in pairs(Prompts) do PromptDelete(prompt) end
+    for _, prompt in pairs(prompts) do PromptDelete(prompt) end
 end)

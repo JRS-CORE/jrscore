@@ -1,3 +1,4 @@
+-- jrs_goldclaim | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 Locales = {
     en = {
         prompt_cancel = 'Cancel',

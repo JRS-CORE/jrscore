@@ -1,22 +1,25 @@
------------------------------------------------------------------------------------------------
--- context menus + input dialogs on the JRS menu / JRS inputs (same API the rest of the script uses)
--- def = { id, title, subtitle?, menu?, onBack?, options = { { title, description?, event?, args?, arrow?, disabled? } } }
------------------------------------------------------------------------------------------------
-local registeredContexts = {}
+-- jrs_goldclaim | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_goldclaim | client: menus and input windows on the JRS menu and JRS input
+-- A menu is described once (OpenContext) and shown later by id (ShowContext).
+--   def = { id, title, subtitle?, menu? (parent id), onBack?, options = { { title, description?, event?, args?, disabled? } } }
+
+local menus = {}
 
 function OpenContext(def)
-    if def and def.id then registeredContexts[def.id] = def end
+    if def and def.id then menus[def.id] = def end
 end
 
 function ShowContext(id)
-    local def = registeredContexts[id]
+    local def = menus[id]
     if not def then return end
-    local elements = {}
-    for i, o in ipairs(def.options or {}) do
-        elements[#elements + 1] = { label = o.title or '', value = i, desc = o.description or '' }
+
+    local rows = {}
+    for i, option in ipairs(def.options or {}) do
+        rows[i] = { label = option.title or '', value = i, desc = option.description or '' }
     end
-    JRS.OpenMenu('jrs_goldclaim_' .. id, def.title or '', def.subtitle or '', elements, function(el, menu)
-        local option = def.options[el.value]
+
+    JRS.OpenMenu('jrs_goldclaim_' .. id, def.title or '', def.subtitle or '', rows, function(row, menu)
+        local option = def.options[row.value]
         if not option or not option.event or option.disabled then return end
         menu.close()
         TriggerEvent(option.event, option.args)
@@ -26,19 +29,18 @@ function ShowContext(id)
     end)
 end
 
-function HideContext()
-    JRS.CloseMenu()
-end
+function HideContext() JRS.CloseMenu() end
 
--- fields = { { label, type = 'input'|'number', default?, min?, max?, maxLength? } } ; callback(values | nil)
-function OpenInputDialog(title, fields, callback)
+-- asks for every field in turn; callback gets the list of answers, or nil when one is cancelled
+-- fields = { { label, type = 'input' | 'number', default? } }
+function OpenInputDialog(title, fields, done)
     CreateThread(function()
-        local values = {}
-        for i, f in ipairs(fields) do
-            local v = JRS.Input(f.label or title, f.default and tostring(f.default) or '', f.type == 'number')
-            if v == nil then return callback(nil) end
-            values[i] = v
+        local answers = {}
+        for i, field in ipairs(fields) do
+            local value = JRS.Input(field.label or title, field.default and tostring(field.default) or '', field.type == 'number')
+            if value == nil then return done(nil) end
+            answers[i] = value
         end
-        callback(values)
+        done(answers)
     end)
 end
