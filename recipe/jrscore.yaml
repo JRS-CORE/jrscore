@@ -25,7 +25,7 @@ tasks:
   # ---------------------------------------------------------
   - action: download_github
     src: "https://github.com/JRS-CORE/jrscore"
-    ref: "v1.0.0"
+    ref: "v1.1.0"
     dest: ./tmp/jrscore
 
   - action: move_path
