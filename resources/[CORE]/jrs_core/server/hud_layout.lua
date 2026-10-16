@@ -80,7 +80,9 @@ end
 -- fxmanifest.lua's explicit server_scripts list, so the export handler can
 -- reuse this exact same validation on the layout it receives from the NUI,
 -- rather than trusting client-sent data or duplicating the rules.
-function sanitizeLayout(layout)
+-- showAll = true ignores the stored visible flag (used for layouts saved before
+-- the compact HUD was switched on, when every element was stored as hidden).
+function sanitizeLayout(layout, showAll)
     if type(layout) ~= 'table' then return nil end
     local clean = {}
     local count = 0
@@ -104,7 +106,7 @@ function sanitizeLayout(layout)
                     x = math.max(0.0, math.min(1.0, x)),
                     y = math.max(0.0, math.min(1.0, y)),
                     scale = math.max(0.5, math.min(1.8, scale)),
-                    visible = false, -- All core HUD elements are permanently inactive ("غير نشط")
+                    visible = showAll == true or point.visible ~= false,
                     color = sanitizeHexColor(point.color),
                 }
                 count = count + 1
@@ -140,7 +142,10 @@ loadLayoutForSource = function(src)
             local layout = nil
             if rows and rows[1] and type(rows[1].layout) == 'string' then
                 local ok, decoded = pcall(json.decode, rows[1].layout)
-                if ok then layout = sanitizeLayout(decoded) end
+                if ok and type(decoded) == 'table' then
+                    -- rows saved before hudv = 2 only ever held visible = false
+                    layout = sanitizeLayout(decoded, decoded.hudv ~= 2)
+                end
             end
 
             -- No saved row for this character yet - fall back to the exported/
@@ -186,6 +191,7 @@ RegisterNetEvent('jrs_core:hud:saveLayout', function(layout)
     local character = getAuthoritativeCharacter(src)
     local clean = sanitizeLayout(layout)
     if not character or not clean then return end
+    clean.hudv = 2 -- marks a layout whose visible flags are real (see loadLayoutForSource)
 
     exports.oxmysql:execute(
         ('INSERT INTO `%s` (`identifier`, `charidentifier`, `layout`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `layout` = VALUES(`layout`)'):format(HUD_LAYOUT_TABLE),
