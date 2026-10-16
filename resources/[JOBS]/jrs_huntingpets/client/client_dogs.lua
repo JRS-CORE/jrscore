@@ -1,759 +1,523 @@
--- jrs_huntingpets: Dog Client
-local keys = Config.DogKeys
-local pressTime = 0
-local recentlySpawned = 0
-local currentDogPed = nil
-local currentDogId = nil
-local dogXP = 0
-local fetchedObj = nil
-local Retrieving = false
-local RetrievedEntities = {}
-local FeedTimer = 0
-local recentlyCombat = 0
-local isDogHungry = false
-local notifyHungry = false
-local HuntMode = false
-local isTracking = false
-local AddedFeedPrompts = false
+-- jrs_huntingpets | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_huntingpets | client: the hunting dog
+-- The dog follows the player, can sit, play poses, retrieve animals the player shot (hunt mode), defend
+-- against whoever the player fights and gets hungry. Pups grow with xp (fed with Config.AnimalFood).
 
--- Prompt tables
-local HuntModePrompt = {}
-local FeedPrompt = {}
-local AttackPrompt = {}
-local TrackPrompt = {}
-local StayPrompt = {}
-local FollowPrompt = {}
-local AddedAttackPrompt = {}
-local AddedTrackPrompt = {}
-local SearchDatabasePrompt = {}
+local dog = nil                 -- the dog ped
+local dogId = nil               -- its row id
+local dogXp = 0
+local spawnCooldown = 0         -- seconds until a dog can be called again
+local combatCooldown = 0
+local feedTimer = 0             -- seconds since the last meal
+local hungry, hungryTold, feedPromptsAdded = false, false, false
+local huntMode, fetching, tracking = false, false, false
+local fetched = {}              -- animal -> true once retrieved or ignored
+local anim = false              -- a pose is playing
 
--- ═══════════════════════════════════════════════════════════
--- HELPERS
--- ═══════════════════════════════════════════════════════════
-local function getJob()
-    local me = JRS.Me()
-    return me and me.job or nil
-end
+-- prompts that exist per ped (the dog or a target): kind -> ped -> prompt handle
+local prompts = { follow = {}, stay = {}, hunt = {}, feed = {}, attack = {}, track = {} }
+local offered = { attack = {}, track = {} }          -- target ped -> true once its prompt was made
 
-local function CanTrackDatabase()
-    return getJob() == Config.DogTrackingJob
-end
-
-function GetCurrentDogPed()
-    return currentDogPed
-end
-
--- ═══════════════════════════════════════════════════════════
--- ANIMATIONS
--- ═══════════════════════════════════════════════════════════
-local function AnimationPet(entity, dict, name)
-    local waiting = 0
-    RequestAnimDict(dict)
-    while not HasAnimDictLoaded(dict) do
-        waiting = waiting + 100
-        Wait(100)
-        if waiting > 5000 then break end
-    end
-    TaskPlayAnim(entity, dict, name, 1.0, 1.0, -1, 1, 0, false, false, false)
-end
-
-local function DogEatAnimation()
-    AnimationPet(currentDogPed, "amb_creature_mammal@world_dog_eating_ground@base", "base")
-end
-
-local function DogSitAnimation()
-    AnimationPet(currentDogPed, "amb_creature_mammal@world_dog_sitting@base", "base")
-end
-
--- ═══════════════════════════════════════════════════════════
--- DOG ANIMATIONS MENU (NUI - matches RDR2 leather & gold UI)
--- ═══════════════════════════════════════════════════════════
-local function DogCompanionAnims()
-    return {
-        { animname = L('anim_dog_rollground'), dict = 'amb_creature_mammal@world_dog_roll_ground@idle', dictname = 'idle_c' },
-        { animname = L('anim_dog_begging'), dict = 'amb_creature_mammal@world_dog_begging@idle', dictname = 'idle_a' },
-        { animname = L('anim_dog_resting'), dict = 'amb_creature_mammal@world_dog_resting@base', dictname = 'base' },
-        { animname = L('anim_dog_sleeping'), dict = 'amb_creature_mammal@world_dog_sleeping@base', dictname = 'base' },
-        { animname = L('anim_dog_digging'), dict = 'amb_creature_mammal@world_dog_digging@base', dictname = 'base' },
-        { animname = L('anim_dog_barkingup'), dict = 'amb_creature_mammal@world_dog_barking_up@base', dictname = 'base' },
-        { animname = L('anim_dog_barkingvicious'), dict = 'amb_creature_mammal@world_dog_barking_vicious@base', dictname = 'base' },
-        { animname = L('anim_dog_barkgrowl'), dict = 'amb_creature_mammal@world_dog_bark_growl@base', dictname = 'base' },
-        { animname = L('anim_dog_guardgrowl'), dict = 'amb_creature_mammal@world_dog_guard_growl@base', dictname = 'base' },
-        { animname = L('anim_dog_howlingsitting'), dict = 'amb_creature_mammal@world_dog_howling_sitting@base', dictname = 'base' },
-        { animname = L('anim_dog_sniffingground'), dict = 'amb_creature_mammal@world_dog_sniffing_ground@base', dictname = 'base' },
-        { animname = L('anim_dog_pooping'), dict = 'amb_creature_mammal@world_dog_pooping@base', dictname = 'base' },
-    }
-end
-
+function GetCurrentDogPed() return dog end
 DogAnimActive = false
 
-local RegisterDogTarget
-local StopDogAnimation
+-- ------------------------------------------------------------------ small helpers
 
-RegisterDogTarget = function()
-    if not currentDogPed then return end
-    local options = {
-        {
-            name = 'dog_animations',
-            label = L('ui_dog_actions_title'),
-            icon = 'fa-solid fa-paw',
-            onSelect = function()
-                TriggerEvent('jrs_huntingpets:client:dogAnimations')
-            end,
-            distance = 2.5,
-        },
-    }
-    if DogAnimActive then
-        options[#options + 1] = {
-            name = 'dog_stop_anim',
-            label = L('ui_stop_animation'),
-            icon = 'fa-solid fa-pause',
-            onSelect = function()
-                StopDogAnimation()
-            end,
-            distance = 2.5,
-        }
+local function forgetDog()
+    if dog then
+        JRS.RemoveEntityTarget(dog)
+        DeleteEntity(dog)
     end
-    options[#options + 1] = {
-        name = 'dog_hunt_mode',
-        label = L('ui_huntmode_label', HuntMode and L('ui_on') or L('ui_off')),
-        icon = 'fa-solid fa-crosshairs',
-        onSelect = function()
-            HuntMode = not HuntMode
-            if HuntMode then
-                Notify(L('info_dog_huntmode_on'), '', 'SUCCESS')
-            else
-                Notify(L('info_dog_huntmode_off'), '', 'TIP')
-            end
-            RegisterDogTarget()
-        end,
-        distance = 2.5,
-    }
-    JRS.RemoveEntityTarget(currentDogPed)
-    JRS.AddEntityTarget(currentDogPed, options)
+    dog, dogId = nil, nil
+    if ActivePetType == 'dog' then ActivePetType = nil end
 end
 
-StopDogAnimation = function()
-    if not currentDogPed then return end
-    ClearPedTasks(currentDogPed)
-    ClearPedSecondaryTask(currentDogPed)
-    FreezeEntityPosition(currentDogPed, false)
-    followOwner(currentDogPed, PlayerPedId(), false)
-    DogAnimActive = false
-    RegisterDogTarget()
+local function playOn(ped, dict, name)
+    RequestAnimDict(dict)
+    local waited = 0
+    while not HasAnimDictLoaded(dict) and waited <= 5000 do
+        waited = waited + 100
+        Wait(100)
+    end
+    TaskPlayAnim(ped, dict, name, 1.0, 1.0, -1, 1, 0, false, false, false)
 end
 
-local function PlayDogAnimation(dict, dictname)
-    if not currentDogPed then return end
-    ClearPedTasks(currentDogPed)
-    ClearPedSecondaryTask(currentDogPed)
-    AnimationPet(currentDogPed, dict, dictname)
-    FreezeEntityPosition(currentDogPed, true)
-    DogAnimActive = true
-    RegisterDogTarget()
+local function sit() playOn(dog, 'amb_creature_mammal@world_dog_sitting@base', 'base') end
+local function eat() playOn(dog, 'amb_creature_mammal@world_dog_eating_ground@base', 'base') end
+
+local function addPrompt(kind, entity, control, label)
+    local group = Citizen.InvokeNative(0xB796970BD125FCE8, entity, Citizen.ResultAsLong())
+    local prompt = PromptRegisterBegin()
+    PromptSetControlAction(prompt, control)
+    PromptSetText(prompt, CreateVarString(10, 'LITERAL_STRING', label))
+    PromptSetEnabled(prompt, true)
+    PromptSetVisible(prompt, true)
+    PromptSetStandardMode(prompt, true)
+    PromptSetGroup(prompt, group)
+    PromptRegisterEnd(prompt)
+    prompts[kind][entity] = prompt
+end
+
+local function pressed(kind, entity)
+    local prompt = prompts[kind][entity]
+    return prompt and PromptHasStandardModeCompleted(prompt)
+end
+
+local function toggleHunt()
+    huntMode = not huntMode
+    if huntMode then Notify(L('info_dog_huntmode_on'), '', 'SUCCESS') else Notify(L('info_dog_huntmode_off'), '', 'TIP') end
+end
+
+-- ------------------------------------------------------------------ following and staying
+
+function followOwner(ped, owner, inShop)
+    FreezeEntityPosition(ped, false)
+    ClearPedTasks(ped)
+    ClearPedSecondaryTask(ped)
+    TaskFollowToOffsetOfEntity(ped, owner, 0.0, -1.5, 0.0, 1.0, -1, Config.DogPetAttributes.FollowDistance * 100000000, 1, 1, 0, 0, 1)
+    if inShop then Citizen.InvokeNative(0x489FFCCCE7392B55, ped, owner) end
+end
+
+local function stay(ped)
+    ClearPedTasks(ped)
+    ClearPedSecondaryTask(ped)
+    sit()
+    FreezeEntityPosition(ped, true)
+end
+
+-- ------------------------------------------------------------------ poses and the look-at menu
+
+local POSES <const> = {
+    { 'anim_dog_rollground', 'amb_creature_mammal@world_dog_roll_ground@idle', 'idle_c' },
+    { 'anim_dog_begging', 'amb_creature_mammal@world_dog_begging@idle', 'idle_a' },
+    { 'anim_dog_resting', 'amb_creature_mammal@world_dog_resting@base', 'base' },
+    { 'anim_dog_sleeping', 'amb_creature_mammal@world_dog_sleeping@base', 'base' },
+    { 'anim_dog_digging', 'amb_creature_mammal@world_dog_digging@base', 'base' },
+    { 'anim_dog_barkingup', 'amb_creature_mammal@world_dog_barking_up@base', 'base' },
+    { 'anim_dog_barkingvicious', 'amb_creature_mammal@world_dog_barking_vicious@base', 'base' },
+    { 'anim_dog_barkgrowl', 'amb_creature_mammal@world_dog_bark_growl@base', 'base' },
+    { 'anim_dog_guardgrowl', 'amb_creature_mammal@world_dog_guard_growl@base', 'base' },
+    { 'anim_dog_howlingsitting', 'amb_creature_mammal@world_dog_howling_sitting@base', 'base' },
+    { 'anim_dog_sniffingground', 'amb_creature_mammal@world_dog_sniffing_ground@base', 'base' },
+    { 'anim_dog_pooping', 'amb_creature_mammal@world_dog_pooping@base', 'base' },
+}
+
+local setTargets
+
+local function stopPose()
+    if not dog then return end
+    ClearPedTasks(dog)
+    ClearPedSecondaryTask(dog)
+    FreezeEntityPosition(dog, false)
+    followOwner(dog, PlayerPedId(), false)
+    DogAnimActive, anim = false, false
+    setTargets()
+end
+
+local function startPose(dict, name)
+    if not dog then return end
+    ClearPedTasks(dog)
+    ClearPedSecondaryTask(dog)
+    playOn(dog, dict, name)
+    FreezeEntityPosition(dog, true)
+    DogAnimActive, anim = true, true
+    setTargets()
+end
+
+-- what the player can pick when looking at the dog
+setTargets = function()
+    if not dog then return end
+    local function option(name, label, icon, onSelect) return { name = name, label = label, icon = icon, onSelect = onSelect, distance = 2.5 } end
+
+    local list = { option('dog_animations', L('ui_dog_actions_title'), 'fa-solid fa-paw', function() TriggerEvent('jrs_huntingpets:client:dogAnimations') end) }
+    if DogAnimActive then list[#list + 1] = option('dog_stop_anim', L('ui_stop_animation'), 'fa-solid fa-pause', stopPose) end
+    list[#list + 1] = option('dog_hunt_mode', L('ui_huntmode_label', huntMode and L('ui_on') or L('ui_off')), 'fa-solid fa-crosshairs', function()
+        toggleHunt()
+        setTargets()
+    end)
+
+    JRS.RemoveEntityTarget(dog)
+    JRS.AddEntityTarget(dog, list)
 end
 
 RegisterNetEvent('jrs_huntingpets:client:dogAnimations', function()
-    if not currentDogPed then return end
+    if not dog then return end
 
-    local animations = {
+    local rows = {
         { label = L('prompt_dog_follow'), action = 'follow' },
         { label = L('prompt_dog_stay'), action = 'stay' },
         { label = L('prompt_dog_huntmode'), action = 'huntmode' },
     }
-    if DogAnimActive then
-        animations[#animations + 1] = { label = L('ui_stop_animation'), action = 'stop' }
-    end
-    for _, v in ipairs(DogCompanionAnims()) do
-        animations[#animations + 1] = {
-            label = v.animname,
-            action = 'anim',
-            dict = v.dict,
-            dictname = v.dictname,
-        }
-    end
+    if DogAnimActive then rows[#rows + 1] = { label = L('ui_stop_animation'), action = 'stop' } end
+    for _, pose in ipairs(POSES) do rows[#rows + 1] = { label = L(pose[1]), action = 'anim', dict = pose[2], dictname = pose[3] } end
 
-    SendNUIMessage({ action = 'openDogAnims', title = L('ui_dog_actions_title'), animations = animations, ui = GetUiLocale() })
+    SendNUIMessage({ action = 'openDogAnims', title = L('ui_dog_actions_title'), animations = rows, ui = GetUiLocale() })
     SetNuiFocus(true, true)
 end)
 
-RegisterNUICallback('dogAnimSelect', function(data, cb)
-    cb('ok')
-    if not currentDogPed then
-        SetNuiFocus(false, false)
-        return
-    end
+RegisterNUICallback('dogAnimSelect', function(data, done)
+    done('ok')
     SetNuiFocus(false, false)
-    if data.action == 'stop' then
-        StopDogAnimation()
-    elseif data.action == 'putaway' then
-        TriggerEvent('jrs_huntingpets:client:putawayDog')
-    elseif data.action == 'follow' then
-        FreezeEntityPosition(currentDogPed, false)
-        followOwner(currentDogPed, PlayerPedId(), false)
-    elseif data.action == 'stay' then
-        ClearPedTasks(currentDogPed)
-        ClearPedSecondaryTask(currentDogPed)
-        DogSitAnimation()
-        FreezeEntityPosition(currentDogPed, true)
-    elseif data.action == 'huntmode' then
-        HuntMode = not HuntMode
-        if HuntMode then
-            Notify(L('info_dog_huntmode_on'), '', 'SUCCESS')
-        else
-            Notify(L('info_dog_huntmode_off'), '', 'TIP')
-        end
-    elseif data.action == 'anim' and data.dict and data.dictname then
-        PlayDogAnimation(data.dict, data.dictname)
-    end
+    if not dog then return end
+
+    local act = data.action
+    if act == 'stop' then stopPose()
+    elseif act == 'putaway' then TriggerEvent('jrs_huntingpets:client:putawayDog')
+    elseif act == 'follow' then followOwner(dog, PlayerPedId(), false)
+    elseif act == 'stay' then stay(dog)
+    elseif act == 'huntmode' then toggleHunt()
+    elseif act == 'anim' and data.dict and data.dictname then startPose(data.dict, data.dictname) end
 end)
 
--- ═══════════════════════════════════════════════════════════
--- DOG BEHAVIOR & ATTRIBUTES
--- ═══════════════════════════════════════════════════════════
-local function SetDogAttributes(entity)
-    Citizen.InvokeNative(0x09A59688C26D88DF, entity, 0, 1100)
-    Citizen.InvokeNative(0x09A59688C26D88DF, entity, 1, 1100)
-    Citizen.InvokeNative(0x09A59688C26D88DF, entity, 2, 1100)
-    Citizen.InvokeNative(0x75415EE0CB583760, entity, 0, 1100)
-    Citizen.InvokeNative(0x75415EE0CB583760, entity, 1, 1100)
-    Citizen.InvokeNative(0x75415EE0CB583760, entity, 2, 1100)
-    Citizen.InvokeNative(0x5DA12E025D47D4E5, entity, 0, 10)
-    Citizen.InvokeNative(0x5DA12E025D47D4E5, entity, 1, 10)
-    Citizen.InvokeNative(0x5DA12E025D47D4E5, entity, 2, 10)
-    Citizen.InvokeNative(0x920F9488BD115EFB, entity, 0, 10)
-    Citizen.InvokeNative(0x920F9488BD115EFB, entity, 1, 10)
-    Citizen.InvokeNative(0x920F9488BD115EFB, entity, 2, 10)
-    Citizen.InvokeNative(0xF6A7C08DF2E28B28, entity, 0, 5000.0, false)
-    Citizen.InvokeNative(0xF6A7C08DF2E28B28, entity, 1, 5000.0, false)
-    Citizen.InvokeNative(0xF6A7C08DF2E28B28, entity, 2, 5000.0, false)
-end
+-- ------------------------------------------------------------------ the dog itself
 
-local function setDogBehavior(petPed)
-    local dogGroup = GetPedRelationshipGroupHash(petPed)
-    local groups = {
-        GetHashKey('PLAYER'), 143493179, -2040077242, 1222652248, 1077299173,
-        -887307738, -1998572072, -661858713, 1232372459, -1836932466,
-        1878159675, 1078461828, -1535431934, 1862763509, -1663301869,
-        -1448293989, -1201903818, -886193798, -1996978098, 555364152,
-        -2020052692, 707888648, 378397108, -350651841, -1538724068,
-        1030835986, -1919885972, -1976316465, 841021282, 889541022,
-        -1329647920, -319516747, -767591988, -989642646, 1986610512, -1683752762
-    }
-    for _, g in ipairs(groups) do
-        SetRelationshipBetweenGroups(1, dogGroup, g)
+-- rewards the dog cannot be spoiled by pain or fear: levels for health, stamina, attack and defence
+local function toughen(ped)
+    for core = 0, 2 do
+        Citizen.InvokeNative(0x09A59688C26D88DF, ped, core, 1100)
+        Citizen.InvokeNative(0x75415EE0CB583760, ped, core, 1100)
+        Citizen.InvokeNative(0x5DA12E025D47D4E5, ped, core, 10)
+        Citizen.InvokeNative(0x920F9488BD115EFB, ped, core, 10)
+        Citizen.InvokeNative(0xF6A7C08DF2E28B28, ped, core, 5000.0, false)
     end
 end
 
-function followOwner(dogPed, playerPed, isInShop)
-    FreezeEntityPosition(dogPed, false)
-    ClearPedTasks(dogPed)
-    ClearPedSecondaryTask(dogPed)
-    TaskFollowToOffsetOfEntity(dogPed, playerPed, 0.0, -1.5, 0.0, 1.0, -1, Config.DogPetAttributes.FollowDistance * 100000000, 1, 1, 0, 0, 1)
-    if isInShop then
-        Citizen.InvokeNative(0x489FFCCCE7392B55, dogPed, playerPed)
-    end
+local FRIENDS <const> = {
+    `PLAYER`, 143493179, -2040077242, 1222652248, 1077299173, -887307738, -1998572072, -661858713, 1232372459, -1836932466,
+    1878159675, 1078461828, -1535431934, 1862763509, -1663301869, -1448293989, -1201903818, -886193798, -1996978098, 555364152,
+    -2020052692, 707888648, 378397108, -350651841, -1538724068, 1030835986, -1919885972, -1976316465, 841021282, 889541022,
+    -1329647920, -319516747, -767591988, -989642646, 1986610512, -1683752762,
+}
+
+local function befriend(ped)
+    local mine = GetPedRelationshipGroupHash(ped)
+    for _, other in ipairs(FRIENDS) do SetRelationshipBetweenGroups(1, mine, other) end
 end
 
-local function petStay(dogPed)
-    ClearPedTasks(dogPed)
-    ClearPedSecondaryTask(dogPed)
-    DogSitAnimation()
-    FreezeEntityPosition(dogPed, true)
-end
-
-local function SET_BLIP_TYPE(animal)
-    return Citizen.InvokeNative(0x23f74c2FDA6E7C61, -1749618580, animal)
-end
-
-local function SET_PED_OUTFIT_PRESET(dog, preset)
-    return Citizen.InvokeNative(0x77FF8D35EEC6BBC4, dog, preset, 0)
-end
-
--- ═══════════════════════════════════════════════════════════
--- PROMPTS
--- ═══════════════════════════════════════════════════════════
-local function AddPrompt(promptTable, entity, controlAction, label)
-    local group = Citizen.InvokeNative(0xB796970BD125FCE8, entity, Citizen.ResultAsLong())
-    promptTable[entity] = PromptRegisterBegin()
-    PromptSetControlAction(promptTable[entity], controlAction)
-    local str = CreateVarString(10, 'LITERAL_STRING', label)
-    PromptSetText(promptTable[entity], str)
-    PromptSetEnabled(promptTable[entity], true)
-    PromptSetVisible(promptTable[entity], true)
-    PromptSetStandardMode(promptTable[entity], true)
-    PromptSetGroup(promptTable[entity], group)
-    PromptRegisterEnd(promptTable[entity])
-end
-
--- ═══════════════════════════════════════════════════════════
--- SPAWN DOG
--- ═══════════════════════════════════════════════════════════
-local function spawnDog(model, player, x, y, z, h, skin, playerPed, isdead, isshop, xp)
-    local EntityPedCoord = GetEntityCoords(player)
-    local EntitydogCoord = currentDogPed and GetEntityCoords(currentDogPed) or EntityPedCoord
-
-    if #(EntityPedCoord - EntitydogCoord) > 100.0 or isshop or isdead or currentDogPed == nil then
-        if currentDogPed ~= nil then
-            JRS.RemoveEntityTarget(currentDogPed)
-            DeleteEntity(currentDogPed)
-        end
-
-        dogXP = xp
-        local hash = GetHashKey(model)
-        RequestModel(hash)
-        while not HasModelLoaded(hash) do Wait(500) end
-
-        currentDogPed = CreatePed(hash, x, y, z, h, true, true)
-        NetworkRegisterEntityAsNetworked(currentDogPed)
-        local netId = NetworkGetNetworkIdFromEntity(currentDogPed)
-        SetNetworkIdExistsOnAllMachines(netId, true)
-
-        SetEntityAsMissionEntity(currentDogPed, true, true)
-        SET_PED_OUTFIT_PRESET(currentDogPed, skin)
-        SET_BLIP_TYPE(currentDogPed)
-
-        if Config.DogPetAttributes.Invincible then
-            SetEntityInvincible(currentDogPed, true)
-        end
-
-        -- Add prompts
-        AddPrompt(FollowPrompt, currentDogPed, 0x63A38F2C, L('prompt_dog_follow'))
-
-        if Config.NoFear then
-            Citizen.InvokeNative(0x013A7BA5015C1372, currentDogPed, true)
-            Citizen.InvokeNative(0x3B005FF0538ED2A9, currentDogPed)
-            Citizen.InvokeNative(0xAEB97D84CDF3C00B, currentDogPed, false)
-            Citizen.InvokeNative(0x9F52AD32D5AA413D, currentDogPed, false)
-            Citizen.InvokeNative(0xC1B1E9A034A63A62, currentDogPed, 0)
-            Citizen.InvokeNative(0xB8B6430EAD2D2437, currentDogPed, false)
-        end
-
-        SetDogAttributes(currentDogPed)
-        setDogBehavior(currentDogPed)
-        SetPedAsGroupMember(currentDogPed, GetPedGroupIndex(playerPed))
-
-        -- Growth system
-        if Config.RaiseAnimal then
-            local halfGrowth = Config.DogFullGrownXp / 2
-            if dogXP >= Config.DogFullGrownXp then
-                SetPedScale(currentDogPed, 1.0)
-                AddPrompt(StayPrompt, currentDogPed, 0x9959A6F0, L('prompt_dog_stay'))
-                AddPrompt(HuntModePrompt, currentDogPed, 0xB2F377E8, L('prompt_dog_huntmode'))
-            elseif dogXP >= halfGrowth then
-                SetPedScale(currentDogPed, 0.8)
-                AddPrompt(StayPrompt, currentDogPed, 0x9959A6F0, L('prompt_dog_stay'))
-            else
-                SetPedScale(currentDogPed, 0.6)
-            end
-        else
-            dogXP = Config.DogFullGrownXp
-            AddPrompt(StayPrompt, currentDogPed, 0x9959A6F0, L('prompt_dog_stay'))
-            AddPrompt(HuntModePrompt, currentDogPed, 0xB2F377E8, L('prompt_dog_huntmode'))
-        end
-
-        -- the JRS interaction prompt: Dog Actions + Stop Animation (only while posed)
-        DogAnimActive = false
-        RegisterDogTarget()
-
-        ActivePetType = 'dog'
-
-        while (GetScriptTaskStatus(currentDogPed, 0x4924437d) ~= 8) do Wait(1000) end
-        followOwner(currentDogPed, player, isshop)
-
-    end
-end
-
--- ═══════════════════════════════════════════════════════════
--- SPAWN DOG EVENT (from server)
--- ═══════════════════════════════════════════════════════════
-RegisterNetEvent('jrs_huntingpets:client:spawnDog')
-AddEventHandler('jrs_huntingpets:client:spawnDog', function(dogId, dog, skin, isInShop, xp)
-    currentDogId = dogId
-    if currentDogPed then return end
-    if HasActivePet() and ActivePetType ~= 'dog' then
-        Notify(L('error_one_pet_only'), '', 'ERROR')
+-- size and abilities follow the growth stage: pup, half grown, full grown
+local function applyGrowth(ped)
+    if not Config.RaiseAnimal then
+        dogXp = Config.DogFullGrownXp
+        addPrompt('stay', ped, 0x9959A6F0, L('prompt_dog_stay'))
+        addPrompt('hunt', ped, 0xB2F377E8, L('prompt_dog_huntmode'))
         return
     end
 
-    if recentlySpawned > 0 then return end
-    recentlySpawned = Config.DogPetAttributes.SpawnLimiter
-
-    isDogHungry = false
-    FeedTimer = 0
-    notifyHungry = false
-    AddedFeedPrompts = false
-
-    local player = PlayerPedId()
-    local x, y, z, heading
-
-    if not isInShop then
-        x, y, z = table.unpack(GetOffsetFromEntityInWorldCoords(player, 0.0, -5.0, 0.3))
-        local _, b = GetGroundZAndNormalFor_3dCoord(x, y, z + 10)
-        z = b
-    end
-
-    if isInShop then
-        for _, v in pairs(Config.Shops) do
-            local playerCoords = GetEntityCoords(PlayerPedId())
-            local distance = #(playerCoords - v.npccoords.xyz)
-            if distance < Config.DistanceSpawn then
-                local sx, sy, sz, sw = v.Spawndog.x, v.Spawndog.y, v.Spawndog.z, v.Spawndog.w
-                spawnDog(dog, player, sx, sy, sz, sw, skin, PlayerPedId(), false, true, xp)
-                return
-            end
-        end
+    if dogXp >= Config.DogFullGrownXp then
+        SetPedScale(ped, 1.0)
+        addPrompt('stay', ped, 0x9959A6F0, L('prompt_dog_stay'))
+        addPrompt('hunt', ped, 0xB2F377E8, L('prompt_dog_huntmode'))
+    elseif dogXp >= Config.DogFullGrownXp / 2 then
+        SetPedScale(ped, 0.8)
+        addPrompt('stay', ped, 0x9959A6F0, L('prompt_dog_stay'))
     else
-        local EntityIsDead = currentDogPed ~= nil and IsEntityDead(currentDogPed)
-        spawnDog(dog, player, x, y, z, heading, skin, PlayerPedId(), EntityIsDead, false, xp)
-    end
-end)
-
--- ═══════════════════════════════════════════════════════════
--- PUT AWAY / SELL DOG
--- ═══════════════════════════════════════════════════════════
-RegisterNetEvent('jrs_huntingpets:client:putawayDog')
-AddEventHandler('jrs_huntingpets:client:putawayDog', function()
-    if currentDogPed then
-        DogAnimActive = false
-        JRS.RemoveEntityTarget(currentDogPed)
-        DeleteEntity(currentDogPed)
-        currentDogPed = nil
-        currentDogId = nil
-        if ActivePetType == 'dog' then ActivePetType = nil end
-    end
-end)
-
-RegisterNetEvent('jrs_huntingpets:client:sellDogConfirm')
-AddEventHandler('jrs_huntingpets:client:sellDogConfirm', function()
-    if currentDogPed then
-        JRS.RemoveEntityTarget(currentDogPed)
-        DeleteEntity(currentDogPed)
-        currentDogPed = nil
-        currentDogId = nil
-        recentlySpawned = 0
-        if ActivePetType == 'dog' then ActivePetType = nil end
-    end
-end)
-
--- ═══════════════════════════════════════════════════════════
--- COMMANDS
--- ═══════════════════════════════════════════════════════════
-RegisterCommand("calldog", function()
-    TriggerServerEvent('jrs_huntingpets:server:loadDog')
-end)
-
-RegisterCommand("fleedog", function()
-    TriggerEvent('jrs_huntingpets:client:putawayDog')
-end)
-
--- Hotkey
-Citizen.CreateThread(function()
-    while true do
-        if Config.CallDogKey then
-            if IsControlJustPressed(0, keys[Config.DogTriggerKeys.CallDog]) then
-                TriggerServerEvent('jrs_huntingpets:server:loadDog')
-            end
-        end
-        Citizen.Wait(1)
-    end
-end)
-
--- ═══════════════════════════════════════════════════════════
--- HUNT MODE & RETRIEVAL
--- ═══════════════════════════════════════════════════════════
-function GetClosestAnimalPed(playerPed, radius)
-    local playerCoords = GetEntityCoords(playerPed)
-    local itemset = CreateItemset(true)
-    local size = Citizen.InvokeNative(0x59B57C4B06531E1E, playerCoords, radius, itemset, 1, Citizen.ResultAsInteger())
-    local closestPed
-    local minDist = radius
-    if size > 0 then
-        for i = 0, size - 1 do
-            local ped = GetIndexedItemInItemset(i, itemset)
-            if playerPed ~= ped then
-                local pedType = GetPedType(ped)
-                local model = GetEntityModel(ped)
-                if pedType == 28 and IsEntityDead(ped) and not RetrievedEntities[ped] and Config.DogRetrievableAnimals[model] then
-                    local pedCoords = GetEntityCoords(ped)
-                    local distance = #(playerCoords - pedCoords)
-                    if distance < minDist then
-                        closestPed = ped
-                        minDist = distance
-                    end
-                end
-            end
-        end
-    end
-    if IsItemsetValid(itemset) then DestroyItemset(itemset) end
-    return closestPed
-end
-
-function RetrieveKill(ClosestPed)
-    fetchedObj = ClosestPed
-    local ped = PlayerPedId()
-    local coords = GetEntityCoords(fetchedObj)
-    TaskGoToCoordAnyMeans(currentDogPed, coords, 2.0, 0, 0, 786603, 0xbf800000)
-    Retrieving = true
-    while true do
-        Citizen.Wait(2000)
-        TaskGoToCoordAnyMeans(currentDogPed, coords, 2.0, 0, 0, 786603, 0xbf800000)
-        local petCoords = GetEntityCoords(currentDogPed)
-        coords = GetEntityCoords(fetchedObj)
-        if GetDistanceBetweenCoords(coords, petCoords, true) <= 2.5 then
-            AttachEntityToEntity(fetchedObj, currentDogPed, GetPedBoneIndex(currentDogPed, 21030), 0.14, 0.14, 0.09798, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
-            RetrievedEntities[fetchedObj] = true
-            ReturnKillToPlayer(fetchedObj, ped)
-            break
-        end
+        SetPedScale(ped, 0.6)
     end
 end
 
-function ReturnKillToPlayer(fetchedKill, playerPed)
-    local coords = GetEntityCoords(playerPed)
-    TaskGoToCoordAnyMeans(currentDogPed, coords, 1.5, 0, 0, 786603, 0xbf800000)
-    while true do
-        Citizen.Wait(2000)
-        coords = GetEntityCoords(playerPed)
-        local coords2 = GetEntityCoords(currentDogPed)
-        TaskGoToCoordAnyMeans(currentDogPed, coords, 1.5, 0, 0, 786603, 0xbf800000)
-        if GetDistanceBetweenCoords(coords, coords2, true) <= 2.0 then
-            DetachEntity(fetchedObj)
-            Wait(100)
-            PlaceObjectOnGroundProperly(fetchedObj, true)
-            Retrieving = false
-            followOwner(currentDogPed, playerPed, false)
-            break
+local function makeDog(model, owner, at, skin, inShop, xp)
+    if dog then
+        JRS.RemoveEntityTarget(dog)
+        DeleteEntity(dog)
+    end
+    dogXp = xp
+
+    local hash = joaat(model)
+    RequestModel(hash)
+    while not HasModelLoaded(hash) do Wait(500) end
+
+    dog = CreatePed(hash, at.x, at.y, at.z, at.h, true, true)
+    NetworkRegisterEntityAsNetworked(dog)
+    SetNetworkIdExistsOnAllMachines(NetworkGetNetworkIdFromEntity(dog), true)
+    SetEntityAsMissionEntity(dog, true, true)
+    Citizen.InvokeNative(0x77FF8D35EEC6BBC4, dog, skin, 0)                 -- outfit preset
+    Citizen.InvokeNative(0x23f74c2FDA6E7C61, -1749618580, dog)             -- map blip
+    if Config.DogPetAttributes.Invincible then SetEntityInvincible(dog, true) end
+
+    addPrompt('follow', dog, 0x63A38F2C, L('prompt_dog_follow'))
+
+    if Config.NoFear then
+        Citizen.InvokeNative(0x013A7BA5015C1372, dog, true)
+        Citizen.InvokeNative(0x3B005FF0538ED2A9, dog)
+        Citizen.InvokeNative(0xAEB97D84CDF3C00B, dog, false)
+        Citizen.InvokeNative(0x9F52AD32D5AA413D, dog, false)
+        Citizen.InvokeNative(0xC1B1E9A034A63A62, dog, 0)
+        Citizen.InvokeNative(0xB8B6430EAD2D2437, dog, false)
+    end
+
+    toughen(dog)
+    befriend(dog)
+    SetPedAsGroupMember(dog, GetPedGroupIndex(owner))
+    applyGrowth(dog)
+
+    DogAnimActive = false
+    setTargets()
+    ActivePetType = 'dog'
+
+    while GetScriptTaskStatus(dog, 0x4924437d) ~= 8 do Wait(1000) end
+    followOwner(dog, owner, inShop)
+end
+
+RegisterNetEvent('jrs_huntingpets:client:spawnDog', function(id, model, skin, inShop, xp)
+    dogId = id
+    if dog then return end
+    if HasActivePet() and ActivePetType ~= 'dog' then return Notify(L('error_one_pet_only'), '', 'ERROR') end
+    if spawnCooldown > 0 then return end
+    spawnCooldown = Config.DogPetAttributes.SpawnLimiter
+
+    hungry, feedTimer, hungryTold, feedPromptsAdded = false, 0, false, false
+
+    local me = PlayerPedId()
+    if not inShop then
+        local x, y, z = table.unpack(GetOffsetFromEntityInWorldCoords(me, 0.0, -5.0, 0.3))
+        local _, ground = GetGroundZAndNormalFor_3dCoord(x, y, z + 10)
+        return makeDog(model, me, { x = x, y = y, z = ground }, skin, false, xp)
+    end
+
+    -- from the shop: the dog appears at the shop that is close
+    for _, shop in pairs(Config.Shops) do
+        if #(GetEntityCoords(me) - shop.npccoords.xyz) < Config.DistanceSpawn then
+            local s = shop.Spawndog
+            return makeDog(model, me, { x = s.x, y = s.y, z = s.z, h = s.w }, skin, true, xp)
         end
+    end
+end)
+
+RegisterNetEvent('jrs_huntingpets:client:putawayDog', function()
+    if not dog then return end
+    DogAnimActive = false
+    forgetDog()
+end)
+
+RegisterNetEvent('jrs_huntingpets:client:sellDogConfirm', function()
+    if not dog then return end
+    forgetDog()
+    spawnCooldown = 0
+end)
+
+RegisterCommand('calldog', function() TriggerServerEvent('jrs_huntingpets:server:loadDog') end)
+RegisterCommand('fleedog', function() TriggerEvent('jrs_huntingpets:client:putawayDog') end)
+
+CreateThread(function()
+    while true do
+        if Config.CallDogKey and IsControlJustPressed(0, Config.DogKeys[Config.DogTriggerKeys.CallDog]) then
+            TriggerServerEvent('jrs_huntingpets:server:loadDog')
+        end
+        Wait(1)
+    end
+end)
+
+-- ------------------------------------------------------------------ retrieving what the player shot
+
+-- animals in `radius` of `ped` that satisfy `want(entity)`; the closest one
+local function closestNear(ped, radius, want)
+    local at = GetEntityCoords(ped)
+    local set = CreateItemset(true)
+    local count = Citizen.InvokeNative(0x59B57C4B06531E1E, at, radius, set, 1, Citizen.ResultAsInteger())
+    local best, bestAway = nil, radius
+    for i = 0, count - 1 do
+        local entity = GetIndexedItemInItemset(i, set)
+        if entity ~= ped and want(entity) then
+            local away = #(at - GetEntityCoords(entity))
+            if away < bestAway then best, bestAway = entity, away end
+        end
+    end
+    if IsItemsetValid(set) then DestroyItemset(set) end
+    return best
+end
+
+function GetClosestAnimalPed(ped, radius)
+    return closestNear(ped, radius, function(e)
+        return GetPedType(e) == 28 and IsEntityDead(e) and not fetched[e] and Config.DogRetrievableAnimals[GetEntityModel(e)]
+    end)
+end
+
+-- note: like the original this returns the LAST ped in combat with the player, not the nearest
+function GetClosestFightingPed(ped, radius)
+    local found
+    local at = GetEntityCoords(ped)
+    local set = CreateItemset(true)
+    local count = Citizen.InvokeNative(0x59B57C4B06531E1E, at, radius, set, 1, Citizen.ResultAsInteger())
+    for i = 0, count - 1 do
+        local entity = GetIndexedItemInItemset(i, set)
+        if entity ~= ped and entity ~= dog and IsPedInCombat(ped, entity) then found = entity end
+    end
+    if IsItemsetValid(set) then DestroyItemset(set) end
+    return found
+end
+
+-- walk to `where()` until close; true when reached
+local function goTo(where, closeEnough, speed)
+    while true do
+        Wait(2000)
+        local at = where()
+        TaskGoToCoordAnyMeans(dog, at, speed, 0, 0, 786603, 0xbf800000)
+        if #(at - GetEntityCoords(dog)) <= closeEnough then return end
     end
 end
 
--- ═══════════════════════════════════════════════════════════
--- MAIN DOG LOOP (hunt mode, feeding, death, combat)
--- ═══════════════════════════════════════════════════════════
-Citizen.CreateThread(function()
+function RetrieveKill(prey)
+    local me = PlayerPedId()
+    fetching = true
+    TaskGoToCoordAnyMeans(dog, GetEntityCoords(prey), 2.0, 0, 0, 786603, 0xbf800000)
+    goTo(function() return GetEntityCoords(prey) end, 2.5, 2.0)
+
+    AttachEntityToEntity(prey, dog, GetPedBoneIndex(dog, 21030), 0.14, 0.14, 0.09798, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
+    fetched[prey] = true
+    ReturnKillToPlayer(prey, me)
+end
+
+function ReturnKillToPlayer(prey, me)
+    TaskGoToCoordAnyMeans(dog, GetEntityCoords(me), 1.5, 0, 0, 786603, 0xbf800000)
+    goTo(function() return GetEntityCoords(me) end, 2.0, 1.5)
+
+    DetachEntity(prey)
+    Wait(100)
+    PlaceObjectOnGroundProperly(prey, true)
+    fetching = false
+    followOwner(dog, me, false)
+end
+
+-- ------------------------------------------------------------------ the dog's day: hunt, defend, hunger, death
+
+CreateThread(function()
     while true do
-        Citizen.Wait(1000)
-        -- Hunt mode retrieval
-        if currentDogPed and not Retrieving and not isDogHungry and HuntMode then
-            local canHunt = not Config.RaiseAnimal or dogXP >= Config.DogFullGrownXp
-            if canHunt then
-                local ped = PlayerPedId()
-                local ClosestPed = GetClosestAnimalPed(ped, Config.DogSearchRadius)
-                if ClosestPed then
-                    local pedType = GetPedType(ClosestPed)
-                    if pedType == 28 and IsEntityDead(ClosestPed) and not RetrievedEntities[ClosestPed] then
-                        local whoKilledPed = GetPedSourceOfDeath(ClosestPed)
-                        if ped == whoKilledPed then
-                            local model = GetEntityModel(ClosestPed)
-                            if Config.DogRetrievableAnimals[model] then
-                                RetrieveKill(ClosestPed)
-                            end
-                        else
-                            RetrievedEntities[ClosestPed] = true
-                        end
-                    end
+        Wait(1000)
+
+        if dog and not fetching and not hungry and huntMode and (not Config.RaiseAnimal or dogXp >= Config.DogFullGrownXp) then
+            local me = PlayerPedId()
+            local prey = GetClosestAnimalPed(me, Config.DogSearchRadius)
+            if prey and GetPedType(prey) == 28 and IsEntityDead(prey) and not fetched[prey] then
+                if GetPedSourceOfDeath(prey) == me then
+                    if Config.DogRetrievableAnimals[GetEntityModel(prey)] then RetrieveKill(prey) end
+                else
+                    fetched[prey] = true                          -- not the player's kill: never fetch it
                 end
             end
         end
 
-        -- Defensive mode
-        if currentDogPed and Config.DefensiveMode and recentlyCombat <= 0 then
-            local ped = PlayerPedId()
-            local enemyPed = GetClosestFightingPed(ped, 50.0)
-            if enemyPed then
-                ClearPedTasks(currentDogPed)
-                TaskCombatPed(currentDogPed, enemyPed, 0, 16)
-                recentlyCombat = 15
+        if dog and Config.DefensiveMode and combatCooldown <= 0 then
+            local enemy = GetClosestFightingPed(PlayerPedId(), 50.0)
+            if enemy then
+                ClearPedTasks(dog)
+                TaskCombatPed(dog, enemy, 0, 16)
+                combatCooldown = 15
             end
         end
 
-        -- Feed timer
-        if currentDogPed then
-            FeedTimer = FeedTimer + 1
-            if Config.DogFeedInterval <= FeedTimer then
-                isDogHungry = true
-                if not AddedFeedPrompts then
-                    AddPrompt(FeedPrompt, currentDogPed, 0xCEFD9220, L('prompt_dog_feed'))
-                    AddedFeedPrompts = true
+        if dog then
+            feedTimer = feedTimer + 1
+            if feedTimer >= Config.DogFeedInterval then
+                hungry = true
+                if not feedPromptsAdded then
+                    addPrompt('feed', dog, 0xCEFD9220, L('prompt_dog_feed'))
+                    feedPromptsAdded = true
                 end
-                if not notifyHungry and Config.NotifyWhenHungry then
+                if not hungryTold and Config.NotifyWhenHungry then
                     Notify(L('info_hungry'), '', 'TIP')
-                    notifyHungry = true
+                    hungryTold = true
                 end
             end
 
-            -- Death check
-            if IsEntityDead(currentDogPed) then
-                recentlySpawned = Config.DogPetAttributes.DeathCooldown
+            if IsEntityDead(dog) then
+                spawnCooldown = Config.DogPetAttributes.DeathCooldown
                 Notify(L('error_petdead'), '', 'ERROR')
                 Wait(3000)
-                JRS.RemoveEntityTarget(currentDogPed)
-                DeleteEntity(currentDogPed)
-                currentDogPed = nil
-                currentDogId = nil
-                if ActivePetType == 'dog' then ActivePetType = nil end
+                forgetDog()
             end
         end
 
-        if recentlySpawned > 0 then recentlySpawned = recentlySpawned - 1 end
-        if recentlyCombat > 0 then recentlyCombat = recentlyCombat - 1 end
+        if spawnCooldown > 0 then spawnCooldown = spawnCooldown - 1 end
+        if combatCooldown > 0 then combatCooldown = combatCooldown - 1 end
     end
 end)
 
-function GetClosestFightingPed(playerPed, radius)
-    local playerCoords = GetEntityCoords(playerPed)
-    local itemset = CreateItemset(true)
-    local size = Citizen.InvokeNative(0x59B57C4B06531E1E, playerCoords, radius, itemset, 1, Citizen.ResultAsInteger())
-    local closestPed
-    local minDist = radius
-    if size > 0 then
-        for i = 0, size - 1 do
-            local ped = GetIndexedItemInItemset(i, itemset)
-            if playerPed ~= ped and ped ~= currentDogPed then
-                if IsPedInCombat(playerPed, ped) then
-                    local pedCoords = GetEntityCoords(ped)
-                    closestPed = ped
-                    minDist = #(playerCoords - pedCoords)
-                end
-            end
-        end
-    end
-    if IsItemsetValid(itemset) then DestroyItemset(itemset) end
-    return closestPed
+-- ------------------------------------------------------------------ prompts on what the player aims at
+
+-- should a prompt be made for `target`, given the Only* settings of that kind?
+local function wanted(target, onlyAnimals, onlyNpc, onlyPlayers)
+    if onlyAnimals and GetPedType(target) == 28 then return true end
+    if onlyNpc and not IsPedAPlayer(target) then return true end
+    if onlyPlayers and IsPedAPlayer(target) then return true end
+    return not onlyAnimals and not onlyNpc and not onlyPlayers
 end
 
--- ═══════════════════════════════════════════════════════════
--- PROMPT HANDLING LOOP
--- ═══════════════════════════════════════════════════════════
-Citizen.CreateThread(function()
+local function feedNow(me)
+    TaskTurnPedToFaceEntity(me, dog, 5000)
+    TaskTurnPedToFaceEntity(dog, me, 5000)
+    TaskStartScenarioInPlace(me, joaat('WORLD_HUMAN_CROUCH_INSPECT'), 60000, true, false, false, false)
+    Wait(2000)
+    eat()
+    Wait(4000)
+    ClearPedTasks(me)
+    Wait(4000)
+    ClearPedTasks(dog)
+    followOwner(dog, me, false)
+    TriggerServerEvent('jrs_huntingpets:server:feedDog', dogId)
+end
+
+CreateThread(function()
     while true do
         Wait(0)
         local id = PlayerId()
-        if IsPlayerTargettingAnything(id) then
-            local result, entity = GetPlayerTargetEntity(id)
-
-            -- Feed
-            if FeedPrompt[entity] and PromptHasStandardModeCompleted(FeedPrompt[entity]) then
-                if entity == currentDogPed and Config.DogFeedInterval <= FeedTimer then
-                    local ped = PlayerPedId()
-                    TaskTurnPedToFaceEntity(ped, currentDogPed, 5000)
-                    TaskTurnPedToFaceEntity(currentDogPed, ped, 5000)
-                    TaskStartScenarioInPlace(ped, GetHashKey('WORLD_HUMAN_CROUCH_INSPECT'), 60000, true, false, false, false)
-                    Wait(2000)
-                    DogEatAnimation()
-                    Wait(4000)
-                    ClearPedTasks(ped)
-                    Wait(4000)
-                    ClearPedTasks(currentDogPed)
-                    followOwner(currentDogPed, ped, false)
-                    TriggerServerEvent('jrs_huntingpets:server:feedDog', currentDogId)
-                end
-                Wait(2000)
-            end
-
-            -- Follow
-            if FollowPrompt[entity] and PromptHasStandardModeCompleted(FollowPrompt[entity]) then
-                if isTracking then
-                    isTracking = false
-                    ClearPedTasks(currentDogPed)
-                end
-                followOwner(currentDogPed, PlayerPedId(), false)
-                Wait(2000)
-            end
-
-            -- Stay
-            if StayPrompt[entity] and PromptHasStandardModeCompleted(StayPrompt[entity]) then
-                petStay(currentDogPed)
-                Wait(2000)
-            end
-
-            -- Attack
-            if AttackPrompt[entity] and PromptHasStandardModeCompleted(AttackPrompt[entity]) then
-                local retval, group = AddRelationshipGroup("attackedPeds")
-                SetPedRelationshipGroupHash(entity, group)
-                SetRelationshipBetweenGroups(5, GetPedRelationshipGroupHash(currentDogPed), GetPedRelationshipGroupHash(entity))
-                TaskCombatPed(currentDogPed, entity, 0, 16)
-            end
-
-            -- Track
-            if TrackPrompt[entity] and PromptHasStandardModeCompleted(TrackPrompt[entity]) then
-                TaskFollowToOffsetOfEntity(currentDogPed, entity, 0.0, -1.5, 0.0, 1.0, -1, 2 * 100000000, 1, 1, 0, 0, 1)
-            end
-
-            -- Hunt Mode
-            if HuntModePrompt[entity] and PromptHasStandardModeCompleted(HuntModePrompt[entity]) then
-                HuntMode = not HuntMode
-                if HuntMode then
-                    Notify(L('info_dog_huntmode_on'), '', 'SUCCESS')
-                else
-                    Notify(L('info_dog_huntmode_off'), '', 'TIP')
-                end
-            end
-
-            -- Add attack/track prompts for targets
-            if Config.AttackCommand and currentDogPed then
-                if not AddedAttackPrompt[entity] and entity ~= currentDogPed then
-                    local shouldAdd = false
-                    if Config.AttackOnlyAnimals and GetPedType(entity) == 28 then shouldAdd = true
-                    elseif Config.AttackOnlyNPC and not IsPedAPlayer(entity) then shouldAdd = true
-                    elseif Config.AttackOnlyPlayers and IsPedAPlayer(entity) then shouldAdd = true
-                    elseif not Config.AttackOnlyAnimals and not Config.AttackOnlyNPC and not Config.AttackOnlyPlayers then shouldAdd = true end
-                    if shouldAdd then
-                        AddPrompt(AttackPrompt, entity, 0x63A38F2C, L('prompt_dog_attack'))
-                        AddedAttackPrompt[entity] = true
-                    end
-                end
-            end
-
-            if Config.TrackCommand and currentDogPed then
-                if not AddedTrackPrompt[entity] and entity ~= currentDogPed then
-                    local shouldAdd = false
-                    if Config.TrackOnlyAnimals and GetPedType(entity) == 28 then shouldAdd = true
-                    elseif Config.TrackOnlyNPC and not IsPedAPlayer(entity) then shouldAdd = true
-                    elseif Config.TrackOnlyPlayers and IsPedAPlayer(entity) then shouldAdd = true
-                    elseif not Config.TrackOnlyAnimals and not Config.TrackOnlyNPC and not Config.TrackOnlyPlayers then shouldAdd = true end
-                    if shouldAdd then
-                        AddPrompt(TrackPrompt, entity, 0x9959A6F0, L('prompt_dog_track'))
-                        AddedTrackPrompt[entity] = true
-                    end
-                end
-            end
-        else
+        if not IsPlayerTargettingAnything(id) then
             Wait(500)
-        end
-    end
-end)
-
--- ═══════════════════════════════════════════════════════════
--- DOG FED EVENT (from server)
--- ═══════════════════════════════════════════════════════════
-RegisterNetEvent('jrs_huntingpets:client:dogFed')
-AddEventHandler('jrs_huntingpets:client:dogFed', function(newXP)
-    if Config.RaiseAnimal then
-        dogXP = newXP
-        local halfGrowth = Config.DogFullGrownXp / 2
-        if dogXP >= Config.DogFullGrownXp then
-            SetPedScale(currentDogPed, 1.0)
-            AddPrompt(StayPrompt, currentDogPed, 0x9959A6F0, L('prompt_dog_stay'))
-            AddPrompt(HuntModePrompt, currentDogPed, 0xB2F377E8, L('prompt_dog_huntmode'))
-        elseif dogXP >= halfGrowth then
-            SetPedScale(currentDogPed, 0.8)
-            AddPrompt(StayPrompt, currentDogPed, 0x9959A6F0, L('prompt_dog_stay'))
         else
-            SetPedScale(currentDogPed, 0.6)
+            local _, entity = GetPlayerTargetEntity(id)
+
+            if pressed('feed', entity) then
+                if entity == dog and feedTimer >= Config.DogFeedInterval then feedNow(PlayerPedId()) end
+                Wait(2000)
+            end
+            if pressed('follow', entity) then
+                if tracking then
+                    tracking = false
+                    ClearPedTasks(dog)
+                end
+                followOwner(dog, PlayerPedId(), false)
+                Wait(2000)
+            end
+            if pressed('stay', entity) then
+                stay(dog)
+                Wait(2000)
+            end
+            if pressed('attack', entity) then
+                local _, group = AddRelationshipGroup('attackedPeds')
+                SetPedRelationshipGroupHash(entity, group)
+                SetRelationshipBetweenGroups(5, GetPedRelationshipGroupHash(dog), GetPedRelationshipGroupHash(entity))
+                TaskCombatPed(dog, entity, 0, 16)
+            end
+            if pressed('track', entity) then
+                TaskFollowToOffsetOfEntity(dog, entity, 0.0, -1.5, 0.0, 1.0, -1, 2 * 100000000, 1, 1, 0, 0, 1)
+            end
+            if pressed('hunt', entity) then toggleHunt() end
+
+            -- the target gets attack / track prompts once, when the settings allow
+            if dog and entity ~= dog then
+                if Config.AttackCommand and not offered.attack[entity]
+                    and wanted(entity, Config.AttackOnlyAnimals, Config.AttackOnlyNPC, Config.AttackOnlyPlayers) then
+                    addPrompt('attack', entity, 0x63A38F2C, L('prompt_dog_attack'))
+                    offered.attack[entity] = true
+                end
+                if Config.TrackCommand and not offered.track[entity]
+                    and wanted(entity, Config.TrackOnlyAnimals, Config.TrackOnlyNPC, Config.TrackOnlyPlayers) then
+                    addPrompt('track', entity, 0x9959A6F0, L('prompt_dog_track'))
+                    offered.track[entity] = true
+                end
+            end
         end
     end
-    isDogHungry = false
-    FeedTimer = 0
-    notifyHungry = false
 end)
 
--- ═══════════════════════════════════════════════════════════
--- CLEANUP
--- ═══════════════════════════════════════════════════════════
-AddEventHandler('onResourceStop', function(resource)
-    if resource == GetCurrentResourceName() then
-        TriggerEvent('jrs_huntingpets:client:putawayDog')
+-- the server fed the dog: it may grow
+RegisterNetEvent('jrs_huntingpets:client:dogFed', function(xp)
+    if Config.RaiseAnimal and dog then
+        dogXp = xp
+        applyGrowth(dog)
     end
+    hungry, feedTimer, hungryTold = false, 0, false
+end)
+
+AddEventHandler('onResourceStop', function(resource)
+    if resource == GetCurrentResourceName() then TriggerEvent('jrs_huntingpets:client:putawayDog') end
 end)

@@ -29,11 +29,10 @@ JRS Core API and extended by the JRS TEAM (2026). The projects are credited here
 in force. The JRS TEAM is rewriting these scripts from scratch one by one; a script leaves the table below when
 its rewrite is finished.
 
-**Still based on third-party work: 3 scripts.  Rewritten so far: 57.**
+**Still based on third-party work: 2 scripts.  Rewritten so far: 58.**
 
 | Script | Based on |
 |---|---|
-| `jrs_huntingpets` | [RSG Framework](https://github.com/Rexshack-RedM) |
 | `jrs_mdt` | [RSG Framework](https://github.com/Rexshack-RedM) |
 | `jrs_railroad` | [RSG Framework](https://github.com/Rexshack-RedM) |
 

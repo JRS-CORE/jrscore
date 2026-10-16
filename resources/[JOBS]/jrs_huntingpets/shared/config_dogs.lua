@@ -1,3 +1,4 @@
+-- jrs_huntingpets | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 -- ==========================================================================
 --  JRS CORE  |  jrs_huntingpets  |  shared/config_dogs.lua
 --  hunting pets - hunting dogs and birds with training, tracking and scavenging

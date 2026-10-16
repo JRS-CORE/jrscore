@@ -1,145 +1,80 @@
--- jrs_huntingpets: NPC Spawning
-local spawnedPeds = {}
-local spawnedPetPeds = {}
+-- jrs_huntingpets | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_huntingpets | client: the shop clerks (and an optional display pet) that appear when the player is near
 
---------------------------------------
--- SHOP NPC SPAWN
---------------------------------------
+local clerks, display = {}, {}      -- shop index -> ped
+
+local function fade(ped, from, to)
+    local step = from < to and 51 or -51
+    for alpha = from, to, step do
+        Wait(50)
+        SetEntityAlpha(ped, alpha, false)
+    end
+end
+
+-- a frozen, harmless ped that fades in; `scenario` is optional
+local function makePed(model, at, scenario)
+    RequestModel(model)
+    while not HasModelLoaded(model) do Wait(50) end
+
+    local ped = CreatePed(model, at.x, at.y, at.z - 1.0, at.w, false, false, 0, 0)
+    SetEntityAlpha(ped, 0, false)
+    SetRandomOutfitVariation(ped, true)
+    SetEntityCanBeDamaged(ped, false)
+    SetEntityInvincible(ped, true)
+    FreezeEntityPosition(ped, true)
+    SetBlockingOfNonTemporaryEvents(ped, true)
+    local group = GetPedRelationshipGroupHash(ped)
+    SetPedRelationshipGroupHash(ped, group)
+    SetRelationshipBetweenGroups(1, group, `PLAYER`)
+    if scenario then TaskStartScenarioInPlace(ped, joaat(scenario), -1, true) end
+    if Config.FadeIn then fade(ped, 0, 255) end
+    return ped
+end
+
+function SpawnShopNPC(model, at, scenario)
+    local ped = makePed(model, at, scenario)
+    JRS.AddEntityTarget(ped, { {
+        name = 'jrs_huntingpets_shop', label = L('label_petshop'), icon = 'fa-solid fa-paw', distance = 3.0,
+        onSelect = function() TriggerEvent('jrs_huntingpets:client:openShop') end,
+    } })
+    return ped
+end
+
+function SpawnDecoPet(model, at) return makePed(model, at) end
+
+local function remove(list, key)
+    local ped = list[key]
+    if Config.FadeIn then fade(ped, 255, 0) end
+    DeletePed(ped)
+    list[key] = nil
+end
+
+-- keeps one ped per shop while the player is within Config.DistanceSpawn
+local function keep(list, key, at, spawn)
+    local close = #(GetEntityCoords(PlayerPedId()) - at.xyz) < Config.DistanceSpawn
+    if close and not list[key] then list[key] = spawn()
+    elseif not close and list[key] then remove(list, key) end
+end
+
 CreateThread(function()
     while true do
         Wait(500)
-        for k, v in pairs(Config.Shops) do
-            local playerCoords = GetEntityCoords(PlayerPedId())
-            local distance = #(playerCoords - v.npccoords.xyz)
-
-            if distance < Config.DistanceSpawn and not spawnedPeds[k] then
-                local spawnedPed = SpawnShopNPC(v.npcmodel, v.npccoords, v.scenario)
-                spawnedPeds[k] = { spawnedPed = spawnedPed }
-            end
-
-            if distance >= Config.DistanceSpawn and spawnedPeds[k] then
-                if Config.FadeIn then
-                    for i = 255, 0, -51 do
-                        Wait(50)
-                        SetEntityAlpha(spawnedPeds[k].spawnedPed, i, false)
-                    end
-                end
-                DeletePed(spawnedPeds[k].spawnedPed)
-                spawnedPeds[k] = nil
+        for index, shop in pairs(Config.Shops) do
+            keep(clerks, index, shop.npccoords, function() return SpawnShopNPC(shop.npcmodel, shop.npccoords, shop.scenario) end)
+            -- a display pet only for shops that define one
+            if shop.npcpetcoords and shop.npcpetmodel then
+                keep(display, index, shop.npcpetcoords, function() return SpawnDecoPet(shop.npcpetmodel, shop.npcpetcoords) end)
             end
         end
     end
 end)
 
-function SpawnShopNPC(npcmodel, npccoords, scenario)
-    RequestModel(npcmodel)
-    while not HasModelLoaded(npcmodel) do
-        Wait(50)
-    end
-    local spawnedPed = CreatePed(npcmodel, npccoords.x, npccoords.y, npccoords.z - 1.0, npccoords.w, false, false, 0, 0)
-    SetEntityAlpha(spawnedPed, 0, false)
-    SetRandomOutfitVariation(spawnedPed, true)
-    SetEntityCanBeDamaged(spawnedPed, false)
-    SetEntityInvincible(spawnedPed, true)
-    FreezeEntityPosition(spawnedPed, true)
-    SetBlockingOfNonTemporaryEvents(spawnedPed, true)
-    -- Relationship
-    SetPedRelationshipGroupHash(spawnedPed, GetPedRelationshipGroupHash(spawnedPed))
-    SetRelationshipBetweenGroups(1, GetPedRelationshipGroupHash(spawnedPed), `PLAYER`)
-    -- Scenario
-    if scenario then
-        TaskStartScenarioInPlace(spawnedPed, joaat(scenario), -1, true)
-    end
-    -- Fade in
-    if Config.FadeIn then
-        for i = 0, 255, 51 do
-            Wait(50)
-            SetEntityAlpha(spawnedPed, i, false)
+AddEventHandler('onResourceStop', function(resource)
+    if resource ~= GetCurrentResourceName() then return end
+    for _, list in ipairs({ clerks, display }) do
+        for key, ped in pairs(list) do
+            DeletePed(ped)
+            list[key] = nil
         end
-    end
-    -- the JRS interaction prompt
-    JRS.AddEntityTarget(spawnedPed, {
-        {
-            name = 'jrs_huntingpets_shop',
-            label = L('label_petshop'),
-            icon = 'fa-solid fa-paw',
-            onSelect = function()
-                TriggerEvent('jrs_huntingpets:client:openShop')
-            end,
-            distance = 3.0
-        },
-    })
-    return spawnedPed
-end
-
---------------------------------------
--- SHOP PET NPC SPAWN (decoration)
---------------------------------------
-CreateThread(function()
-    while true do
-        Wait(500)
-        for k2, v2 in pairs(Config.Shops) do
-            -- Decorative display pet: skip shops that don't define one (no
-            -- shop in config_shared.lua currently sets npcpetmodel/npcpetcoords,
-            -- which previously errored every 500ms trying to index a nil value).
-            if not v2.npcpetcoords or not v2.npcpetmodel then goto continue end
-
-            local playerCoords = GetEntityCoords(PlayerPedId())
-            local distance = #(playerCoords - v2.npcpetcoords.xyz)
-
-            if distance < Config.DistanceSpawn and not spawnedPetPeds[k2] then
-                local spawnedPed2 = SpawnDecoPet(v2.npcpetmodel, v2.npcpetcoords)
-                spawnedPetPeds[k2] = { spawnedPed2 = spawnedPed2 }
-            end
-
-            if distance >= Config.DistanceSpawn and spawnedPetPeds[k2] then
-                if Config.FadeIn then
-                    for i2 = 255, 0, -51 do
-                        Wait(50)
-                        SetEntityAlpha(spawnedPetPeds[k2].spawnedPed2, i2, false)
-                    end
-                end
-                DeletePed(spawnedPetPeds[k2].spawnedPed2)
-                spawnedPetPeds[k2] = nil
-            end
-
-            ::continue::
-        end
-    end
-end)
-
-function SpawnDecoPet(npcpetmodel, npcpetcoords)
-    RequestModel(npcpetmodel)
-    while not HasModelLoaded(npcpetmodel) do
-        Wait(50)
-    end
-    local spawnedPed2 = CreatePed(npcpetmodel, npcpetcoords.x, npcpetcoords.y, npcpetcoords.z - 1.0, npcpetcoords.w, false, false, 0, 0)
-    SetEntityAlpha(spawnedPed2, 0, false)
-    SetRandomOutfitVariation(spawnedPed2, true)
-    SetEntityCanBeDamaged(spawnedPed2, false)
-    SetEntityInvincible(spawnedPed2, true)
-    FreezeEntityPosition(spawnedPed2, true)
-    SetBlockingOfNonTemporaryEvents(spawnedPed2, true)
-    SetPedRelationshipGroupHash(spawnedPed2, GetPedRelationshipGroupHash(spawnedPed2))
-    SetRelationshipBetweenGroups(1, GetPedRelationshipGroupHash(spawnedPed2), `PLAYER`)
-    if Config.FadeIn then
-        for i2 = 0, 255, 51 do
-            Wait(50)
-            SetEntityAlpha(spawnedPed2, i2, false)
-        end
-    end
-    return spawnedPed2
-end
-
--- Cleanup on resource stop
-AddEventHandler("onResourceStop", function(resourceName)
-    if GetCurrentResourceName() ~= resourceName then return end
-    for k, v in pairs(spawnedPeds) do
-        if v.spawnedPed then DeletePed(v.spawnedPed) end
-        spawnedPeds[k] = nil
-    end
-    for k2, v2 in pairs(spawnedPetPeds) do
-        if v2.spawnedPed2 then DeletePed(v2.spawnedPed2) end
-        spawnedPetPeds[k2] = nil
     end
 end)

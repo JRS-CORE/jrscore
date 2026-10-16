@@ -1,42 +1,27 @@
--- jrs_huntingpets: Shop Client (rewritten)
-local SpawnedPetshopBlips = {}
+-- jrs_huntingpets | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
+-- jrs_huntingpets | client: the shop window (NUI), the blips and what the two pet scripts share
 
--- ═══════════════════════════════════════════════════════════
--- SHARED STATE
--- ═══════════════════════════════════════════════════════════
-ActivePetType = nil  -- 'dog' or 'bird' or nil
+local blips = {}
 
-function HasActivePet()
-    return ActivePetType ~= nil
-end
+-- 'dog', 'bird' or nil: which pet the player has out right now
+ActivePetType = nil
 
--- ═══════════════════════════════════════════════════════════
--- NOTIFICATION HELPER (the JRS kit)
--- ═══════════════════════════════════════════════════════════
-local TypeMap = {
-    ERROR = 'error',
-    SUCCESS = 'success',
-    TIP = 'inform',
-    WARNING = 'warning',
-}
+function HasActivePet() return ActivePetType ~= nil end
+
+-- ------------------------------------------------------------------ messages
+
+local KINDS <const> = { ERROR = 'error', SUCCESS = 'success', TIP = 'inform', WARNING = 'warning' }
 
 function Notify(title, message, template, duration)
-    local notifyType = TypeMap[template] or (template and template:lower()) or 'inform'
     JRS.NotifyT({
-        title = title,
-        description = message,
-        duration = duration or 5000,
-        type = notifyType,
+        title = title, description = message, duration = duration or 5000,
+        type = KINDS[template] or (template and template:lower()) or 'inform',
     })
 end
 
--- ═══════════════════════════════════════════════════════════
--- NUI LOCALE BUNDLE
--- Every static/generated string the NUI (html/script.js) needs, resolved
--- through the JRS kit's L() so the shop UI follows the server's language
--- (set via the 'ox:locale' convar) instead of being hardcoded in English.
--- ═══════════════════════════════════════════════════════════
-local UiLocaleKeys = {
+-- ------------------------------------------------------------------ texts for the page
+
+local UI_KEYS <const> = {
     'ui_back', 'ui_close', 'ui_header_title', 'ui_header_subtitle', 'ui_tab_shop', 'ui_tab_mypets',
     'ui_wallet_cash', 'ui_purchase_pet_title', 'ui_gold', 'ui_pet_name_label', 'ui_pet_name_placeholder',
     'ui_cancel', 'ui_buy', 'ui_animations_title', 'ui_put_dog_away', 'ui_commands_title',
@@ -50,343 +35,222 @@ local UiLocaleKeys = {
     'ui_toast_success', 'ui_toast_error', 'ui_toast_notice', 'ui_dog_actions_title', 'ui_stop_animation',
 }
 
-local CachedUiLocale = nil
+local uiTexts
 function GetUiLocale()
-    if CachedUiLocale then return CachedUiLocale end
-    local bundle = {}
-    for _, key in ipairs(UiLocaleKeys) do
-        bundle[key] = L(key)
+    if not uiTexts then
+        uiTexts = {}
+        for _, key in ipairs(UI_KEYS) do uiTexts[key] = L(key) end
     end
-    CachedUiLocale = bundle
-    return bundle
+    return uiTexts
 end
 
--- ═══════════════════════════════════════════════════════════
--- MODEL NAME + IMAGE MAPS (for My Pets tab in NUI)
--- ═══════════════════════════════════════════════════════════
-local ModelNames = {}
+-- model -> display name, and model .. '_img' -> picture file, for the "My pets" tab
+local names = {}
 
--- Build name/image maps from config
-local function BuildModelMaps()
-    -- Dogs
-    for _, dog in ipairs(Config.Dogs) do
-        local model = dog.Param.Model
-        local name = dog.Name or dog.Text:gsub('%$%d+ %- ', '')
-        ModelNames[model] = name
-        ModelNames[model .. '_img'] = dog.img
-    end
-    -- Birds (from Config.Birds categories/variants)
-    for _, category in ipairs(Config.Birds) do
-        for _, variant in ipairs(category.variants) do
-            local model = tostring(variant.model)
-            ModelNames[model] = variant.name
-            local imgFile = variant.image or 'missing.png'
-            if imgFile:find('/') then imgFile = imgFile:match('[^/]+$') end
-            ModelNames[model .. '_img'] = imgFile
-        end
+local function fileName(path)
+    local image = path or 'missing.png'
+    return image:find('/') and image:match('[^/]+$') or image
+end
+
+local function dogName(dog) return dog.Name or dog.Text:gsub('%$%d+ %- ', '') end
+
+for _, dog in ipairs(Config.Dogs) do
+    names[dog.Param.Model] = dogName(dog)
+    names[dog.Param.Model .. '_img'] = dog.img
+end
+for _, category in ipairs(Config.Birds) do
+    for _, variant in ipairs(category.variants) do
+        local model = tostring(variant.model)
+        names[model] = variant.name
+        names[model .. '_img'] = fileName(variant.image)
     end
 end
-BuildModelMaps()
 
--- ═══════════════════════════════════════════════════════════
--- OPEN SHOP
--- ═══════════════════════════════════════════════════════════
-local function IsShopOpen()
+-- ------------------------------------------------------------------ opening the shop
+
+local function isOpen()
     if Config.AlwaysOpen then return true end
     local hour = GetClockHours()
     return hour >= Config.OpenTime and hour < Config.CloseTime
 end
 
-local function OpenShop()
-    if not IsShopOpen() then
-        Notify(L('notif_title_pets'), L('notif_shop_closed', Config.OpenTime), 'ERROR')
-        return
+local function shopDogs()
+    local list = {}
+    for _, dog in ipairs(Config.Dogs) do
+        list[#list + 1] = { name = dogName(dog), desc = dog.Desc, img = dog.img, model = dog.Param.Model, price = dog.Param.Price }
     end
+    return list
+end
+
+local function shopBirds()
+    local list, categories, seen = {}, {}, {}
+    for _, category in ipairs(Config.Birds) do
+        if not seen[category.name] then
+            seen[category.name] = true
+            categories[#categories + 1] = category.name
+        end
+        for _, variant in ipairs(category.variants) do
+            list[#list + 1] = {
+                name = variant.name, category = category.name, img = fileName(variant.image), price = variant.price,
+                type = variant.type, desc = L('birdtypedesc_' .. tostring(variant.type):lower()),
+                model = tostring(variant.model), preset = variant.preset,
+            }
+        end
+    end
+    return list, categories
+end
+
+local function openShop()
+    if not isOpen() then return Notify(L('notif_title_pets'), L('notif_shop_closed', Config.OpenTime), 'ERROR') end
 
     JRS.TriggerCallback('jrs_huntingpets:server:getShopData', function(data)
         if not data then return end
 
-        -- Build shop dog list
-        local dogs = {}
-        for _, dog in ipairs(Config.Dogs) do
-            dogs[#dogs + 1] = {
-                name = dog.Name or dog.Text:gsub('%$%d+ %- ', ''),
-                desc = dog.Desc,
-                img = dog.img,
-                model = dog.Param.Model,
-                price = dog.Param.Price,
-            }
-        end
-
-        -- Build shop bird list
-        local birds = {}
-        local birdCategories = {}
-        local catMap = {}
-        for _, category in ipairs(Config.Birds) do
-            if not catMap[category.name] then
-                catMap[category.name] = true
-                birdCategories[#birdCategories + 1] = category.name
-            end
-            for _, variant in ipairs(category.variants) do
-                local imgFile = variant.image or 'missing.png'
-                if imgFile:find('/') then imgFile = imgFile:match('[^/]+$') end
-                birds[#birds + 1] = {
-                    name = variant.name,
-                    category = category.name,
-                    img = imgFile,
-                    price = variant.price,
-                    type = variant.type,
-                    desc = L('birdtypedesc_' .. tostring(variant.type):lower()),
-                    model = tostring(variant.model),
-                    preset = variant.preset,
-                }
-            end
-        end
-
-        -- Active pet name
-        local activePet = 'None'
-        if ActivePetType == 'dog' then activePet = 'Dog (Active)'
-        elseif ActivePetType == 'bird' then activePet = 'Bird (Active)' end
-
-        -- Build scavenger/fish info for Pet Info tab
-        local scavengerItems = {}
-        for _, v in ipairs(Config.ScavengerItems) do
-            scavengerItems[#scavengerItems + 1] = { name = v.name, xp = v.xp, xpreq = v.xpreq }
-        end
-        local fishItems = {}
-        for _, v in ipairs(Config.FishItems) do
-            -- FishItems use model hash, convert to string name
-            local modelStr = tostring(v.model)
-            fishItems[#fishItems + 1] = { name = modelStr, xp = v.xp, xpreq = v.xpreq }
-        end
+        local birds, categories = shopBirds()
+        local scavenger, fish = {}, {}
+        for _, v in ipairs(Config.ScavengerItems) do scavenger[#scavenger + 1] = { name = v.name, xp = v.xp, xpreq = v.xpreq } end
+        for _, v in ipairs(Config.FishItems) do fish[#fish + 1] = { name = tostring(v.model), xp = v.xp, xpreq = v.xpreq } end
 
         SendNUIMessage({
             action = 'open',
-            dogs = dogs,
-            birds = birds,
-            birdCategories = birdCategories,
-            ownedDogs = data.ownedDogs or {},
-            ownedBirds = data.ownedBirds or {},
-            activePet = activePet,
-            modelNames = ModelNames,
-            scavengerItems = scavengerItems,
-            fishItems = fishItems,
-            selectedDog = data.selectedDog,
-            selectedBird = data.selectedBird,
-            ui = GetUiLocale(),
+            dogs = shopDogs(), birds = birds, birdCategories = categories,
+            ownedDogs = data.ownedDogs or {}, ownedBirds = data.ownedBirds or {},
+            activePet = ActivePetType == 'dog' and 'Dog (Active)' or ActivePetType == 'bird' and 'Bird (Active)' or 'None',
+            modelNames = names, scavengerItems = scavenger, fishItems = fish,
+            selectedDog = data.selectedDog, selectedBird = data.selectedBird, ui = GetUiLocale(),
         })
         SetNuiFocus(true, true)
     end)
 end
 
--- ═══════════════════════════════════════════════════════════
--- NUI CALLBACKS
--- ═══════════════════════════════════════════════════════════
-RegisterNUICallback('close', function(data, cb)
+RegisterNetEvent('jrs_huntingpets:client:openShop', openShop)
+
+-- ------------------------------------------------------------------ page callbacks
+
+-- an NUI callback that closes the window, answers, then runs `act(data)`
+local function leaving(name, act)
+    RegisterNUICallback(name, function(data, done)
+        SetNuiFocus(false, false)
+        done('ok')
+        act(data)
+    end)
+end
+
+RegisterNUICallback('close', function(_, done)
     SetNuiFocus(false, false)
-    cb('ok')
+    done('ok')
 end)
 
--- Call dog (from My Pets tab)
-RegisterNUICallback('callDog', function(data, cb)
-    SetNuiFocus(false, false)
-    cb('ok')
-    if HasActivePet() then
-        Notify(L('notif_title_pets'), L('notif_send_pet_home_first'), 'ERROR')
-        return
+-- bring a pet out (only one at a time)
+local function summon(event)
+    return function(data)
+        if HasActivePet() then return Notify(L('notif_title_pets'), L('notif_send_pet_home_first'), 'ERROR') end
+        TriggerServerEvent(event, data.id)
     end
-    TriggerServerEvent('jrs_huntingpets:server:callDog', data.id)
+end
+
+leaving('callDog', summon('jrs_huntingpets:server:callDog'))
+leaving('callBird', summon('jrs_huntingpets:server:callBird'))
+leaving('sellDog', function(data) TriggerServerEvent('jrs_huntingpets:server:sellDog', data.id) end)
+leaving('sellBird', function(data) TriggerServerEvent('jrs_huntingpets:server:sellBird', data.id) end)
+
+leaving('spawnPet', function(data)
+    if HasActivePet() then return Notify(L('notif_title_pets'), L('notif_send_pet_home_first'), 'ERROR') end
+    TriggerServerEvent(data.pet.type == 'dog' and 'jrs_huntingpets:server:callDog' or 'jrs_huntingpets:server:callBird', data.pet.id)
 end)
 
--- Call bird (from My Pets tab)
-RegisterNUICallback('callBird', function(data, cb)
+-- the price on the page is only decoration, the server uses the configured price
+RegisterNUICallback('buyPet', function(data, done)
     SetNuiFocus(false, false)
-    cb('ok')
-    if HasActivePet() then
-        Notify(L('notif_title_pets'), L('notif_send_pet_home_first'), 'ERROR')
-        return
-    end
-    TriggerServerEvent('jrs_huntingpets:server:callBird', data.id)
-end)
-
--- Sell dog (from My Pets tab)
-RegisterNUICallback('sellDog', function(data, cb)
-    SetNuiFocus(false, false)
-    cb('ok')
-    TriggerServerEvent('jrs_huntingpets:server:sellDog', data.id)
-end)
-
--- Sell bird (from My Pets tab)
-RegisterNUICallback('sellBird', function(data, cb)
-    SetNuiFocus(false, false)
-    cb('ok')
-    TriggerServerEvent('jrs_huntingpets:server:sellBird', data.id)
-end)
-
--- Select dog (from My Pets tab). Waits for the server to confirm ownership
--- and save the selection before telling the NUI whether it succeeded, so
--- the "Selected" state it shows always matches what's actually saved.
-RegisterNUICallback('selectDog', function(data, cb)
-    JRS.TriggerCallback('jrs_huntingpets:server:selectDog', function(success)
-        cb({ success = success == true })
-    end, data.id)
-end)
-
--- Select bird (from My Pets tab)
-RegisterNUICallback('selectBird', function(data, cb)
-    JRS.TriggerCallback('jrs_huntingpets:server:selectBird', function(success)
-        cb({ success = success == true })
-    end, data.id)
-end)
-
--- Buy pet (from NUI shop). The price shown in the NUI is cosmetic only —
--- the server always looks up the real price from Config itself.
-RegisterNUICallback('buyPet', function(data, cb)
-    SetNuiFocus(false, false)
-    cb('ok')
+    done('ok')
     if data.category == 'dogs' then
         TriggerServerEvent('jrs_huntingpets:server:buyDog', data.model)
     else
-        local preset = tonumber(data.preset) or 0
-        TriggerServerEvent('jrs_huntingpets:server:buyBird', data.model, preset)
+        TriggerServerEvent('jrs_huntingpets:server:buyBird', data.model, tonumber(data.preset) or 0)
     end
     SendNUIMessage({ action = 'close' })
 end)
 
--- Get pet data (for my pets menu)
-RegisterNUICallback('getPetData', function(data, cb)
-    JRS.TriggerCallback('jrs_huntingpets:server:getPetData', function(petData)
-        cb(petData)
-    end, data.index)
+-- the page shows "selected" only after the server saved it
+local function selecting(name, callback)
+    RegisterNUICallback(name, function(data, done)
+        JRS.TriggerCallback(callback, function(ok) done({ success = ok == true }) end, data.id)
+    end)
+end
+selecting('selectDog', 'jrs_huntingpets:server:selectDog')
+selecting('selectBird', 'jrs_huntingpets:server:selectBird')
+
+RegisterNUICallback('getPetData', function(data, done)
+    JRS.TriggerCallback('jrs_huntingpets:server:getPetData', function(info) done(info) end, data.index)
 end)
 
--- Show pet (spawn/despawn)
-RegisterNUICallback('showPet', function(data, cb)
-    cb('ok')
+RegisterNUICallback('showPet', function(data, done)
+    done('ok')
     if data.pet then
-        -- Pet exists, show it
-        if data.pet.type == 'dog' then
-            TriggerServerEvent('jrs_huntingpets:server:callDog', data.pet.id)
-        else
-            TriggerServerEvent('jrs_huntingpets:server:callBird', data.pet.id)
-        end
+        TriggerServerEvent(data.pet.type == 'dog' and 'jrs_huntingpets:server:callDog' or 'jrs_huntingpets:server:callBird', data.pet.id)
     end
 end)
 
--- Spawn pet
-RegisterNUICallback('spawnPet', function(data, cb)
-    SetNuiFocus(false, false)
-    cb('ok')
-    if HasActivePet() then
-        Notify(L('notif_title_pets'), L('notif_send_pet_home_first'), 'ERROR')
-        return
-    end
-    if data.pet.type == 'dog' then
-        TriggerServerEvent('jrs_huntingpets:server:callDog', data.pet.id)
-    else
-        TriggerServerEvent('jrs_huntingpets:server:callBird', data.pet.id)
-    end
+RegisterNUICallback('follow', function(data, done)
+    done('ok')
+    if data.followDistance then Config.DogPetAttributes.FollowDistance = data.followDistance end
 end)
 
--- Follow (set follow distance)
-RegisterNUICallback('follow', function(data, cb)
-    cb('ok')
-    if data.followDistance then
-        Config.DogPetAttributes.FollowDistance = data.followDistance
-    end
-end)
-
--- Transfer pet
-RegisterNUICallback('transferPet', function(data, cb)
-    cb('ok')
-    -- Transfer functionality - would need server support
+RegisterNUICallback('transferPet', function(_, done)
+    done('ok')
     Notify(L('notif_title_pets'), L('notif_transfer_not_implemented'), 'TIP')
 end)
 
--- Feed pet
-RegisterNUICallback('feedPet', function(data, cb)
-    cb('ok')
-    -- This is handled by the dog/bird feeding prompts
-end)
-
--- Get commands
-RegisterNUICallback('getCommands', function(data, cb)
-    local commands = {}
-    cb(commands)
-end)
-
--- Get animations
-RegisterNUICallback('getAnimations', function(data, cb)
-    local animations = {}
-    cb(animations)
-end)
-
--- Start animation
-RegisterNUICallback('startanim', function(data, cb)
-    cb('ok')
+RegisterNUICallback('startanim', function(_, done)
+    done('ok')
     TriggerEvent('jrs_huntingpets:client:dogAnimations')
 end)
 
--- Do command
-RegisterNUICallback('docommand', function(data, cb)
-    cb('ok')
-end)
+-- panels the page asks for that have nothing to show yet
+for _, name in ipairs({ 'feedPet', 'docommand' }) do RegisterNUICallback(name, function(_, done) done('ok') end) end
+for _, name in ipairs({ 'getCommands', 'getAnimations' }) do RegisterNUICallback(name, function(_, done) done({}) end) end
 
--- Update money display
-RegisterNUICallback('getMoney', function(data, cb)
+RegisterNUICallback('getMoney', function(_, done)
     local me = JRS.Me(true) or {}
-    cb({
-        cash = me.money or 0,
-        gold = me.gold or 0
-    })
+    done({ cash = me.money or 0, gold = me.gold or 0 })
 end)
 
--- ═══════════════════════════════════════════════════════════
--- BLIPS
--- ═══════════════════════════════════════════════════════════
-Citizen.CreateThread(function()
+-- ------------------------------------------------------------------ blips
+
+CreateThread(function()
     for _, shop in ipairs(Config.Shops) do
         if shop.showblip then
             local blip = BlipAddForCoords(1664425300, shop.Coords)
             SetBlipSprite(blip, Config.Blip.blipSprite, true)
             SetBlipScale(blip, Config.Blip.blipScale)
             SetBlipName(blip, Config.Blip.blipName)
-            table.insert(SpawnedPetshopBlips, blip)
+            blips[#blips + 1] = blip
         end
     end
 end)
 
-local function UpdateBlipColours()
-    local isOpen = IsShopOpen()
-    for _, blip in pairs(SpawnedPetshopBlips) do
-        BlipAddModifier(blip, isOpen and joaat('BLIP_MODIFIER_MP_COLOR_8') or joaat('BLIP_MODIFIER_MP_COLOR_2'))
-    end
+local function colourBlips()
+    local colour = joaat(isOpen() and 'BLIP_MODIFIER_MP_COLOR_8' or 'BLIP_MODIFIER_MP_COLOR_2')
+    for _, blip in ipairs(blips) do BlipAddModifier(blip, colour) end
 end
 
-RegisterNetEvent('jrs:SelectedCharacter', function() UpdateBlipColours() end)
-CreateThread(function() while true do UpdateBlipColours() Wait(60000) end end)
-
--- ═══════════════════════════════════════════════════════════
--- EVENTS
--- ═══════════════════════════════════════════════════════════
-RegisterNetEvent('jrs_huntingpets:client:openShop', function()
-    OpenShop()
-end)
-
--- Bird sold from server
-RegisterNetEvent('jrs_huntingpets:client:birdSold', function()
-    if ActivePetType == 'bird' then
-        -- Send bird home if it's the active one
-        if CalledBird ~= nil then SendBirdHome(1) end
-        ActivePetType = nil
+RegisterNetEvent('jrs:SelectedCharacter', colourBlips)
+CreateThread(function()
+    while true do
+        colourBlips()
+        Wait(60000)
     end
 end)
 
--- ═══════════════════════════════════════════════════════════
--- CLEANUP ON RESOURCE RESTART
--- ═══════════════════════════════════════════════════════════
-AddEventHandler('onResourceStop', function(resourceName)
-    if GetCurrentResourceName() ~= resourceName then return end
+-- the server sold the bird that is out: send it home
+RegisterNetEvent('jrs_huntingpets:client:birdSold', function()
+    if ActivePetType ~= 'bird' then return end
+    if CalledBird ~= nil then SendBirdHome(1) end
+    ActivePetType = nil
+end)
+
+AddEventHandler('onResourceStop', function(resource)
+    if resource ~= GetCurrentResourceName() then return end
     SendNUIMessage({ action = 'close' })
     SetNuiFocus(false, false)
 end)

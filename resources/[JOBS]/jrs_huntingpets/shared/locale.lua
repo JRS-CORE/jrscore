@@ -1,3 +1,4 @@
+-- jrs_huntingpets | Copyright (C) 2026 JRS TEAM | SPDX-License-Identifier: GPL-3.0-or-later | see LICENSE
 Locales = {
     en = {
         anim_dog_barkgrowl = 'Bark Growl',
