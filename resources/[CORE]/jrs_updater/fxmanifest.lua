@@ -10,7 +10,7 @@ version '1.0.0'
 
 -- Version of the JRS Core pack this server was installed from.
 -- Bump it together with every GitHub release (tag vX.Y.Z -> X.Y.Z).
-jrscore_pack '1.0.0'
+jrscore_pack '1.1.0'
 
 server_scripts {
     'config.lua',
