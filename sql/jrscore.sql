@@ -185,7 +185,7 @@ CREATE TABLE IF NOT EXISTS `jrs_discord_whitelist` (
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `identifier` (`identifier`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- jrs_double_xp_state
 CREATE TABLE IF NOT EXISTS `jrs_double_xp_state` (
@@ -212,7 +212,7 @@ CREATE TABLE IF NOT EXISTS `jrs_id_numbers` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`charid`),
   UNIQUE KEY `uniq_identity_number` (`identity_number`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- jrs_idcard
 CREATE TABLE IF NOT EXISTS `jrs_idcard` (
@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS `jrs_idcard` (
   `nationality` varchar(100) NOT NULL DEFAULT '',
   `marks` varchar(500) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- jrs_inventory_storage
 CREATE TABLE IF NOT EXISTS `jrs_inventory_storage` (
@@ -270,7 +270,7 @@ CREATE TABLE IF NOT EXISTS `jrs_job_levels` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`charidentifier`,`job`),
   KEY `idx_jrs_job_levels_char` (`charidentifier`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- jrs_job_xp_shares
 CREATE TABLE IF NOT EXISTS `jrs_job_xp_shares` (
@@ -278,7 +278,7 @@ CREATE TABLE IF NOT EXISTS `jrs_job_xp_shares` (
   `core_share` decimal(6,4) NOT NULL DEFAULT 0.2500,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`job`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- jrs_metabolism
 CREATE TABLE IF NOT EXISTS `jrs_metabolism` (
@@ -289,7 +289,7 @@ CREATE TABLE IF NOT EXISTS `jrs_metabolism` (
   `hud_settings` longtext DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `charidentifier` (`charidentifier`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- jrs_npc_outfits
 CREATE TABLE IF NOT EXISTS `jrs_npc_outfits` (
@@ -339,7 +339,7 @@ CREATE TABLE IF NOT EXISTS `jrs_ranch` (
   PRIMARY KEY (`farmid`),
   KEY `idx_owner` (`owner_steam`),
   KEY `idx_location_owner` (`location_id`,`owner_steam`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- jrs_stashes
 CREATE TABLE IF NOT EXISTS `jrs_stashes` (
@@ -386,7 +386,7 @@ CREATE TABLE IF NOT EXISTS `jrs_trade_orders` (
   KEY `idx_jrs_trade_seller` (`seller_identifier`,`seller_charid`,`status`),
   KEY `idx_jrs_trade_buyer` (`buyer_identifier`,`buyer_charid`,`status`),
   KEY `idx_jrs_trade_expiry` (`status`,`expires_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- jrs_users
 CREATE TABLE IF NOT EXISTS `jrs_users` (
