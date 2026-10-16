@@ -88,6 +88,14 @@ function ResetNoclip(ped)
     SetGameplayCamInitialHeading(0.0)
     SetPlayerLockon(PlayerId(), true)
     ClearPedTasks(ped, true, true)
+    -- keep the ped visible for a moment in case a late frame hides it again
+    CreateThread(function()
+        for _ = 1, 8 do
+            Wait(250)
+            if on.noclip then return end
+            SetEntityVisible(PlayerPedId(), not on.invisible)
+        end
+    end)
 end
 
 function EnableNoclip(ped)
@@ -178,6 +186,10 @@ CreateThread(function()
             Wait(1000)
         else
             Wait(0)
+            -- The menu can switch no-clip off during that Wait; without this
+            -- check the frame below hid the ped again after ResetNoclip.
+            repeat
+            if not on.noclip then break end
             local ped = PlayerPedId()
             local speed = speeds[at].speed
 
@@ -212,6 +224,7 @@ CreateThread(function()
             local scale = speed + 0.3
             local to = GetOffsetFromEntityInWorldCoords(ped, 0.0, forward * scale, vertical * scale)
             SetEntityCoordsNoOffset(ped, to.x, to.y, to.z, on.noclip, on.noclip, on.noclip)
+            until true
         end
     end
 end)
