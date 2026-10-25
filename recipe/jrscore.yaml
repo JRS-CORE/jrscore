@@ -39,7 +39,7 @@ tasks:
   - action: query_database
     file: ./tmp/sql/jrscore_scripts.sql
 
-  # 2) Resources (11 small parts: each download and unzip stays under txAdmin's per-task timeout)
+  # 2) Resources (20 small parts: each download and unzip stays under txAdmin's 180s per-task timeout)
   - action: download_file
     url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.4/jrscore-resources-1.zip
     path: ./tmp/parts/part1.zip
@@ -115,6 +115,69 @@ tasks:
     path: ./tmp/parts/part11.zip
   - action: unzip
     src: ./tmp/parts/part11.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.4/jrscore-resources-12.zip
+    path: ./tmp/parts/part12.zip
+  - action: unzip
+    src: ./tmp/parts/part12.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.4/jrscore-resources-13.zip
+    path: ./tmp/parts/part13.zip
+  - action: unzip
+    src: ./tmp/parts/part13.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.4/jrscore-resources-14.zip
+    path: ./tmp/parts/part14.zip
+  - action: unzip
+    src: ./tmp/parts/part14.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.4/jrscore-resources-15.zip
+    path: ./tmp/parts/part15.zip
+  - action: unzip
+    src: ./tmp/parts/part15.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.4/jrscore-resources-16.zip
+    path: ./tmp/parts/part16.zip
+  - action: unzip
+    src: ./tmp/parts/part16.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.4/jrscore-resources-17.zip
+    path: ./tmp/parts/part17.zip
+  - action: unzip
+    src: ./tmp/parts/part17.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.4/jrscore-resources-18.zip
+    path: ./tmp/parts/part18.zip
+  - action: unzip
+    src: ./tmp/parts/part18.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.4/jrscore-resources-19.zip
+    path: ./tmp/parts/part19.zip
+  - action: unzip
+    src: ./tmp/parts/part19.zip
+    dest: ./
+
+  - action: download_file
+    url: https://github.com/JRS-CORE/jrscore/releases/download/v1.2.4/jrscore-resources-20.zip
+    path: ./tmp/parts/part20.zip
+  - action: unzip
+    src: ./tmp/parts/part20.zip
     dest: ./
 
   # 3) Server config and icon
