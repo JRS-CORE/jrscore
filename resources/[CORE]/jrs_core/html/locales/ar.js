@@ -28,7 +28,6 @@ JrsI18n.register('ar', {
     'core_information': 'المعلومات',
     'core_job': 'الوظيفة',
     'core_jrs_input': 'إدخال JRS',
-    'core_jrs_library_dialogs': 'نوافذ مكتبة JRS',
     'core_jrs_menu': 'قائمة JRS',
     'core_jrs_optional_toast': 'إشعار JRS الاختياري',
     'core_level': 'المستوى',

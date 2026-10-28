@@ -3,8 +3,7 @@
     input: document.getElementById('jrsInputModule'),
     menu: document.getElementById('jrsMenuModule'),
     notify: document.getElementById('jrsNotifyModule'),
-    extinput: document.getElementById('jrsExtInputModule'),
-    extlib: document.getElementById('jrsExtLibModule')
+    extinput: document.getElementById('jrsExtInputModule')
   };
 
   function visible(frame, enabled, interactive) {
@@ -26,10 +25,9 @@
   // a menu is up (unless another dialog sits on top) and gets the keyboard
   // forwarded when the top page holds the focus.
   let menuOpen = 0;
-  let extlibFocus = false;
   function overlayOpen() {
     const vis = (f) => f && f.style.visibility === 'visible' && f.style.pointerEvents === 'auto';
-    return vis(modules.input) || vis(modules.extinput) || extlibFocus;
+    return vis(modules.input) || vis(modules.extinput);
   }
   function syncMenuPointer() {
     if (modules.menu) modules.menu.style.pointerEvents = (menuOpen > 0 && !overlayOpen()) ? 'auto' : 'none';
@@ -66,7 +64,6 @@
     const name = String(data.__jrsModule);
     const frame = modules[name];
     if (!frame || !frame.contentWindow) return;
-    if (name === 'extlib' && typeof data.focus === 'boolean') { extlibFocus = data.focus; visible(frame, true, data.focus); syncMenuPointer(); return; }
     const payload = data.payload || {};
 
     if (name === 'input') {
@@ -79,8 +76,7 @@
     } else if (name === 'extinput') {
       const show = payload.style !== 'none';
       visible(frame, show, show);
-    } else if (name === 'extlib') {
-      frame.style.visibility = 'visible';
+
     } else if (name === 'notify') {
       visible(frame, true, false);
     }

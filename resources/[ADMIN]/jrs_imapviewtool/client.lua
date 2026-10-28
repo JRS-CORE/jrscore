@@ -9,7 +9,8 @@
 --   /testIpl <hash>             flip one section on and off
 -- While it runs: previous/next document page keys pick a section, the animal-interact key loads/unloads it.
 
-local Data <const> = Import '/imaps_with_coords_and_heading'
+local imapDataRaw = LoadResourceFile(GetCurrentResourceName(), 'imaps_with_coords_and_heading.lua')
+local Data <const> = imapDataRaw and load(imapDataRaw)() or { IPL_LIST = {} }
 local Core <const> = exports.jrs_core:GetCore()
 
 local KEY_PREV <const>   = joaat('INPUT_DOCUMENT_PAGE_PREV')

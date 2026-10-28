@@ -10,7 +10,6 @@ description 'Loot rewards from dead NPCs'
 version '2.0.0'
 
 shared_scripts {
-    '@jrs_core/lib/import.lua',
     'config.lua',
 }
 client_script 'client/main.lua'

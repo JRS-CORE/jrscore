@@ -191,14 +191,6 @@ $(document).ready(function() {
 			coreProg.setVisible(false);
 			return;
 		}
-		if (typeof event.data.type === 'string' && event.data.type.indexOf('jrslib:') === 0) {
-			const frame = document.getElementById('jrsLibUi')
-			if (frame && frame.contentWindow) {
-				frame.style.pointerEvents = ((event.data.type === 'jrslib:open_inputs' || event.data.type === 'jrslib:open_answer') && event.data.status === true) ? 'auto' : 'none'
-				frame.contentWindow.postMessage(event.data, '*')
-			}
-			return
-		}
 		if (event.data.action == "setValuejrscore"){
 			if (hudDebug) console.log('[jrs_core:HUD] received setValuejrscore: ' + event.data.key + ' = ' + event.data.value)
 			if (!hudSuppressed) $("#ui").stop(true, true).fadeIn(150)

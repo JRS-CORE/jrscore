@@ -635,40 +635,6 @@ Config.Performance = {
 end
 
 
--- --------------------------------------------------------------------------
---  Shared library
--- --------------------------------------------------------------------------
-do
--- ---------------------------------------------------------------------------
--- Shared helper library (merged in from the standalone jrs_lib resource)
---
--- jrs_lib used to define a bare `Config = {}` of its own. Inside jrs_core that
--- would wipe the framework's own Config table, so every former jrs_lib setting
--- now lives under Config.Lib.
--- ---------------------------------------------------------------------------
-
-Config = Config or {}
-
-Config.Lib = {
-    -- Folder the built-in notification fallback pulls item icons from. Only
-    -- used when jrs_notify is not running.
-    FolderWithIcons = 'jrs_inventory/html/images/items/',
-
-    -- Developer helpers jrs_lib registered unconditionally. Kept on so the
-    -- merge does not silently remove tools that were already available.
-    EnableDevCommands = true,
-    PolyPointCommand  = 'polyPoint',
-    TargetCommand     = 'target',
-
-    -- Field names the server API reports back to callers.
-    CharacterTable  = 'Characters',
-    JobColumn       = 'job',
-    JobGradeColumn  = 'jobgrade',
-    SteamColumn     = 'identifier',
-    CharIdColumn    = 'charidentifier',
-}
-end
-
 
 -- --------------------------------------------------------------------------
 --  Award / feed pop-ups

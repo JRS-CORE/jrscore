@@ -28,7 +28,6 @@ JrsI18n.register('en', {
     'core_information': 'INFORMATION',
     'core_job': 'Job',
     'core_jrs_input': 'JRS input',
-    'core_jrs_library_dialogs': 'JRS library dialogs',
     'core_jrs_menu': 'JRS menu',
     'core_jrs_optional_toast': 'JRS optional toast',
     'core_level': 'Level',
