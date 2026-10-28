@@ -48,7 +48,7 @@ gluing resources together.
 
 | Folder | Resources |
 |---|---|
-| `[CORE]` | `jrs_core` `jrs_inventory` `jrs_loadingscreen` `jrs_chat` `jrs_multijob` `jrs_radialmenu` `jrs_minigame` `jrs_updater` |
+| `[CORE]` | `jrs_core` `jrs_inventory` `jrs_loadingscreen` `jrs_chat` `jrs_updater` |
 | `[WORLD]` | `jrs_city` |
 
 Also included: `[CFX]` (default CFX resources and screenshot-basic) and `[DEPENDENCIES]`
