@@ -35,8 +35,8 @@ function isAdminOrConsole(source, commandKey)
     if source == 0 then return true end
 
     local playerSource = tonumber(source)
-    local user = jrsCore.getUser(playerSource)
-    local allowed = user ~= nil and Config.CanUseCommand(user.group, commandKey)
+    local group = jrsCore.GetGroup(playerSource)
+    local allowed = group ~= nil and Config.CanUseCommand(group, commandKey)
     if not allowed then
         notifyCommandSource(playerSource, _Up(playerSource, 'command_permission_denied'), 4000, true)
         return false
@@ -194,7 +194,6 @@ function RefreshAdminCommandSuggestions(playerSource)
     playerSource = tonumber(playerSource)
     if not playerSource then return end
 
-    local user = jrsCore.getUser(playerSource)
     for _, suggestion in ipairs(adminCommandSuggestions) do
         local commandName = Config.Commands[suggestion.key]
         if commandName then
@@ -323,14 +322,14 @@ end)
 
 RegisterCommand(Config.Commands.setjob, function(source, args)
     if source == 0 then
-        local targetId = args[1]
+        local targetId = tonumber(args[1])
         local jobName = args[2]
-        local jobGrade = args[3]
+        local jobGrade = tonumber(args[3]) or 0
 
-        if targetId and jobName and jobGrade then
-            local targetUser = jrsCore.getUser(targetId)
-            if targetUser then
-                local changed = targetUser.getUsedCharacter.setJob(targetId, jobName, jobGrade)
+        if targetId and jobName then
+            local targetChar = jrsCore.GetCharacter(targetId)
+            if targetChar then
+                local changed = Character.setJob(targetId, jobName, jobGrade)
                 notifyCommandSource(source, changed and _Up(source, 'cmd_set_player_job_to_grade', targetId, jobName, jobGrade) or _Up(source, 'player_not_found'), 5000, changed ~= true)
                 if changed then notifyCommandTarget(targetId, _Up(targetId, 'cmdt_your_job_was_set_to_grade', jobName, jobGrade), 5000, false) end
             else
@@ -344,14 +343,14 @@ RegisterCommand(Config.Commands.setjob, function(source, args)
 
     if not isAdminOrConsole(source, 'setjob') then return end
 
-    local targetId = args[1]
+    local targetId = tonumber(args[1])
     local jobName = args[2]
-    local jobGrade = args[3]
+    local jobGrade = tonumber(args[3]) or 0
 
-    if targetId and jobName and jobGrade then
-        local targetUser = jrsCore.getUser(targetId)
-        if targetUser then
-            local changed = targetUser.getUsedCharacter.setJob(targetId, jobName, jobGrade)
+    if targetId and jobName then
+        local targetChar = jrsCore.GetCharacter(targetId)
+        if targetChar then
+            local changed = Character.setJob(targetId, jobName, jobGrade)
             if changed then
                 notifyCommandSource(source, _Up(source, 'cmd_set_player_job_to_grade', targetId, jobName, jobGrade), 5000, false)
                 notifyCommandTarget(targetId, _Up(targetId, 'cmdt_your_job_was_set_to_grade', jobName, jobGrade), 5000, false)
@@ -419,8 +418,7 @@ RegisterCommand(Config.Commands.delchar, function(source, args)
         return
     end
 
-    local targetUser = jrsCore.getUser(targetSource)
-    local character = targetUser and targetUser.getUsedCharacter
+    local character = jrsCore.GetCharacter(targetSource)
     if not character or not character.charIdentifier then
         notifyCommandSource(source, _Up(source, 'player_not_found'), 5000, true)
         return
@@ -470,22 +468,17 @@ end)
 RegisterCommand(Config.Commands.setgroup, function(source, args)
     if not isAdminOrConsole(source, 'setgroup') then return end
 
-    local targetId = args[1]
+    local targetId = tonumber(args[1])
     local groupName = args[2]
 
     if targetId and groupName then
-        local targetUser = jrsCore.getUser(targetId)
-        if targetUser then
-            local changed = targetUser.setGroup(source, targetId, groupName)
-            if changed then
-                RefreshAdminCommandSuggestions(tonumber(targetId))
-                notifyCommandSource(source, _Up(source, 'cmd_set_player_group_to', targetId, groupName), 5000, false)
-                notifyCommandTarget(targetId, _Up(targetId, 'cmdt_your_permission_group_was_set_to', groupName), 5000, false)
-            else
-                notifyCommandSource(source, _Up(source, 'cmd_the_group_change_failed'), 5000, true)
-            end
+        local changed = jrsCore.SetGroup(targetId, groupName)
+        if changed then
+            RefreshAdminCommandSuggestions(targetId)
+            notifyCommandSource(source, _Up(source, 'cmd_set_player_group_to', targetId, groupName), 5000, false)
+            notifyCommandTarget(targetId, _Up(targetId, 'cmdt_your_permission_group_was_set_to', groupName), 5000, false)
         else
-            notifyCommandSource(source, _Up(source, 'player_not_found'), 5000, true)
+            notifyCommandSource(source, _Up(source, 'cmd_the_group_change_failed'), 5000, true)
         end
     else
         notifyCommandSource(source, _Up(source, 'usage_setgroup'), 5000, true)
@@ -530,8 +523,8 @@ RegisterCommand(Config.Commands.giveitem, function(source, args)
         return
     end
 
-    local targetUser = jrsCore.getUser(targetId)
-    if not targetUser then
+    local targetChar = jrsCore.GetCharacter(targetId)
+    if not targetChar then
         notifyCommandSource(source, _Up(source, 'player_not_found'), 5000, true)
         return
     end
@@ -575,8 +568,8 @@ RegisterCommand(Config.Commands.giveweapon, function(source, args)
         return
     end
 
-    local targetUser = jrsCore.getUser(targetId)
-    if not targetUser or not targetUser.getUsedCharacter then
+    local targetChar = jrsCore.GetCharacter(targetId)
+    if not targetChar then
         notifyCommandSource(source, _Up(source, 'player_not_found'), 5000, true)
         return
     end
@@ -655,8 +648,8 @@ RegisterCommand(Config.Commands.givemoney, function(source, args)
         return
     end
 
-    local targetUser = jrsCore.getUser(targetId)
-    if not targetUser then
+    local targetChar = jrsCore.GetCharacter(targetId)
+    if not targetChar then
         notifyCommandSource(source, _Up(source, 'player_not_found'), 5000, true)
         return
     end
@@ -692,8 +685,8 @@ RegisterCommand(Config.Commands.revive, function(source, args)
         return
     end
 
-    local targetUser = jrsCore.getUser(targetId)
-    if not targetUser then
+    local targetChar = jrsCore.GetCharacter(targetId)
+    if not targetChar then
         notifyCommandSource(source, _Up(source, 'player_not_found'), 5000, true)
         return
     end
@@ -736,8 +729,8 @@ local function runXpChangeCommand(source, args, commandKey, operation)
         return
     end
 
-    local targetUser = jrsCore.getUser(targetId)
-    if not targetUser or not targetUser.getUsedCharacter then
+    local targetChar = jrsCore.GetCharacter(targetId)
+    if not targetChar then
         notifyCommandSource(source, _Up(source, 'player_not_found'), 5000, true)
         return
     end
@@ -822,8 +815,8 @@ RegisterCommand(Config.Commands.setxp, function(source, args)
         return
     end
 
-    local targetUser = jrsCore.getUser(targetId)
-    if not targetUser or not targetUser.getUsedCharacter then
+    local targetChar = jrsCore.GetCharacter(targetId)
+    if not targetChar then
         notifyCommandSource(source, _Up(source, 'player_not_found'), 5000, true)
         return
     end
@@ -870,8 +863,8 @@ RegisterCommand(Config.Commands.setlevel or 'setlevel', function(source, args)
         return
     end
 
-    local targetUser = jrsCore.getUser(targetId)
-    if not targetUser or not targetUser.getUsedCharacter then
+    local targetChar = jrsCore.GetCharacter(targetId)
+    if not targetChar then
         notifyCommandSource(source, _Up(source, 'player_not_found'), 5000, true)
         return
     end
@@ -918,8 +911,8 @@ RegisterCommand(Config.Commands.addlevel or 'addlevel', function(source, args)
         return
     end
 
-    local targetUser = jrsCore.getUser(targetId)
-    if not targetUser or not targetUser.getUsedCharacter then
+    local targetChar = jrsCore.GetCharacter(targetId)
+    if not targetChar then
         notifyCommandSource(source, _Up(source, 'player_not_found'), 5000, true)
         return
     end
@@ -1102,14 +1095,13 @@ AddEventHandler('jrs_core:returnCoords', function(coords)
     notifyCommandSource(requester, _Up(requester, 'teleport_success'), 3000, false)
 end)
 
--- RDO Currency Commands (/gold, /cash)
+-- Native JRS Currency Commands (/gold, /cash)
 RegisterCommand('gold', function(source)
     local src = tonumber(source)
     if not src or src <= 0 then return end
-    local user = jrsCore and jrsCore.getUser and jrsCore.getUser(src)
-    local character = user and user.getUsedCharacter
-    if not character then return end
-    local gold = tonumber(character.gold) or 0.0
+    local char = jrsCore.GetCharacter(src)
+    if not char then return end
+    local gold = tonumber(char.gold) or 0.0
     TriggerClientEvent('jrs_core:sendRightTipNotification', src,
         string.format("Gold Bars: %.2f 𝕲", gold), 5000)
 end, false)
@@ -1117,11 +1109,10 @@ end, false)
 RegisterCommand('cash', function(source)
     local src = tonumber(source)
     if not src or src <= 0 then return end
-    local user = jrsCore and jrsCore.getUser and jrsCore.getUser(src)
-    local character = user and user.getUsedCharacter
-    if not character then return end
-    local money = tonumber(character.money) or 0.0
-    local gold = tonumber(character.gold) or 0.0
+    local char = jrsCore.GetCharacter(src)
+    if not char then return end
+    local money = tonumber(char.money) or 0.0
+    local gold = tonumber(char.gold) or 0.0
     TriggerClientEvent('jrs_core:sendRightTipNotification', src,
         string.format("Cash: $%.2f | Gold: %.2f 𝕲", money, gold), 5000)
 end, false)

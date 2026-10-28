@@ -15,3 +15,6 @@ console.log
 
 # test fixture keys inside npm packages trip GitHub secret scanning
 *.pem
+
+# backup directories
+*_backup_*/

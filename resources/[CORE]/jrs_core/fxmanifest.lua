@@ -7,10 +7,6 @@ author 'JRS TEAM'
 description 'JRS unified core: core + native notifications + optional toast + inputs + menu + character services + bounded RPC'
 version '2.5.6-habitats'
 
--- Compatibility aliases for resources that only declare legacy dependencies.
-provide 'jrs_inputs'
-provide 'jrs_menu'
-provide 'jrs_notify'
 
 --[[
   CLIENT/SCRIPT POOL SIZE INCREASES (merged in from jrs_poolsizes 2026-09-12)
@@ -214,9 +210,6 @@ escrow_ignore {
     '*.sql',
 }
 
--- extended API (GetCore, Core.Callback, notifications, death/respawn) for the extra scripts
-client_scripts { 'client/compat_callbacks.lua', 'client/compat_api.lua', 'client/respawn.lua' }
-server_scripts { 'server/compat_callbacks.lua', 'server/compat_api.lua', 'server/compat_state.lua' }
 
 -- built-in menu / advanced inputs / theme exports (no separate jrs_menu, jrs_inputs)
 shared_scripts { 'shared/ext_theme.lua' }

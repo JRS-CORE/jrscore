@@ -265,10 +265,6 @@ Citizen.CreateThread(function()
     end
 end)
 
--- Legacy event plus unified core API.
-AddEventHandler('jrs_menu:getmenu', function(cb)
-    if type(cb) == 'function' then cb(Menu) end
-end)
 JRSMenuAPI = Menu
 
 AddEventHandler('onClientResourceStop', function(stopped)

@@ -44,4 +44,3 @@ dependencies { 'jrs_core' }
 -- the chat other resources talk to (chat:addMessage / chat:addSuggestion ...)
 provide 'chat'
 
-jrs_api 'ext'

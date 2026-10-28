@@ -6,8 +6,6 @@ author 'JRS TEAM'
 description 'JRS Inventory unified resource: inventory + weapons + storage + ground + robbery + transactional trade'
 version '2.4.6'
 
-provide 'jrs_trade'
-
 dependencies {
     'jrs_core',
     'oxmysql',
@@ -116,6 +114,3 @@ escrow_ignore {
     'modules/trade/sql/*.sql',
 }
 
--- extended inventory API (custom inventories, JRS-style exports) for the extra scripts
-client_scripts { 'client/compat_client.lua' }
-server_scripts { 'server/compat_api.lua', 'server/compat_custom.lua' }
