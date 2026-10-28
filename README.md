@@ -74,7 +74,6 @@ Built natively from the ground up with a unified architecture, clean code, and z
    ensure jrs_core
    ensure jrs_inventory
    ensure jrs_chat
-   ensure jrs_city
    ensure jrs_loadingscreen
    ```
 4. Configure `sv_enforceGameBuild 1491` in `server.cfg`.

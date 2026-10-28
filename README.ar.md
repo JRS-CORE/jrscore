@@ -74,7 +74,6 @@
    ensure jrs_core
    ensure jrs_inventory
    ensure jrs_chat
-   ensure jrs_city
    ensure jrs_loadingscreen
    ```
 4. تأكد من تفعيل `sv_enforceGameBuild 1491` في `server.cfg`.
