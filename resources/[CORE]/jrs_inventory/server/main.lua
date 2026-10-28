@@ -21,6 +21,15 @@ local function isCallable(fn)
     return false
 end
 
+local function GetPlayerCharacter(source)
+    local src = tonumber(source)
+    if not src or src <= 0 then return nil end
+    local char = exports[Config.CoreResource or 'jrs_core']:GetCharacter(src) or (jrsCore and jrsCore.GetCharacter and jrsCore.GetCharacter(src))
+    if char then return char end
+    local user = jrsCore and jrsCore.getUser and jrsCore.getUser(src)
+    return user and user.getUsedCharacter or nil
+end
+
 local jrsCoreWarnedAt = {}
 local JRS_CORE_WARN_THROTTLE_MS = 30000
 jrsCore = setmetatable({}, {
@@ -30,6 +39,19 @@ jrsCore = setmetatable({}, {
             -- compatibility layer loaded by server/jrsInventoryAPI.lua.
             -- IMPORTANT: nil can legitimately mean "character not ready";
             -- never fall through and report that as "no such API method".
+            if key == "GetCharacter" or key == "getCharacter" then
+                local args = { ... }
+                local src = tonumber(args[1])
+                if not src or src <= 0 then return nil end
+                local ok, char = pcall(function() return exports[Config.CoreResource or 'jrs_core']:GetCharacter(src) end)
+                if ok and char then return char end
+                if type(JRSInventoryGetCoreUser) == "function" then
+                    local u = JRSInventoryGetCoreUser(src)
+                    return u and u.getUsedCharacter or nil
+                end
+                return nil
+            end
+
             if key == "getUser" or key == "GetUser" then
                 local args = { ... }
                 if type(JRSInventoryGetCoreUser) == "function" then
@@ -208,8 +230,7 @@ exports('GetMaxWeight', GetMaxWeight)
 
 function getMaxWeapons(source)
     local job = "default"
-    local User = jrsCore and jrsCore.getUser(tonumber(source))
-    local Character = User and User.getUsedCharacter
+    local Character = GetPlayerCharacter(source)
     if Character then
         local rawJob = Character.job
         if type(rawJob) == "table" then
@@ -690,8 +711,7 @@ function IsInventoryLoadedForPlayer(source, Character)
     end
 
     if not Character then
-        local User = jrsCore and jrsCore.getUser and jrsCore.getUser(src)
-        Character = User and User.getUsedCharacter
+        Character = GetPlayerCharacter(src)
     end
 
     local identity = InventoryCharacterIdentity(Character)
@@ -720,12 +740,7 @@ function SaveInventoryNow(source)
         return false
     end
 
-    local User = jrsCore and jrsCore.getUser and jrsCore.getUser(src)
-    if not User then
-        return false
-    end
-
-    local Character = User.getUsedCharacter
+    local Character = GetPlayerCharacter(src)
     if not Character then
         return false
     end

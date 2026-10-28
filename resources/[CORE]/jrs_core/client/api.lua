@@ -29,7 +29,7 @@ end
 function DisplayProgressBar(time, description, cb, shouldCancel, options)
     time = math.max(100, tonumber(time) or 1000)
     options = type(options) == 'table' and options or {}
-    local brand = options.brand or (type(_U) == 'function' and _U('core_redempire')) or 'JRS'
+    local brand = options.brand or (type(_U) == 'function' and _U('core_brand')) or 'JRS'
 
     CoreProgressState.serial = CoreProgressState.serial + 1
     local currentSerial = CoreProgressState.serial

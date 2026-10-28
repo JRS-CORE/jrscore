@@ -1,5 +1,5 @@
 Locales["ar"] = {
-    ['core_redempire'] = "جي آر إس",
+    ['core_brand'] = "جي آر إس",
     ['core_working'] = "جارٍ العمل...",
     -- Connection
     ['checking_steam'] = "أهلاً %s. جارٍ التحقق من ستيم...",

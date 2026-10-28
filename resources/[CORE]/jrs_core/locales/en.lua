@@ -1,5 +1,5 @@
 Locales["en"] = {
-    ['core_redempire'] = "JRS",
+    ['core_brand'] = "JRS",
     ['core_working'] = "Working...",
     -- Connection
     ['checking_steam'] = "Welcome %s. Checking Steam...",

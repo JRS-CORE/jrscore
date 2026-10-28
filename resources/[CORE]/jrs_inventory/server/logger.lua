@@ -43,8 +43,7 @@ end
 
 local function characterData(playerId)
     playerId = tonumber(playerId)
-    local User = playerId and jrsCore and jrsCore.getUser and jrsCore.getUser(playerId)
-    local Character = User and User.getUsedCharacter
+    local Character = playerId and (exports['jrs_core']:GetCharacter(playerId) or (jrsCore and jrsCore.GetCharacter and jrsCore.GetCharacter(playerId)))
     return User, Character
 end
 

@@ -48,18 +48,13 @@ end
 local function getCharacterData(playerId)
     local src = tonumber(playerId)
     if not src then return nil end
-    local User = jrsCore and jrsCore.getUser(src)
-    local Character = User and User.getUsedCharacter
+    local Character = exports.jrs_core:GetCharacter(src) or (jrsCore and jrsCore.GetCharacter and jrsCore.GetCharacter(src))
     if Character then return Character, Character.identifier, Character.charIdentifier end
 
-    -- See server/weapons.lua's getCharacterData for why this retries: jrs_core
-    -- can still be resolving this connection's loaded character for a brief
-    -- window even though the player is fully online.
     for _ = 1, 5 do
         if not GetPlayerName(src) then return nil end
         Citizen.Wait(300)
-        User = jrsCore and jrsCore.getUser(src)
-        Character = User and User.getUsedCharacter
+        Character = exports.jrs_core:GetCharacter(src) or (jrsCore and jrsCore.GetCharacter and jrsCore.GetCharacter(src))
         if Character then return Character, Character.identifier, Character.charIdentifier end
     end
     return nil

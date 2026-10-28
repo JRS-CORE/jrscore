@@ -131,8 +131,7 @@ function AddInventoryItemDirect(playerId, itemName, count, metadata, preferredSl
     local itemDef = ResolveItemDef(itemName)
     if itemName == "" or not itemDef then return false, "invalid_item" end
 
-    local User = jrsCore and jrsCore.getUser and jrsCore.getUser(playerId)
-    local Character = User and User.getUsedCharacter
+    local Character = jrsCore and jrsCore.GetCharacter and jrsCore.GetCharacter(playerId)
     if not Character then return false, "player_not_found" end
     if type(IsInventoryLoadedForPlayer) ~= "function" or not IsInventoryLoadedForPlayer(playerId, Character) then
         return false, "inventory_not_loaded"
@@ -460,8 +459,7 @@ local function remapMergedItemInHotbar(playerId, removedItemId, targetItemId, it
 
     if not changed then return end
 
-    local User = jrsCore and jrsCore.getUser and jrsCore.getUser(playerId)
-    local Character = User and User.getUsedCharacter
+    local Character = jrsCore and jrsCore.GetCharacter and jrsCore.GetCharacter(playerId)
     if not Character then return end
 
     exports[Config.MysqlResource]:execute(

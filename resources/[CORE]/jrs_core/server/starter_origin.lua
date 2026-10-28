@@ -159,7 +159,7 @@ AddEventHandler('jrs_core:server:characterReady', function(sourceId, character)
     SetTimeout(1500, function()
         -- Ensure player is still active and valid with the same character
         local user = jrsCore.getUser(sourceId)
-        local curChar = user and user.getUsedCharacter
+        local curChar = jrsCore.GetCharacter(source)
         if not curChar or tonumber(curChar.charIdentifier) ~= charId then
             startersInProgress[charId] = nil
             return

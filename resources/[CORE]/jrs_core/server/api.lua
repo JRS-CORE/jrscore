@@ -456,18 +456,17 @@ local function buildLegacyServerAPI()
         if PlayerData[source] then
             return PlayerData[source].job
         end
-        local user = jrsCore.getUser(source)
-        return user and user.getUsedCharacter and user.getUsedCharacter.job or nil
+        local char = jrsCore.GetCharacter and jrsCore.GetCharacter(source)
+        return char and char.job or nil
     end
 
     serverApi.setJob = function(source, job, grade)
         source = tonumber(source)
         if not source or not job then return false end
 
-        local user = jrsCore.getUser(source)
-        if not user or not user.getUsedCharacter then return false end
+        local character = jrsCore.GetCharacter and jrsCore.GetCharacter(source)
+        if not character then return false end
 
-        local character = user.getUsedCharacter
         grade = tonumber(grade) or tonumber(character.jobgrade) or 0
         local changed, reason = character.setJob(source, job, grade)
         if changed ~= true then return false, reason end
@@ -484,8 +483,8 @@ local function buildLegacyServerAPI()
         if PlayerData[source] then
             return PlayerData[source].jobGrade
         end
-        local user = jrsCore.getUser(source)
-        return user and user.getUsedCharacter and user.getUsedCharacter.jobgrade or nil
+        local char = jrsCore.GetCharacter and jrsCore.GetCharacter(source)
+        return char and char.jobgrade or nil
     end
 
     serverApi.setJobGrade = function(source, grade)
@@ -493,10 +492,9 @@ local function buildLegacyServerAPI()
         grade = tonumber(grade)
         if not source or grade == nil then return false end
 
-        local user = jrsCore.getUser(source)
-        if not user or not user.getUsedCharacter then return false end
+        local character = jrsCore.GetCharacter and jrsCore.GetCharacter(source)
+        if not character then return false end
 
-        local character = user.getUsedCharacter
         local changed, reason = character.setJob(source, character.job, grade)
         if changed ~= true then return false, reason end
 
@@ -661,27 +659,27 @@ CoreAPI.addNewCallBack("jrs:getPlayerData", function(source, data)
     local target = source
     if data and data.source then target = tonumber(data.source) end
     if not PlayerData[target] then return {} end
-    local xPlayer = PlayerData[target]
+    local pData = PlayerData[target]
     return {
         source = target,
-        identifier = xPlayer.identifier,
-        charIdentifier = tonumber(xPlayer.charIdentifier),
-        firstname = xPlayer.firstname,
-        lastname = xPlayer.lastname,
-        gender = xPlayer.gender,
-        dob = xPlayer.dob,
-        job = xPlayer.job,
-        jobGrade = xPlayer.jobGrade,
-        group = xPlayer.group or "user",
-        money = xPlayer.account and tonumber(xPlayer.account[0]) or 0,
-        gold = xPlayer.account and tonumber(xPlayer.account[1]) or 0,
-        rol = xPlayer.account and tonumber(xPlayer.account[2]) or 0,
-        dirtymoney = xPlayer.account and tonumber(xPlayer.account[3]) or 0,
-        blackmoney = xPlayer.account and tonumber(xPlayer.account[3]) or 0, -- compatibility alias for Dirty Money
-        xp = tonumber(xPlayer.xp) or 0,
-        identityId = xPlayer.identity_id,
-        defaultWeapon = xPlayer.default_weapon,
-        inventoryMaxWeight = xPlayer.inventory_capacity,
+        identifier = pData.identifier,
+        charIdentifier = tonumber(pData.charIdentifier),
+        firstname = pData.firstname,
+        lastname = pData.lastname,
+        gender = pData.gender,
+        dob = pData.dob,
+        job = pData.job,
+        jobGrade = pData.jobGrade,
+        group = pData.group or "user",
+        money = pData.account and tonumber(pData.account[0]) or 0,
+        gold = pData.account and tonumber(pData.account[1]) or 0,
+        rol = pData.account and tonumber(pData.account[2]) or 0,
+        dirtymoney = pData.account and tonumber(pData.account[3]) or 0,
+        blackmoney = pData.account and tonumber(pData.account[3]) or 0, -- compatibility alias for Dirty Money
+        xp = tonumber(pData.xp) or 0,
+        identityId = pData.identity_id,
+        defaultWeapon = pData.default_weapon,
+        inventoryMaxWeight = pData.inventory_capacity,
     }
 end)
 
@@ -699,51 +697,51 @@ end)
 -- MONEY / CURRENCY
 CoreAPI.addNewCallBack("jrs:addMoney", function(source, data)
     if not data.amount or data.amount <= 0 then return { success = false, error = _U('err_invalid_amount') } end
-    local User = jrsCore.getUser(source)
-    if not User then return { success = false, error = _U('err_user_not_found') } end
-    User.getUsedCharacter.addCurrency(source, 0, data.amount)
+    local char = jrsCore.GetCharacter(source)
+    if not char then return { success = false, error = _U('err_user_not_found') } end
+    char.addCurrency(source, 0, data.amount)
     return { success = true }
 end)
 
 CoreAPI.addNewCallBack("jrs:removeMoney", function(source, data)
     if not data.amount or data.amount <= 0 then return { success = false, error = _U('err_invalid_amount') } end
-    local User = jrsCore.getUser(source)
-    if not User then return { success = false, error = _U('err_user_not_found') } end
-    User.getUsedCharacter.removeCurrency(source, 0, data.amount)
+    local char = jrsCore.GetCharacter(source)
+    if not char then return { success = false, error = _U('err_user_not_found') } end
+    char.removeCurrency(source, 0, data.amount)
     return { success = true }
 end)
 
 CoreAPI.addNewCallBack("jrs:addGold", function(source, data)
     if not data.amount or data.amount <= 0 then return { success = false, error = _U('err_invalid_amount') } end
-    local User = jrsCore.getUser(source)
-    if not User then return { success = false, error = _U('err_user_not_found') } end
-    User.getUsedCharacter.addCurrency(source, 1, data.amount)
+    local char = jrsCore.GetCharacter(source)
+    if not char then return { success = false, error = _U('err_user_not_found') } end
+    char.addCurrency(source, 1, data.amount)
     return { success = true }
 end)
 
 CoreAPI.addNewCallBack("jrs:removeGold", function(source, data)
     if not data.amount or data.amount <= 0 then return { success = false, error = _U('err_invalid_amount') } end
-    local User = jrsCore.getUser(source)
-    if not User then return { success = false, error = _U('err_user_not_found') } end
-    User.getUsedCharacter.removeCurrency(source, 1, data.amount)
+    local char = jrsCore.GetCharacter(source)
+    if not char then return { success = false, error = _U('err_user_not_found') } end
+    char.removeCurrency(source, 1, data.amount)
     return { success = true }
 end)
 
 CoreAPI.addNewCallBack("jrs:addDirtyMoney", function(source, data)
     if not data.amount or data.amount <= 0 then return { success = false, error = _U('err_invalid_amount') } end
-    local User = jrsCore.getUser(source)
-    if not User then return { success = false, error = _U('err_user_not_found') } end
-    User.getUsedCharacter.addCurrency(source, 3, data.amount)
+    local char = jrsCore.GetCharacter(source)
+    if not char then return { success = false, error = _U('err_user_not_found') } end
+    char.addCurrency(source, 3, data.amount)
     return { success = true }
 end)
 
 CoreAPI.addNewCallBack("jrs:removeDirtyMoney", function(source, data)
     if not data.amount or data.amount <= 0 then return { success = false, error = _U('err_invalid_amount') } end
-    local User = jrsCore.getUser(source)
-    if not User then return { success = false, error = _U('err_user_not_found') } end
-    local balance = tonumber(User.getUsedCharacter.dirtymoney) or 0
+    local char = jrsCore.GetCharacter(source)
+    if not char then return { success = false, error = _U('err_user_not_found') } end
+    local balance = tonumber(char.dirtymoney) or 0
     if balance < data.amount then return { success = false, error = _U('err_invalid_amount') } end
-    User.getUsedCharacter.removeCurrency(source, 3, data.amount)
+    char.removeCurrency(source, 3, data.amount)
     return { success = true }
 end)
 
@@ -788,9 +786,8 @@ end)
 CoreAPI.addNewCallBack("jrs:addItem", function(source, data)
     if not data.item then return { success = false, error = _U('err_item_required') } end
     local count = data.count or 1
-    local User = jrsCore.getUser(source)
-    if not User then return { success = false, error = _U('err_user_not_found') } end
-    local Character = User.getUsedCharacter
+    local Character = jrsCore.GetCharacter(source)
+    if not Character then return { success = false, error = _U('err_user_not_found') } end
     local inv = json.decode(Character.inventory) or {}
     table.insert(inv, { itemId = math.random(1, 76062001718755), item = data.item, count = count, metadata = data.metadata or {} })
     Character.inventory = json.encode(inv)
@@ -802,9 +799,8 @@ end)
 CoreAPI.addNewCallBack("jrs:removeItem", function(source, data)
     if not data.item then return { success = false, error = _U('err_item_required') } end
     local count = data.count or 1
-    local User = jrsCore.getUser(source)
-    if not User then return { success = false, error = _U('err_user_not_found') } end
-    local Character = User.getUsedCharacter
+    local Character = jrsCore.GetCharacter(source)
+    if not Character then return { success = false, error = _U('err_user_not_found') } end
     local inv = json.decode(Character.inventory) or {}
     local removed = 0
     for i = #inv, 1, -1 do

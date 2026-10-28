@@ -126,7 +126,7 @@ function TaxEngine.ApplyTax(playerSource, categoryName, baseAmount, context)
     local receiptId = generateReceiptId()
 
     -- Deduct total amount (Base + Tax) from player
-    local char = jrsCore.getUser(playerSource) and jrsCore.getUser(playerSource).getUsedCharacter
+    local char = jrsCore.GetCharacter(playerSource)
     if not char or (char.money or 0) < totalAmount then
         return false, nil, totalAmount, breakdown
     end

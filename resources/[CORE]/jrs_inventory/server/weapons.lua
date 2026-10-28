@@ -23,21 +23,13 @@ end
 local function getCharacterData(playerId)
 	local src = tonumber(playerId)
 	if not src then return nil end
-	local User = jrsCore and jrsCore.getUser(src)
-	local Character = User and User.getUsedCharacter
+	local Character = exports.jrs_core:GetCharacter(src) or (jrsCore and jrsCore.GetCharacter and jrsCore.GetCharacter(src))
 	if Character then return Character, Character.identifier, Character.charIdentifier end
 
-	-- jrs_core can still be resolving this connection's loaded character at
-	-- the exact instant this runs (e.g. right after connecting, or right
-	-- after a resource restart while players are already online) even though
-	-- the player is fully online and playing. This is called from exports/
-	-- event handlers, which run as yieldable Citizen threads, so retry briefly
-	-- instead of failing an already-connected player's give/create outright.
 	for _ = 1, 5 do
 		if not GetPlayerName(src) then return nil end
 		Citizen.Wait(300)
-		User = jrsCore and jrsCore.getUser(src)
-		Character = User and User.getUsedCharacter
+		Character = exports.jrs_core:GetCharacter(src) or (jrsCore and jrsCore.GetCharacter and jrsCore.GetCharacter(src))
 		if Character then return Character, Character.identifier, Character.charIdentifier end
 	end
 	return nil
@@ -705,8 +697,7 @@ AddEventHandler('jrs_inventory:send_state_weapon', function(wepid, state, token)
         end
     end
 
-    local User = jrsCore.getUser(src)
-    local Character = User and User.getUsedCharacter
+    local Character = jrsCore.GetCharacter(src)
     if not Character then reply(false, 'character_unavailable'); return end
     local params = {identifier = Character.identifier, charidentifier = Character.charIdentifier, id = weaponId, used = nextState}
     local function finish(success)
@@ -740,10 +731,8 @@ RegisterServerEvent('jrs_inventory:set_all_weapons_unequipped')
 AddEventHandler('jrs_inventory:set_all_weapons_unequipped', function()
 	local src = tonumber(source)
     if not src or not AllowInventoryRequest(src, 'weapon_state') then return end
-	local User = jrsCore.getUser(tonumber(src))
-	if User == nil or User.getUsedCharacter == nil then return end
-
-	local Character = User.getUsedCharacter
+	local Character = jrsCore.GetCharacter(tonumber(src))
+	if not Character then return end
 	local identifier = Character.identifier
 	local charid = Character.charIdentifier
 
@@ -972,9 +961,8 @@ AddEventHandler('jrs_inventory:saveAmmoThrow', function(wepName, ammoTable, wepC
         return
     end
     wepCond = math.max(0, math.min(100, tonumber(wepCond) or 0))
-	local User = jrsCore.getUser(_source)
-	if not User or not User.getUsedCharacter then return end
-	local Character = User.getUsedCharacter
+	local Character = jrsCore.GetCharacter(_source)
+	if not Character then return end
 
 	local weaponId = tonumber(clientWeaponId)
 	if not weaponId and type(weapon_table) == 'table' and type(weapon_table[_source]) == 'table' then
@@ -1025,9 +1013,8 @@ AddEventHandler('jrs_inventory:saveAmmoNormal', function(wepName, ammoTable, wep
         return
     end
     wepCond = math.max(0, math.min(100, tonumber(wepCond) or 0))
-	local User = jrsCore.getUser(_source)
-	if not User or not User.getUsedCharacter then return end
-	local Character = User.getUsedCharacter
+	local Character = jrsCore.GetCharacter(_source)
+	if not Character then return end
 	local weaponId = tonumber(wepName)
 	if not weaponId then return end
 
@@ -1080,9 +1067,8 @@ local function setWeaponConditionTrusted(playerId, weaponId, condition, sourceRe
     local cachedWeapon = getCachedWeapon(playerId, weaponId)
     if not cachedWeapon then return false, 'weapon_not_owned' end
 
-    local User = jrsCore.getUser(playerId)
-    if not User or not User.getUsedCharacter then return false, 'player_not_loaded' end
-    local Character = User.getUsedCharacter
+    local Character = jrsCore.GetCharacter(playerId)
+    if not Character then return false, 'player_not_loaded' end
 
     cachedWeapon.conditionlevel = condition
     exports[Config.MysqlResource]:execute(

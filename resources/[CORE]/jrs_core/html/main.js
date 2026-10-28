@@ -160,7 +160,7 @@ const coreProg = {
 				displayBrand = window.JrsI18n.t(brand, window.JrsI18n.t(brand.toLowerCase(), brand));
 			}
 			if (!displayBrand || displayBrand === 'undefined' || displayBrand === '') {
-				displayBrand = window.JrsI18n ? window.JrsI18n.t('core_redempire', 'JRS') : 'JRS';
+				displayBrand = window.JrsI18n ? window.JrsI18n.t('core_brand', 'JRS') : 'JRS';
 			}
 			this.brand.textContent = String(displayBrand);
 		}
