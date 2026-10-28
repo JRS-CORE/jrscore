@@ -22,7 +22,7 @@ local function getCharacterData(playerId)
 	local src = tonumber(playerId)
 	if not src then return nil end
 	local User = jrsCore and jrsCore.getUser(src)
-	local Character = User and User.getUsedCharacter
+	local Character = User and (User.character or User.getUsedCharacter)
 	if Character then return Character, Character.identifier, Character.charIdentifier end
 
 	-- See server/weapons.lua's getCharacterData for why this retries: jrs_core
@@ -32,7 +32,7 @@ local function getCharacterData(playerId)
 		if not GetPlayerName(src) then return nil end
 		Citizen.Wait(300)
 		User = jrsCore and jrsCore.getUser(src)
-		Character = User and User.getUsedCharacter
+		Character = User and (User.character or User.getUsedCharacter)
 		if Character then return Character, Character.identifier, Character.charIdentifier end
 	end
 	return nil
@@ -845,7 +845,7 @@ local function completeGroundItemPickup(playerId, dropId, drop, removeDrop)
 	end
 
 	local User = jrsCore and jrsCore.getUser(playerId)
-	local Character = User and User.getUsedCharacter
+	local Character = User and (User.character or User.getUsedCharacter)
 	if not Character then
 		itemDropLocks[dropId] = nil
 		UnlockInventoryPlayer(playerId)

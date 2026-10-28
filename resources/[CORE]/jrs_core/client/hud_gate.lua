@@ -147,7 +147,7 @@ local function isWeaponWheelActive()
         return true
     end
 
-    if isUiAppRunning(GetHashKey("hud_quick_select"), "hud_quick_select") or isUiAppRunning(`hud_quick_select`, "hud_quick_select") then
+    if isUiAppRunning(GetHashKey("hud_quick_select"), "hud_quick_select") or isUiAppRunning(joaat("hud_quick_select"), "hud_quick_select") then
         local now = GetGameTimer()
         wheelRunningNotHeldSince = wheelRunningNotHeldSince or now
         return (now - wheelRunningNotHeldSince) < WHEEL_STALE_AFTER_MS
@@ -190,8 +190,8 @@ local function evaluateAuto()
 
     if auto.OnPauseMenu ~= false then
         if IsPauseMenuActive() or Citizen.InvokeNative(0xB0034A223497FFCB) then return true, 'pause menu' end
-        if isUiAppRunning(GetHashKey("settings_menu")) or isUiAppRunning(`settings_menu`) then return true, 'settings menu' end
-        if isUiAppRunning(GetHashKey("pause_menu")) or isUiAppRunning(`pause_menu`) then return true, 'pause menu' end
+        if isUiAppRunning(GetHashKey("settings_menu")) or isUiAppRunning(joaat("settings_menu")) then return true, 'settings menu' end
+        if isUiAppRunning(GetHashKey("pause_menu")) or isUiAppRunning(joaat("pause_menu")) then return true, 'pause menu' end
         if GetResourceState('jrs_pausemenu') == 'started' then
             local ok, open = pcall(function() return exports['jrs_pausemenu']:IsOpen() end)
             if ok and open == true then return true, 'jrs pause menu' end
@@ -199,7 +199,7 @@ local function evaluateAuto()
     end
 
     if auto.OnMap ~= false then
-        if isUiAppRunning(GetHashKey("map")) or isUiAppRunning(`map`) or isUiAppRunning(`MAP`) or isUiAppRunning(GetHashKey("MAP_APP")) then
+        if isUiAppRunning(GetHashKey("map")) or isUiAppRunning(joaat("map")) or isUiAppRunning(joaat("MAP")) or isUiAppRunning(GetHashKey("MAP_APP")) then
             return true, 'map'
         end
     end

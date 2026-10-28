@@ -111,7 +111,7 @@ local function getCharacter(playerId)
         return jrsCore.getUser(playerId)
     end)
     if okUser and user then
-        return user.getUsedCharacter
+        return (user.character or user.getUsedCharacter)
     end
     return nil
 end

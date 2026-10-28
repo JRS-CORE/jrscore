@@ -345,7 +345,7 @@ exports('canAcquireItem', Inventory.canAcquireItem)
 
 Inventory.getWeaponsMe = function(source)
     local User = getCoreUser(source)
-    local Character = User and User.getUsedCharacter
+    local Character = User and (User.character or User.getUsedCharacter)
     if not Character then return {} end
 
     local result = queryAsync('SELECT * FROM jrs_weaponloadout WHERE charidentifier = @charidentifier', {['charidentifier'] = Character.charIdentifier})

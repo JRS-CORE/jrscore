@@ -131,7 +131,7 @@ local function getActiveCharacter(source)
     end
 
     local user = jrsCore.getUser and jrsCore.getUser(src) or nil
-    local character = user and user.getUsedCharacter or nil
+    local character = user and (user.character or user.getUsedCharacter) or nil
     return type(character) == "table" and character or nil
 end
 
@@ -611,7 +611,7 @@ function User.setGroup(source, targetId, groupName)
 end
 
 local function clearSelectedCharacterState(source, user)
-    if user then user.getUsedCharacter = nil end
+    if user then user.character = nil; user.getUsedCharacter = nil end
     PlayerTable[source] = nil
     PlayerData[source] = nil
     CanSaveCoords[source] = nil
@@ -659,7 +659,8 @@ function jrsCore.SelectCharacterFromRow(source, characterRow)
 
     selectedCharacter.source = source
     selectedCharacter.playerSource = source
-    user.getUsedCharacter = selectedCharacter
+    user.character = selectedCharacter
+        user.getUsedCharacter = selectedCharacter
     PlayerTable[source] = {
         sourceData = source,
         firstname = selectedCharacter.firstname,

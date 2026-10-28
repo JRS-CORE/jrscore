@@ -41,7 +41,7 @@ local function getCharacterIdentity(src)
 
     if (not first or first == '') and jrsCore and jrsCore.getUser then
         local user = jrsCore.getUser(src)
-        local character = user and user.getUsedCharacter or nil
+        local character = user and (user.character or user.getUsedCharacter) or nil
         if type(character) == 'table' then
             first = character.firstname or first
             last = character.lastname or last

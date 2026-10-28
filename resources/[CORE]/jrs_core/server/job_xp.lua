@@ -98,7 +98,7 @@ local function charIdOf(playerSource)
     playerSource = tonumber(playerSource)
     if not playerSource or playerSource <= 0 then return nil end
     local user = jrsCore and jrsCore.getUser and jrsCore.getUser(playerSource)
-    if user and user.getUsedCharacter and user.getUsedCharacter.charIdentifier then
+    if user and (user.character or user.getUsedCharacter) and user.getUsedCharacter.charIdentifier then
         return tonumber(user.getUsedCharacter.charIdentifier)
     end
     if jrsCore and type(jrsCore.GetCharacter) == 'function' then

@@ -80,7 +80,7 @@ local function getCharacter(src)
         if ok and character then return character end
     end
     local user = type(Core.getUser) == 'function' and Core.getUser(src) or nil
-    return user and user.getUsedCharacter or nil
+    return user and (user.character or user.getUsedCharacter) or nil
 end
 
 local function coreAddCash(src, amount)

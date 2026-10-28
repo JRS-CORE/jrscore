@@ -88,7 +88,7 @@ local MULTI_SLOT_TONIC_HASHES = {
 -- Chooses the native item mirrored for a jrs item. Natives the game lists on the wheel
 -- (Config.InputWheel.ShownNatives) are used as-is; anything else takes the place of an unused
 -- native from Config.InputWheel.Substitutes so it still gets its own wheel entry. Names the item
--- database rejects fall through to the entry's fallback list. `used` holds the hashes already
+-- database rejects fall through to the entry's fallback list. joaat("used") holds the hashes already
 -- taken by other owned items.
 local function pickNativeHash(jrsKey, used, shown)
     local entry = getWheelEntry(jrsKey)
@@ -329,7 +329,7 @@ end
 
 function GetPlayerInventoryGUID()
     local emptyGuid = NewGuid()
-    local invGuid, result = GetPlayerInventoryItemGUID(`CHARACTER`, emptyGuid:Buffer(), `SLOTID_NONE`)
+    local invGuid, result = GetPlayerInventoryItemGUID(joaat("CHARACTER"), emptyGuid:Buffer(), joaat("SLOTID_NONE"))
     return invGuid, result
 end
 
@@ -358,39 +358,39 @@ function ResolveItemSlotInfo(item)
     local slotInfo = NewSlotInfo()
     local playerInvGuid = select(1, GetPlayerInventoryGUID())
     slotInfo:SetGuid(playerInvGuid)
-    slotInfo:SetSlotId(`SLOTID_SATCHEL`)
+    slotInfo:SetSlotId(joaat("SLOTID_SATCHEL"))
     local group = GetItemGroup(item)
-    if group == `CLOTHING` then
-        if FitsSlot(item, `SLOTID_WARDROBE`) then
-            local wardrobeGuid = select(1, GetPlayerInventoryItemGUID(`WARDROBE`, slotInfo:GetGuidBuffer(), `SLOTID_WARDROBE`))
+    if group == joaat("CLOTHING") then
+        if FitsSlot(item, joaat("SLOTID_WARDROBE")) then
+            local wardrobeGuid = select(1, GetPlayerInventoryItemGUID(joaat("WARDROBE"), slotInfo:GetGuidBuffer(), joaat("SLOTID_WARDROBE")))
             slotInfo:SetGuid(wardrobeGuid)
-            slotInfo:SetSlotId(GetDefaultItemSlotInfo(item, `WARDROBE`))
+            slotInfo:SetSlotId(GetDefaultItemSlotInfo(item, joaat("WARDROBE")))
         else
-            slotInfo:SetSlotId(GetDefaultItemSlotInfo(item, `SLOTID_WARDROBE`))
+            slotInfo:SetSlotId(GetDefaultItemSlotInfo(item, joaat("SLOTID_WARDROBE")))
         end
-    elseif group == `WEAPON` then
-        if FitsSlot(item, `SLOTID_WEAPON_0`) then
-            slotInfo:SetSlotId(`SLOTID_WEAPON_0`)
-        elseif FitsSlot(item, `SLOTID_WEAPON_1`) then
-            slotInfo:SetSlotId(`SLOTID_WEAPON_1`)
+    elseif group == joaat("WEAPON") then
+        if FitsSlot(item, joaat("SLOTID_WEAPON_0")) then
+            slotInfo:SetSlotId(joaat("SLOTID_WEAPON_0"))
+        elseif FitsSlot(item, joaat("SLOTID_WEAPON_1")) then
+            slotInfo:SetSlotId(joaat("SLOTID_WEAPON_1"))
         else
-            slotInfo:SetSlotId(GetDefaultItemSlotInfo(item, `CHARACTER`))
+            slotInfo:SetSlotId(GetDefaultItemSlotInfo(item, joaat("CHARACTER")))
         end
-    elseif group == `HORSE` then
-        slotInfo:SetSlotId(`SLOTID_ACTIVE_HORSE`)
-    elseif group == `UPGRADE` then
-        if FitsSlot(item, `SLOTID_UPGRADE`) then
-            slotInfo:SetSlotId(`SLOTID_UPGRADE`)
+    elseif group == joaat("HORSE") then
+        slotInfo:SetSlotId(joaat("SLOTID_ACTIVE_HORSE"))
+    elseif group == joaat("UPGRADE") then
+        if FitsSlot(item, joaat("SLOTID_UPGRADE")) then
+            slotInfo:SetSlotId(joaat("SLOTID_UPGRADE"))
         else
-            slotInfo:SetSlotId(GetDefaultItemSlotInfo(item, `CHARACTER`))
+            slotInfo:SetSlotId(GetDefaultItemSlotInfo(item, joaat("CHARACTER")))
         end
     else
-        if FitsSlot(item, `SLOTID_SATCHEL`) then
-            slotInfo:SetSlotId(`SLOTID_SATCHEL`)
-        elseif FitsSlot(item, `SLOTID_WARDROBE`) then
-            slotInfo:SetSlotId(`SLOTID_WARDROBE`)
+        if FitsSlot(item, joaat("SLOTID_SATCHEL")) then
+            slotInfo:SetSlotId(joaat("SLOTID_SATCHEL"))
+        elseif FitsSlot(item, joaat("SLOTID_WARDROBE")) then
+            slotInfo:SetSlotId(joaat("SLOTID_WARDROBE"))
         else
-            slotInfo:SetSlotId(GetDefaultItemSlotInfo(item, `CHARACTER`))
+            slotInfo:SetSlotId(GetDefaultItemSlotInfo(item, joaat("CHARACTER")))
         end
     end
     return slotInfo, group
@@ -422,7 +422,7 @@ end
 function AddItemToInventory(item, quantity)
     local slotInfo = ResolveItemSlotInfo(item)
     local newItemGuid = NewGuid()
-    return AddItemWithGUID(item, newItemGuid, slotInfo, quantity, `ADD_REASON_DEFAULT`)
+    return AddItemWithGUID(item, newItemGuid, slotInfo, quantity, joaat("ADD_REASON_DEFAULT"))
 end
 
 function RemoveItemWithGuid(existingGuid, quantity, removeReason)
@@ -431,7 +431,7 @@ function RemoveItemWithGuid(existingGuid, quantity, removeReason)
         1,
         existingGuid:Buffer(),
         quantity or 1,
-        removeReason or `REMOVE_REASON_DEFAULT`
+        removeReason or joaat("REMOVE_REASON_DEFAULT")
     )
 end
 
@@ -444,7 +444,7 @@ function RemoveItemByName(item, quantity)
     if not guidValid then
         return false
     end
-    return RemoveItemWithGuid(existingGuid, quantity, `REMOVE_REASON_DEFAULT`)
+    return RemoveItemWithGuid(existingGuid, quantity, joaat("REMOVE_REASON_DEFAULT"))
 end
 
 -- Every native this script could have mirrored (wanted names, fallbacks, auto natives).
@@ -484,7 +484,7 @@ local function clearManagedWheelItems()
     end
 end
 
--- Adds/removes `qty` units of a native item ONE AT A TIME. A single call with the full quantity
+-- Adds/removes joaat("qty") units of a native item ONE AT A TIME. A single call with the full quantity
 -- creates an item the game's wheel does not list, while unit-by-unit adds (the original
 -- behaviour) show up correctly. Returns units done.
 local function addNativeUnits(hash, qty)
@@ -622,18 +622,18 @@ local function UpdateCurrentUsableWheelItem(itemHash)
 end
 
 local function HandleQuickSelectMessages()
-    while EventsUiIsPending(`HUD_QUICK_SELECT`) do
+    while EventsUiIsPending(joaat("HUD_QUICK_SELECT")) do
         local msg = DataView.ArrayBuffer(8 * 4)
         msg:SetInt32(0, 0)
         msg:SetInt32(8, 0)
         msg:SetInt32(16, 0)
         msg:SetInt32(24, 0)
-        local ok = Citizen.InvokeNative(0xE24E957294241444, `hud_quick_select`, msg:Buffer())
+        local ok = Citizen.InvokeNative(0xE24E957294241444, joaat("hud_quick_select"), msg:Buffer())
         if ok ~= 0 then
             local f0 = msg:GetInt32(0) or 0
             local f1 = msg:GetInt32(8) or 0
             local f2 = msg:GetInt32(16) or 0
-            if f0 == `ITEM_FOCUSED` then
+            if f0 == joaat("ITEM_FOCUSED") then
                 if f1 == 1 and f2 == 813560150 then
                     WheelHook.currentWheel = 0
                 elseif f1 == 2 and f2 == -414255251 then
@@ -803,7 +803,7 @@ local function HandleWheelHook()
                 WheelHook.weaponTransitionRequested = true
                 local transitioned = false
                 local ok, result = pcall(function()
-                    return Citizen.InvokeNative(0x7689CD255655BFD7, `hud_quick_select`, `WEAPON_WHEEL`)
+                    return Citizen.InvokeNative(0x7689CD255655BFD7, joaat("hud_quick_select"), joaat("WEAPON_WHEEL"))
                 end)
                 transitioned = ok and (result == true or result == 1)
                 if not transitioned then

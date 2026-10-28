@@ -27,7 +27,7 @@ local function GetPlayerCharacter(source)
     local char = exports[Config.CoreResource or 'jrs_core']:GetCharacter(src) or (jrsCore and jrsCore.GetCharacter and jrsCore.GetCharacter(src))
     if char then return char end
     local user = jrsCore and jrsCore.getUser and jrsCore.getUser(src)
-    return user and user.getUsedCharacter or nil
+    return user and (user.character or user.getUsedCharacter) or nil
 end
 
 local jrsCoreWarnedAt = {}
@@ -769,7 +769,7 @@ function SaveInventoryNow(source)
     )
     return true
 end
--- Flush the active character before jrs_character changes User.getUsedCharacter.
+-- Flush the active character before jrs_character changes (User.character or User.getUsedCharacter).
 -- This prevents the old in-memory inventory from ever being saved under the new character.
 local function PrepareCharacterSwitch(src)
     src = tonumber(src)
@@ -940,7 +940,7 @@ function updateItemsInventory(_source)
 	_source = tonumber(_source)
 	if not _source then return end
 	local User = jrsCore and jrsCore.getUser(_source)
-	local Character = User and User.getUsedCharacter
+	local Character = User and (User.character or User.getUsedCharacter)
 	if not Character then return end
 	local identifier = Character.identifier
 	local CharIdentifier = Character.charIdentifier
@@ -1014,7 +1014,7 @@ Citizen.CreateThread(function()
 			local _source = tonumber(playerId)
 			if _source and canSaveInventory[_source] == true then
 				local User = jrsCore.getUser(_source)
-				local Character = User and User.getUsedCharacter
+				local Character = User and (User.character or User.getUsedCharacter)
 				if Character and IsInventoryLoadedForPlayer(_source, Character) then
 					if SaveInventoryNow(_source) then
 						jrsCore.Debug("[Inventory] CharIdentifier : "..tostring(Character.charIdentifier).." inventory has been saved!")
@@ -1042,7 +1042,7 @@ AddEventHandler('onResourceStop', function(resourceName)
 		local src = tonumber(playerId)
 		if src and type(inventory) == 'table' then
 			local User = jrsCore and jrsCore.getUser(src)
-			local Character = User and User.getUsedCharacter
+			local Character = User and (User.character or User.getUsedCharacter)
 			local encodedOk, inventoryJson = pcall(json.encode, inventory)
 			if Character and IsInventoryLoadedForPlayer(src, Character) and encodedOk and type(inventoryJson) == 'string' then
 				queries[#queries + 1] = {
@@ -1114,9 +1114,9 @@ local function AttemptGetItems(_source, attempt)
 		JRSInventoryAmmoRevisions[tonumber(_source)] = {}
 	end
 	local User = jrsCore.getUser(_source)
-	if User ~= nil and User.getUsedCharacter ~= nil then
+	if User ~= nil and (User.character or User.getUsedCharacter) ~= nil then
 		openstorages[_source] = {}
-		local Character = User.getUsedCharacter
+		local Character = (User.character or User.getUsedCharacter)
 		local identifier = Character.identifier
 		local charid = Character.charIdentifier
 		exports[Config.MysqlResource]:execute('SELECT inventory, hotbar FROM jrs_characters WHERE identifier=@identifier and charidentifier=@charidentifier', {["identifier"]=identifier,["charidentifier"]=charid}, function(resultInventory)
@@ -1304,8 +1304,8 @@ AddEventHandler('jrs_inventory:get_money', function(requestedSource)
     if not _source then return end
     if not invokedLocally and not AllowInventoryRequest(_source, 'get_money') then return end
 	local User = jrsCore.getUser(tonumber(_source))
-	if User ~= nil and User.getUsedCharacter ~= nil then
-		local Character = User.getUsedCharacter
+	if User ~= nil and (User.character or User.getUsedCharacter) ~= nil then
+		local Character = (User.character or User.getUsedCharacter)
 		local user_money = Character.money
 		local user_gold = Character.gold
 		local user_dirtymoney = Character.dirtymoney
@@ -1320,8 +1320,8 @@ AddEventHandler('jrs_inventory:get_money_sec', function(requestedSource)
     if not _source then return end
     if not invokedLocally and not AllowInventoryRequest(_source, 'refresh_money') then return end
 	local User = jrsCore.getUser(tonumber(_source))
-	if User == nil or User.getUsedCharacter == nil then return end
-	local Character = User.getUsedCharacter
+	if User == nil or (User.character or User.getUsedCharacter) == nil then return end
+	local Character = (User.character or User.getUsedCharacter)
 	local user_money = Character.money
 	local user_gold = Character.gold
 	local user_dirtymoney = Character.dirtymoney
@@ -1335,8 +1335,8 @@ AddEventHandler('jrs_inventory:get_items_sec', function(requestedSource)
     if not _source then return end
     if not invokedLocally and not AllowInventoryRequest(_source, 'refresh_items') then return end
 	local User = jrsCore.getUser(tonumber(_source))
-	if User == nil or User.getUsedCharacter == nil then return end
-	local Character = User.getUsedCharacter
+	if User == nil or (User.character or User.getUsedCharacter) == nil then return end
+	local Character = (User.character or User.getUsedCharacter)
 	local identifier = Character.identifier
 	local charid = Character.charIdentifier
 
@@ -1484,7 +1484,7 @@ AddEventHandler("jrs_inventory:saveHotbar", function(hotbarData)
     end
     local User = jrsCore.getUser(src)
     if not User then return end
-    local Character = User.getUsedCharacter
+    local Character = (User.character or User.getUsedCharacter)
     if not Character then return end
 
     local cleanedHotbar = sanitizeHotbarForPlayer(src, hotbarData)
@@ -1625,7 +1625,7 @@ AddEventHandler("jrs_inventory:saveSlots", function(items, weapons)
     end
 
     local User = jrsCore and jrsCore.getUser(src)
-    local Character = User and User.getUsedCharacter
+    local Character = User and (User.character or User.getUsedCharacter)
     if not Character then return end
 
     for id, slot in pairs(requestedItems) do
@@ -1850,7 +1850,7 @@ AddEventHandler('jrsCore:canCarryWeapons', function(source, count, cb)
     local _source = tonumber(source)
     local requested = math.max(1, math.floor(tonumber(count) or 1))
     local User = jrsCore and jrsCore.getUser(_source)
-    local Character = User and User.getUsedCharacter
+    local Character = User and (User.character or User.getUsedCharacter)
     if not _source or not Character then
         cb(false)
         return
@@ -2046,7 +2046,7 @@ AddEventHandler('onResourceStart', function(resourceName)
 		for _, playerId in ipairs(GetPlayers()) do
 			local src = tonumber(playerId)
 			local User = src and jrsCore and jrsCore.getUser and jrsCore.getUser(src)
-			local Character = User and User.getUsedCharacter
+			local Character = User and (User.character or User.getUsedCharacter)
 			if src and Character then
 				TriggerClientEvent('jrs_inventory:restartSyncReady', src)
 			end
@@ -2081,7 +2081,7 @@ AddEventHandler('jrs_inventory:devReinitRequest', function()
 		jrsCore.Debug("[Inventory][DevMode] Reinit requested by source "..tostring(_source))
 	end
 
-	local Character = User.getUsedCharacter
+	local Character = (User.character or User.getUsedCharacter)
 	local currentInventory = inv_table[_source]
 	if not Character or type(currentInventory) ~= 'table' or not IsInventoryLoadedForPlayer(_source, Character) then
 		TriggerClientEvent("jrsCore:notify", _source, _Up(_source, 'inventory'), 'Reinitialization cancelled: inventory is not loaded.', 'bag', 4000)

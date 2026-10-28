@@ -56,7 +56,7 @@ local function characterFor(source)
         if Character then return Character end
     end
     local User = jrsCore.getUser and jrsCore.getUser(source)
-    return User and User.getUsedCharacter or nil
+    return User and (User.character or User.getUsedCharacter) or nil
 end
 
 local function sameMetadata(a, b)

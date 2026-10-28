@@ -33,7 +33,7 @@ local function findLoadedUser(identifier)
 end
 
 local function restoreSelectedCharacter(src, user)
-    if not user or type(user.getUsedCharacter) == "table" then
+    if not user or (type(user.character) == 'table' or type(user.getUsedCharacter) == 'table') then
         return user
     end
 
@@ -45,7 +45,8 @@ local function restoreSelectedCharacter(src, user)
     for _, character in ipairs(AllCharacters) do
         if tostring(character.identifier) == tostring(playerData.identifier)
             and tonumber(character.charIdentifier) == tonumber(playerData.charIdentifier) then
-            user.getUsedCharacter = character
+            user.character = character
+        user.getUsedCharacter = character
             break
         end
     end
@@ -83,7 +84,7 @@ function jrsCore.IsCharacterReady(playerSource)
     if not src then return false end
 
     local user = jrsCore.getUser(src)
-    local character = user and user.getUsedCharacter or nil
+    local character = user and (user.character or user.getUsedCharacter) or nil
     local validCharacter = type(character) == "table"
         and character.identifier ~= nil
         and character.charIdentifier ~= nil
@@ -128,7 +129,7 @@ function jrsCore.GetCharacter(playerSource)
     if not src or not jrsCore.IsCharacterReady(src) then return nil end
 
     local user = jrsCore.getUser(src)
-    return user and user.getUsedCharacter or nil
+    return user and (user.character or user.getUsedCharacter) or nil
 end
 
 function jrsCore.SetCharacterReady(playerSource, ready, reason)
@@ -138,7 +139,7 @@ function jrsCore.SetCharacterReady(playerSource, ready, reason)
     ready = ready == true
     if ready then
         local user = jrsCore.getUser(src)
-        local character = user and user.getUsedCharacter or nil
+        local character = user and (user.character or user.getUsedCharacter) or nil
         if type(character) ~= "table" or character.identifier == nil or character.charIdentifier == nil then
             return false
         end
@@ -173,7 +174,7 @@ function jrsCore.SetCharacterReady(playerSource, ready, reason)
 
     local previous = nil
     local user = jrsCore.getUser(src)
-    if user and type(user.getUsedCharacter) == "table" then
+    if user and (type(user.character) == 'table' or type(user.getUsedCharacter) == 'table') then
         previous = user.getUsedCharacter
     end
 
@@ -201,7 +202,7 @@ function jrsCore.ClearCharacter(playerSource, reason)
 
     jrsCore.SetCharacterReady(src, false, reason or "clear")
     local user = jrsCore.getUser(src)
-    if user then user.getUsedCharacter = nil end
+    if user then user.character = nil; user.getUsedCharacter = nil end
     PlayerTable[src] = nil
     PlayerData[src] = nil
     CanSaveCoords[src] = nil
@@ -266,7 +267,8 @@ function jrsCore.ApplyRestoredCharacter(src, user, row)
     character.source = src
     character.playerSource = src
 
-    user.getUsedCharacter = character
+    user.character = character
+        user.getUsedCharacter = character
     UserBySource[src] = user
     PlayerTable[src] = {
         sourceData = src,
@@ -362,7 +364,7 @@ AddEventHandler("playerDropped", function()
     jrsCore.SetCharacterReady(src, false, "dropped")
     SetTimeout(0, function()
         local user = jrsCore.getUser(src)
-        if user then user.getUsedCharacter = nil end
+        if user then user.character = nil; user.getUsedCharacter = nil end
         PlayerTable[src] = nil
         PlayerData[src] = nil
         CanSaveCoords[src] = nil

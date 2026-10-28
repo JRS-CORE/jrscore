@@ -158,7 +158,7 @@ function jrsCore.SaveCharacterCoords(playerSource, coordSend)
         character = jrsCore.GetCharacter(src)
     else
         local user = jrsCore.getUser(src)
-        character = user and user.getUsedCharacter or nil
+        character = user and (user.character or user.getUsedCharacter) or nil
     end
 
     if type(character) ~= "table"
@@ -204,7 +204,7 @@ if Config.Onesync then
 
         PlayerTable[source] = nil
 
-        if user and type(user.getUsedCharacter) == "table" and CanSaveCoords[tonumber(source)] then
+        if user and (type(user.character) == 'table' or type(user.getUsedCharacter) == 'table') and CanSaveCoords[tonumber(source)] then
             local character = user.getUsedCharacter
             local playerCoords = GetEntityCoords(GetPlayerPed(source))
 

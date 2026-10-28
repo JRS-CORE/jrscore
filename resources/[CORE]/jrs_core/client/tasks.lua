@@ -35,7 +35,7 @@ if Config.MapObject then
             Wait(1000)
             local playerPed = PlayerPedId()
 
-            if IsAppActive(`MAP`) ~= 0 and not isMapMenuOpen then
+            if IsAppActive(joaat("MAP")) ~= 0 and not isMapMenuOpen then
 
                 SetCurrentPedWeapon(playerPed, GetHashKey('WEAPON_UNARMED'), true) -- unarm player
                 isMapMenuOpen = true
@@ -59,7 +59,7 @@ if Config.MapObject then
                 Citizen.InvokeNative(0x6B9BBD38AB0796DF, prop, playerPed, GetEntityBoneIndexByName(playerPed,"SKEL_L_Finger12"), 0.20, 0.00, -0.15, 180.0, 190.0, 0.0, true, true, false, true, 1, true)
             end
 
-            if IsAppActive(`MAP`) ~= 1 and isMapMenuOpen then
+            if IsAppActive(joaat("MAP")) ~= 1 and isMapMenuOpen then
                 isMapMenuOpen = false
 
                 RangerMap("mech_carry_box")

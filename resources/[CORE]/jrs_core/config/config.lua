@@ -293,9 +293,9 @@ Config.PlayerInteractions = {
     GiveSlap = true,
     TakeHostage = true,
 
-    GiveHandControlHash = `INPUT_CONTEXT_X`,
-    GiveSlapControlHash = `INPUT_INTERACT_OPTION1`,
-    TakeHostageControlHash = `INPUT_PROMPT_PAGE_NEXT`,
+    GiveHandControlHash = joaat("INPUT_CONTEXT_X"),
+    GiveSlapControlHash = joaat("INPUT_INTERACT_OPTION1"),
+    TakeHostageControlHash = joaat("INPUT_PROMPT_PAGE_NEXT"),
     ReleaseControlHash = 0x07CE1E61,
 
     SocialActionCooldownMs = 2000,

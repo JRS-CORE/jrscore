@@ -47,7 +47,7 @@ end
 
 local function getCharId(playerSource)
     local user = jrsCore and jrsCore.getUser and jrsCore.getUser(playerSource)
-    local character = user and user.getUsedCharacter
+    local character = user and (user.character or user.getUsedCharacter)
     return character and character.charIdentifier or nil
 end
 
