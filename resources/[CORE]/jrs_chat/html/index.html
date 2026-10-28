@@ -1,27 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar" dir="auto">
 <head>
-  <meta charset="utf-8">
-  <title>jrs_chat</title>
-  <link href="./css/style.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JRS Chat</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app">
-    <div class="chat-window hidden" id="window">
-      <div class="chat-messages" id="messages"></div>
+    <div id="chat-container" class="hidden">
+        <!-- Message feed -->
+        <div id="chat-messages"></div>
+
+        <!-- Command suggestions -->
+        <div id="chat-suggestions" class="hidden"></div>
+
+        <!-- Chat input area -->
+        <div id="chat-input-wrapper" class="hidden">
+            <span class="chat-prefix">&#10148;</span>
+            <input type="text" id="chat-input" maxlength="250" placeholder="اكتب رسالتك هنا... (/ للأوامر)" autocomplete="off" spellcheck="false">
+        </div>
     </div>
-    <div class="chat-input" id="input-box" style="display:none">
-      <div class="input-row">
-        <textarea id="input" spellcheck="false" autofocus></textarea>
-      </div>
-      <div class="suggestions-wrap" id="suggestions" style="display:none">
-        <ul class="suggestions" id="suggestion-list"></ul>
-      </div>
-    </div>
-  </div>
-  <script src="./js/config.js"></script>
-  <script src="./js/Message.js"></script>
-  <script src="./js/Suggestions.js"></script>
-  <script src="./js/App.js"></script>
+
+    <script src="app.js"></script>
 </body>
 </html>
