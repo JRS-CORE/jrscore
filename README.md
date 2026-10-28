@@ -48,14 +48,8 @@ gluing resources together.
 
 | Folder | Resources |
 |---|---|
-| `[CORE]` | `jrs_core` `jrs_inventory` `jrs_loadingscreen` `jrs_chat` `jrs_essentials` `jrs_multijob` `jrs_backpacks` `jrs_radialmenu` `jrs_progressbar` `jrs_minigame` |
-| `[CHARACTER]` | `jrs_character` `jrs_clothing` `jrs_barber` `jrs_basemenu` `jrs_metabolism` `jrs_walkanim` `jrs_animations` `jrs_passports` `jrs_playerinfo` `jrs_usable_items` `jrs_bathing` `jrs_canteen` `jrs_water_actions` `jrs_attached_objects` `jrs_3dme` |
-| `[ECONOMY]` | `jrs_banking` `jrs_stores` `jrs_billing` `jrs_paycheck` `jrs_mailbox` `jrs_saloons` `jrs_weapons` `jrs_trader` |
-| `[JOBS]` | `jrs_police` `jrs_mdt` `jrs_medic` `jrs_bossmanager` `jrs_crafting` `jrs_mining` `jrs_smelting` `jrs_goldpanning` `jrs_goldclaim` `jrs_lumberjack` `jrs_fishing` `jrs_hunting` `jrs_huntingpets` `jrs_herbs` `jrs_crawfish` `jrs_railroad` `jrs_samples` `jrs_chicken_job` |
-| `[PROPERTIES]` | `jrs_housing` `jrs_stables` `jrs_wildhorse` `jrs_doorlocks` `jrs_trapdoors` |
-| `[CRIME]` | `jrs_outlaws` `jrs_robbery` `jrs_lootnpcs` `jrs_lockpick` `jrs_search` |
-| `[WORLD]` | `jrs_city` `jrs_guarma` `jrs_canoe` `jrs_hotair` `jrs_npcs` `jrs_radius` `jrs_teleports` `jrs_track` `jrs_zombies` `jrs_zombies_notify` `bee_house` |
-| `[ADMIN]` | `jrs_admin` `jrs_death_logs` `jrs_imapviewtool` |
+| `[CORE]` | `jrs_core` `jrs_inventory` `jrs_loadingscreen` `jrs_chat` `jrs_multijob` `jrs_radialmenu` `jrs_minigame` `jrs_updater` |
+| `[WORLD]` | `jrs_city` |
 
 Also included: `[CFX]` (default CFX resources and screenshot-basic) and `[DEPENDENCIES]`
 (oxmysql, uiprompt, pma-voice, PolyZone, httpmanager, objectloader, weathersync, moonshine_interiors).

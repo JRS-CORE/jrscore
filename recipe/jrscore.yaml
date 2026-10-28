@@ -12,7 +12,7 @@ $steamRequired: false
 name: JRS Core
 version: 1.2.4
 author: JRS TEAM
-description: RedM roleplay framework - core, inventory, character creator, clothing, barber, jobs and economy. Installs every resource, imports the database and writes server.cfg.
+description: RedM roleplay framework - core, inventory, character creator, clothing, barber and economy. Installs every resource, imports the database and writes server.cfg.
 
 tasks:
   # 1) Database
@@ -182,7 +182,7 @@ tasks:
 
   # 3) Server config and icon
   - action: download_file
-    url: https://raw.githubusercontent.com/JRS-CORE/jrscore/v1.2.4/server.cfg
+    url: https://raw.githubusercontent.com/JRS-CORE/jrscore/main/server.cfg
     path: ./server.cfg
 
   - action: download_file
