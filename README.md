@@ -109,13 +109,9 @@ JRS.NotifyRightTip('Welcome to the Frontier', 4000)
 
 ---
 
-## Team
+## Development
 
-| Name | Role |
-|---|---|
-| **ALFIE** | Founder & Lead Developer |
-| **JRS** | Founder & Lead Developer |
-| **GM** | Project Manager |
+Developed and maintained natively by the **JRS TEAM**.
 
 ---
 

@@ -11,7 +11,7 @@ var hudDragState = null
 var hudSelectedElement = 'PlayerGold'
 var hudConfigVisibility = {}
 
-// Multi-select + link (ported from jrs_metabolism's editor, 2026-09-04):
+// Multi-select + link editor controls:
 // hudSelected is the ordered ctrl-click selection (hudSelectedElement always
 // equals its last entry - the "primary" whose controls the panel shows).
 // hudLinkGroups is separate and session-only (never saved): editing the

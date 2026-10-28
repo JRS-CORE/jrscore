@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------
-   Shared HUD icon set for jrs_core - ported from jrs_metabolism.
+   Shared HUD icon set for jrs_core.
 
    Same system as [HUD]/jrs_metabolism/html/jrsui/editor-icons.js: the
    artwork is inline <svg> painted with `currentColor`, held in one

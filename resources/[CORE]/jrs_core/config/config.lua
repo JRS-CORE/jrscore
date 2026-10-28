@@ -144,7 +144,7 @@ Config.HudReadyDelay = 9000 -- legacy compatibility only; CharacterReady now con
 -- Config.HudUpdateInterval with the money/job/level payload.
 Config.HudDebug = false
 
--- Level / XP presentation copied from alfie_level UI only.
+-- Native JRS Level & XP presentation.
 -- The XP system, database and commands still belong entirely to jrs_core.
 Config.LevelHud = {
     enabled = true,

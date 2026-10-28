@@ -979,7 +979,7 @@ INSERT INTO `jrs_items` (`item`, `label`, `label_ar`, `limit`, `can_remove`, `ty
 ('fish_oil','Pure Fish Oil',NULL,0.10,0,'item_standard',1,'Pure fish oil extracted from large fish, rich in benefits and used medicinally.','زيت سمك نقي مستخرج من الأسماك الكبيرة، غني بالفوائد ويستخدم طبياً.','0','medical'),
 ('fixedcamera','Tripod Camera','كاميرا بحامل ثلاثي',1.50,1,'item_standard',1,'A foldable tripod camera kit. Use it to set up a fixed camera that can be picked back up later.','عدة كاميرا بحامل ثلاثي قابل للطي، تستخدم لنصب كاميرا ثابتة يمكن التقاطها لاحقاً.','0','tools'),
 ('flag','Camp Flag','علم المخيّم',0.25,1,'item_standard',1,'A camp flag used to mark and personalize your camp.','علم مخيم يُستخدم لتمييز المخيم وتخصيصه.','0','tools'),
-('flag_jrs','JRS RP Flag','علم ريدمباير آر بي - الموسم 4',0.50,1,'item_standard',1,'Portable custom JRS RP flag.','علم مخصص محمول بتصميم REDEMPIRE RP S4.','0','tools'),
+('flag_jrs','JRS RP Flag','علم ريدمباير آر بي - الموسم 4',0.50,1,'item_standard',1,'Portable custom JRS RP flag.','علم مخصص محمول بتصميم JRS RP S4.','0','tools'),
 ('flakey_fish','Flakey Fish Meat',NULL,0.20,0,'item_standard',1,'A raw, flaky cut of fish meat, ready to be cooked and seasoned.','شريحة لحم سمك طري خام جاهزة للطهي والتتبيل.','0','provisions'),
 ('flour','Flour','طحين',0.25,1,'item_standard',1,'Ground up wheat used for cooking and baking.','دقيق مطحون من القمح، يُستخدم في الطهي والخبز.','{','food'),
 ('flowerboxes','Flower Boxes','صناديق زهور',0.25,1,'item_standard',1,'Containers or receptacles designed to hold and display blooming flowers, adding beauty and charm to any setting.','أوعية مصممة لحمل وعرض الأزهار المتفتحة، تضيف جمالاً وسحراً لأي مكان.','{','placeable'),

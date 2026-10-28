@@ -77,7 +77,7 @@ html { width: 100%; height: 100%; }
     object-fit: contain;
 }
 
-/* Inline-SVG glyphs ported from jrs_metabolism (see html/hud-icons.js). They
+/* Native Inline-SVG glyphs (see html/hud-icons.js).
    paint with `currentColor`, so the colour comes from the .icon box below and
    the HUD editor's Text Colour picker reaches the glyph as well as the label.
    Line art reads heavier than the padded PNGs it replaces, hence 24 not 30. */
@@ -423,7 +423,7 @@ body.hud-suppressed #ui {
 }
 
 /* ==========================================================================
-   LEVEL / XP HUD (visual presentation adapted from alfie_level)
+   LEVEL / XP HUD
    ========================================================================== */
 :root {
   --level-hud-w: clamp(360px, 24vw, 490px);

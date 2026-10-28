@@ -1,6 +1,8 @@
-// JRS Loading Screen content.
-// English is the source text; the _AR siblings are what an Arabic player
-// sees. A field with no _AR falls back to English (see LANGUAGE.pick).
+// ===================================================================
+// JRS CORE | Loading Screen Content & Showcase
+// Copyright (C) 2026 JRS TEAM | All Rights Reserved
+// ===================================================================
+
 const SERVER = {
     SIDE_FEEDS: {
         TEAM: {
@@ -23,31 +25,31 @@ const SERVER = {
 
     CARDS: [
         {
-            NAME: "Your Name",
-            NAME_AR: "اسمك",
-            DESCRIPTION: "Server owner and founder, responsible for the overall vision and direction of the community.",
-            DESCRIPTION_AR: "مالك السيرفر ومؤسسه، مسؤول عن الرؤية العامة وتوجيه المجتمع.",
+            NAME: "JRS CORE",
+            NAME_AR: "JRS CORE",
+            DESCRIPTION: "A complete roleplay framework built for the highest performance and stability on the frontier.",
+            DESCRIPTION_AR: "فريمورك رول بلاي متكامل تم تطويره لتقديم أقصى درجات الاستقرار والأداء العالي.",
             IMAGE: "assets/images/image_1.jpg",
-            ROLE: "SERVER OWNER",
-            ROLE_AR: "مالك السيرفر",
+            ROLE: "FRAMEWORK",
+            ROLE_AR: "الفريمورك",
         },
         {
-            NAME: "Co-Owner",
-            NAME_AR: "الشريك",
-            DESCRIPTION: "Server owner and founder, responsible for the overall vision and direction of the community.",
-            DESCRIPTION_AR: "مالك السيرفر ومؤسسه، مسؤول عن الرؤية العامة وتوجيه المجتمع.",
+            NAME: "ADMINISTRATION",
+            NAME_AR: "الإدارة",
+            DESCRIPTION: "Staff members are dedicated to supporting players and ensuring a fair environment.",
+            DESCRIPTION_AR: "فريق الإدارة متواجد دائماً لمساعدة اللاعبين وضمان بيئة لعب عادلة.",
             IMAGE: "assets/images/image_2.jpg",
-            ROLE: "SERVER OWNER",
-            ROLE_AR: "مالك السيرفر",
+            ROLE: "STAFF",
+            ROLE_AR: "طاقم الإدارة",
         },
         {
-            NAME: "JRS TEAM",
-            NAME_AR: "فريق JRS",
-            DESCRIPTION: "The development team behind the server, building custom scripts, framework systems, and continuous improvements to bring the best roleplay experience.",
-            DESCRIPTION_AR: "فريق التطوير خلف السيرفر، يبني السكربتات المخصّصة وأنظمة الفريمورك ويعمل على تحسينات مستمرة لتقديم أفضل تجربة تمثيل أدوار.",
+            NAME: "DEVELOPMENT",
+            NAME_AR: "فريق التطوير",
+            DESCRIPTION: "Continuous development, custom features, and framework updates powered by JRS.",
+            DESCRIPTION_AR: "تطوير مستمر وميزات حصرية وتحديثات مستمرة بدعم من JRS.",
             IMAGE: "assets/images/image_3.jpg",
-            ROLE: "DEVELOPERS",
-            ROLE_AR: "المطوّرون",
+            ROLE: "JRS TEAM",
+            ROLE_AR: "فريق JRS",
         },
     ],
 
