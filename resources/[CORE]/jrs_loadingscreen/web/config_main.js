@@ -54,19 +54,19 @@ const CONFIG = {
         DISCORD: {
             ENABLE: true,
             LABEL: "DISCORD",
-            URL: "https://discord.gg/your-invite",
+            URL: "https://discord.gg/jrscore",
             GLYPH: "D",
         },
         YOUTUBE: {
             ENABLE: true,
             LABEL: "YOUTUBE",
-            URL: "https://www.youtube.com/",
+            URL: "https://youtube.com/@jrscore",
             GLYPH: "▶",
         },
         WEBSITE: {
             ENABLE: true,
             LABEL: "WEBSITE",
-            URL: "https://www.youtube.com/",
+            URL: "https://docs.jrs-core.com",
             GLYPH: "◎",
         },
     },
