@@ -4,91 +4,125 @@
 
 # JRS Core
 
-**فريمورك رول بلاي مجاني ومفتوح المصدر لـ RedM.**
+**فريمورك رول بلاي متكامل وعالي الأداء لـ RedM.**
+مبني بالكامل من الصفر بهندسة موحدة وكود نظيف وخالٍ تماماً من التبعات الخارجية.
 
-[الشرح](https://docs.jrs-core.com) · [الديسكورد](https://discord.gg/jrscore) · [English](README.md)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Platform: RedM](https://img.shields.io/badge/Platform-RedM-a4161a.svg)](https://redm.net)
+[![Language: Lua 5.4](https://img.shields.io/badge/Lua-5.4-2c2d72.svg)](https://www.lua.org)
+[![Docs](https://img.shields.io/badge/Docs-docs.jrs--core.com-success.svg)](https://docs.jrs-core.com)
+[![Discord](https://img.shields.io/badge/Discord-Join-5865F2.svg?logo=discord&logoColor=white)](https://discord.gg/jrscore)
+
+[التوثيق](https://docs.jrs-core.com) · [الديسكورد](https://discord.gg/jrscore) · [الإبلاغ عن خطأ](../../issues/new/choose) · [English](README.md)
 
 </div>
 
+---
+
 <div dir="rtl">
 
-## وش هو JRS Core؟
+## نظرة عامة
 
-JRS Core باقة سيرفر RedM كاملة مبنية على كور واحد. كل السكربتات تستخدم نفس الـ API ونفس شكل الواجهات
-ونفس قاعدة البيانات، فالسيرفر يشتغل من أول تشغيل.
+**JRS Core** هو نظام رول بلاي متكامل ومخصص لسيرفرات RedM تم تطويره لتقديم أقصى درجات الاستقرار وأقل استهلاك للموارد مع توفير تجربة تطوير سلسة ومباشرة. تعتمد جميع السكربتات على نموذج برمجي موحد ونظام استدعاءات وأحداث قياسي مع طبقة بيانات MySQL محسنة.
 
-- **سكربتات الكور الأساسية** من JRS مصممة تشتغل مع بعض
-- **تثبيت بضغطة وحدة** من txAdmin مع قاعدة البيانات
-- **عربي وإنجليزي** في كل الواجهات
-- **مجاني للأبد** تحت رخصة GNU GPL v3
+- **بنية برمجية موحدة:** خالية 100% من طبقات المحاكاة أو الفريموركات القديمة.
+- **دعم كامل للغتين:** العربية والإنجليزية متوفرتان في كافة واجهات وأنظمة الكور.
+- **أداء استثنائي:** تحسين كامل لحلقات المعالجة وتخفيف استهلاك NUI و CEF.
+- **مجاني ومفتوح المصدر:** مرخص تحت رخصة GNU General Public License v3.0.
 
-## المتطلبات
+---
 
-- سيرفر RedM (آخر artifacts موصى بها) مع txAdmin
-- قاعدة بيانات MariaDB أو MySQL
-- مفتاح سيرفر من [بوابة Cfx.re](https://portal.cfx.re)
-- تفعيل OneSync
+## السكربتات المضمنة في الحزمة
 
-## التثبيت
+| المجلد | السكربت | الوصف |
+|---|---|---|
+| `[CORE]` | `jrs_core` | إدارة الشخصيات، الاقتصاد (كاش، ذهب، أموال مشبوهة)، الوظائف، الصلاحيات، الـ HUD، و RPC الخاص بـ JRS |
+| `[CORE]` | `jrs_inventory` | حقيبة متكاملة تدعم السحب والإفلات، الخانات السريعة، الصناديق والمستودعات، الإسقاط الأرضي، والسرقة |
+| `[CORE]` | `jrs_chat` | شات صوتي وكتابي محلي بقنوات مخصصة (`/me`, `/do`, `/s`, `/w`, `/ann`, `/ooc`) بتصميم غربي أصيل |
+| `[CORE]` | `jrs_loadingscreen` | شاشة دخول احترافية تدعم الفيديو وسلايد الصور والتحكم الموحد بالصوت وعرض الطاقم والقوانين |
+| `[CORE]` | `jrs_updater` | فاحص تلقائي للتحديثات والإصدارات |
+| `[WORLD]` | `jrs_city` | نظام اكتشاف وعرض المدن والمناطق الجغرافية في RedM |
 
-### الطريقة 1: من txAdmin (الأفضل)
+---
+
+## المتطلبات الأساسية
+
+- سيرفر RedM مع تفعيل **OneSync**.
+- قاعدة بيانات MySQL أو MariaDB.
+- مفتاح سيرفر رسمي من [Cfx.re Keymaster](https://keymaster.fivem.net).
+
+---
+
+## خطوات التثبيت
+
+### الطريقة 1: عبر قالب txAdmin (الأسهل والأفضل)
 
 1. افتح txAdmin واختر **Remote URL Template**.
-2. الصق الرابط:
-   ```
+2. الصق رابط القالب:
+   ```text
    https://raw.githubusercontent.com/JRS-CORE/jrscore/main/recipe/jrscore.yaml
    ```
-3. txAdmin ينزّل كل السكربتات، يسوي قاعدة البيانات ويستورد الجداول، ويكتب `server.cfg` بنفسه.
-4. شغّل السيرفر.
+3. اتبع التعليمات لاستيراد قاعدة البيانات وإنشاء `server.cfg` تلقائياً.
 
-### الطريقة 2: بدون إنترنت
+### الطريقة 2: التثبيت اليدوي
 
-شغّل `INSTALL.bat` واكتب مجلد السيرفر وبيانات MySQL ومفتاح السيرفر.
-المثبّت ينسخ السكربتات ويستورد `sql/jrscore.sql` ويكتب `server.cfg`.
+1. ضع مجلد `resources` داخل المسار الرئيسي للسيرفر.
+2. استورد ملف `sql/jrscore.sql` في قاعدة بيانات السيرفر.
+3. رتب تشغيل السكربتات في ملف `server.cfg` كالتالي:
+   ```cfg
+   ensure oxmysql
+   ensure jrs_core
+   ensure jrs_inventory
+   ensure jrs_chat
+   ensure jrs_city
+   ensure jrs_loadingscreen
+   ```
+4. تأكد من تفعيل `sv_enforceGameBuild 1491` في `server.cfg`.
 
-### الطريقة 3: يدوي
+---
 
-1. انسخ مجلد `resources` لمجلد السيرفر.
-2. استورد `sql/jrscore.sql` في قاعدة بيانات فاضية.
-3. انسخ `server.cfg` وعدّل قيم `{{...}}`.
+## واجهة المطورين (API)
 
-### بعد التثبيت
+يمكنك استدعاء دوال الكور في أي سكربت بكل سهولة:
 
-- خل `sv_enforceGameBuild 1491` في `server.cfg`.
-- `oxmysql` و `jrs_core` لازم يشتغلون قبل كل شيء.
-- عشان تصير أونر: حط الستيم هيكس حقك في `Config.CoreOwners` داخل
-  `resources/[CORE]/jrs_core/config/config.lua`، أو خل `group` = `owner` في جدول `jrs_users`، ثم ادخل من جديد.
+```lua
+-- من طرف السيرفر (Server-side)
+local JRS = exports['jrs_core']:getCoreApi()
+local character = JRS.GetCharacter(source)
 
-## أهم الإعدادات
+if character then
+    JRS.AddMoney(source, 50.0)
+    JRS.NotifyRightTip(source, 'تم استلام مكافأة: $50.00', 3000)
+end
 
-| الملف | وش فيه |
-|---|---|
-| `jrs_core/config/config.lua` | اللغة الافتراضية، الوايتلست، فلوس وأغراض البداية، الأدمن، الأوامر |
-| `jrs_core/config/levels.lua` | اللفلات والخبرة |
-| `jrs_inventory/config/config.lua` | الوزن، الخانات، الأغراض |
-| `jrs_loadingscreen/web/config_main.js` | اسم السيرفر، الروابط، الفيديو والموسيقى |
-| `jrs_loadingscreen/web/config_staff.js` | الطاقم، القوانين، الأخبار |
+-- من طرف العميل (Client-side)
+local JRS = exports['jrs_core']:getCoreApi()
+JRS.NotifyRightTip('مرحباً بك في السيرفر', 4000)
+```
 
-## المتاجر
+---
 
-- **JRS SOTR:** [jrs-sotr.tebex.io](https://jrs-sotr.tebex.io/)
-- **Gum Scripts:** [gum-scripts.tebex.io](https://gum-scripts.tebex.io/)
-## الدعم
-- **الشرح الكامل:** [docs.jrs-core.com](https://docs.jrs-core.com)
-- **المجتمع والدعم:** [discord.gg/jrscore](https://discord.gg/jrscore)
-- **المشاكل والاقتراحات:** [افتح Issue](../../issues/new/choose)
+## الدعم الفني والمجتمع
+
+- **التوثيق والشروحات:** [docs.jrs-core.com](https://docs.jrs-core.com)
+- **مجتمع الديسكورد:** [discord.gg/jrscore](https://discord.gg/jrscore)
+- **الإبلاغ عن الأخطاء:** [فتح تذكرة على GitHub](../../issues/new/choose)
+
+---
 
 ## الفريق
 
-| | الدور |
+| الاسم | الدور |
 |---|---|
 | **ALFIE** | المؤسس والمطور الرئيسي |
-| **JRS** | مطور |
+| **JRS** | المؤسس والمطور الرئيسي |
 | **GM** | مدير المشروع |
+
+---
 
 ## الرخصة
 
-JRS Core برنامج حر تحت رخصة [GNU GPL v3](LICENSE). تقدر تستخدمه وتعدله وتشاركه، وأي شيء تبنيه عليه
-لازم يبقى بنفس الرخصة مع إبقاء الحقوق.
+مشروع JRS Core برنامج حر ومفتوح المصدر تحت رخصة **GNU General Public License v3.0**.
+راجع ملف [LICENSE](LICENSE) للمزيد من التفاصيل.
 
 </div>
