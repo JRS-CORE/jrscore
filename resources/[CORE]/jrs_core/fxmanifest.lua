@@ -133,6 +133,9 @@ client_scripts {
     'client/job_xp.lua',
     'client/double_xp.lua',
     'client/character_ready.lua',
+    'client/jrs_rpc.lua',
+    'client/jrs_death.lua',
+    'client/jrs_menu_api.lua',
     'client/gameplay.lua',
     'client/gamepad.lua',
     'client/network_guard.lua',
@@ -195,6 +198,9 @@ server_scripts {
     'server/performance.lua',
     'server/devtools_guard.lua',
     'server/player_dropped.lua',
+    'server/jrs_rpc.lua',
+    'server/jrs_player.lua',
+    'server/jrs_death.lua',
     'server/language.lua'
 }
 

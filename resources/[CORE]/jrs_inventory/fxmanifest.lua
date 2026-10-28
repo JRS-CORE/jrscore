@@ -52,7 +52,8 @@ server_exports {
     'tradeReserveOffer', 'tradeReturnEscrow', 'updatestorage',
     'AcquireInventoryLock', 'ReleaseInventoryLock', 'IsInventoryLocked', 'InventoryTransaction',
     'RegisterInventoryHook', 'GetFreeWeight', 'GetMaxWeight', 'WheelItemInfo', 'UseItemFromWheel', 'reloadItemDefinitions',
-    'OpenPlayerInventoryAdmin'
+    'OpenPlayerInventoryAdmin',
+    'RegisterCustomStorage', 'OpenCustomStorage'
 }
 
 server_scripts {
@@ -74,7 +75,8 @@ server_scripts {
     'server/ground.lua',
     'server/social.lua',
     'server/robbery.lua',
-    'modules/trade/server.lua'
+    'modules/trade/server.lua',
+    'server/jrs_storage_api.lua'
 }
 
 ui_page 'html/index.html'
